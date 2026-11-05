@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createAuth,hashPassword,verifyPassword,validatePasswordHash} from '../server/auth.mjs';
+const password='synthetic-test-password-not-a-real-secret',ownerEmail='owner@example.test',passwordHash=hashPassword(password);
+const make=(args={})=>createAuth({ownerEmail,passwordHash,...args});
+const request=cookie=>({headers:{cookie:cookie.split(';')[0]}});
+test('password hashes use salt and verify without plaintext storage',()=>{assert.equal(verifyPassword(password,passwordHash),true);assert.equal(verifyPassword('wrong',passwordHash),false);assert.notEqual(hashPassword(password),passwordHash);});
+test('authentication refuses missing or malformed owner credentials',()=>{assert.throws(()=>validatePasswordHash('plaintext'));assert.throws(()=>createAuth({ownerEmail,passwordHash:''}));assert.throws(()=>hashPassword('short'));});
+test('session is HttpOnly, same-site strict and secure in hosted configuration',()=>{const a=make({secureCookies:true}),r=a.login(ownerEmail,password,'ip');assert.match(r.cookie,/^__Host-qivvera_session=/);assert.match(r.cookie,/HttpOnly/);assert.match(r.cookie,/SameSite=Strict/);assert.match(r.cookie,/; Secure/);assert.equal(a.session(request(r.cookie)).email,ownerEmail);});
+test('invalid or missing cookie does not authenticate',()=>{const a=make();assert.equal(a.session({headers:{}}),null);assert.equal(a.session({headers:{cookie:'qivvera_session=madeup'}}),null);});
+test('logout invalidates server session',()=>{const a=make(),r=a.login(ownerEmail,password);const req=request(r.cookie);a.logout(req);assert.equal(a.session(req),null);});
+test('absolute session expiry is enforced',()=>{let now=0;const a=make({now:()=>now,ttlMs:100}),r=a.login(ownerEmail,password);now=101;assert.equal(a.session(request(r.cookie)),null);});
+test('wrong credentials rate-limited after five attempts',()=>{const a=make();for(let i=0;i<5;i++)assert.equal(a.login(ownerEmail,'wrong','ip').status,401);assert.equal(a.login(ownerEmail,password,'ip').status,429);});
+test('unknown and known usernames have the same authentication error',()=>{const a=make();assert.equal(a.login('unknown@example.test',password,'a').error,a.login(ownerEmail,'wrong','b').error);});
+test('cross-site token must match the authenticated session',()=>{const a=make(),r=a.login(ownerEmail,password),s=r.session;assert.equal(a.validCsrf({headers:{}},s),false);assert.equal(a.validCsrf({headers:{'x-csrf-token':'0'.repeat(48)}},s),false);assert.equal(a.validCsrf({headers:{'x-csrf-token':s.csrfToken}},s),true);});
+test('sessions do not survive creation of a new auth process',()=>{const a=make(),r=a.login(ownerEmail,password);assert.equal(make().session(request(r.cookie)),null);});

@@ -1,0 +1,23 @@
+{
+  "name": "qivvera-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Qivvera review registry with PostgreSQL & SQLite support",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc || true",
+    "start": "node server/start.mjs",
+    "start:registry": "node server/start.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "typescript": "5.8.3"
+  }
+}
