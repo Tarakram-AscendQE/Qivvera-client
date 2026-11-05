@@ -1,16 +1,10 @@
 /** Local review storage adapter. Not an immutable evidence store or a production database service. */
-import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { InputError, fields } from './errors.mjs';
 
-export class InputError extends Error {
-  constructor(code, message, status = 400) { super(message); this.code = code; this.status = status; }
-}
-export function fields(value, allowed) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new InputError('INVALID_INPUT', 'Send a JSON object.');
-  for (const key of Object.keys(value)) if (!allowed.includes(key)) throw new InputError('UNKNOWN_FIELD', `Unexpected field: ${key}`);
-}
+export { InputError, fields };
 function text(value, name, max, required = true) {
   if (!required && (value === undefined || value === null || value === '')) return '';
   if (typeof value !== 'string' || !value.trim() || value.trim().length > max || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value)) {
@@ -51,7 +45,14 @@ const appView = r => r && ({id:r.id,name:r.name,description:r.description,reposi
 const obligationView = r => r && ({id:r.id,changeId:r.change_id,statement:r.statement,sourceReference:r.source_reference,criticality:r.criticality,authority:'CANDIDATE',state:'NOT_ASSESSED',evidenceCount:0,version:r.version,createdAt:r.created_at,updatedAt:r.updated_at});
 const changeView = r => r && ({id:r.id,applicationId:r.application_id,title:r.title,intent:r.intent,sourceRevision:r.source_revision || null,sourceBinding:'DECLARED_NOT_VERIFIED',producer:r.producer,createdAt:r.created_at,assessmentStatus:'NOT_ASSESSED',disposition:null});
 
+let DatabaseSync;
+try {
+  const sqlite = await import('node:sqlite');
+  DatabaseSync = sqlite.DatabaseSync;
+} catch {}
+
 export function openRepository(path) {
+  if (!DatabaseSync) throw new Error('SQLite is not available in this Node runtime. Use PostgreSQL with DATABASE_URL.');
   if (path !== ':memory:') mkdirSync(dirname(path), {recursive:true,mode:0o700});
   const db = new DatabaseSync(path);
   db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;');

@@ -4,7 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createAuth, digest } from './auth.mjs';
-import { fields, InputError } from './repository.mjs';
+import { fields, InputError } from './errors.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

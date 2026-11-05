@@ -1,6 +1,5 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openRepository } from './repository.mjs';
 import { createApplicationServer } from './app.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -24,6 +23,7 @@ if (databaseUrl) {
   const { openPostgresRepository } = await import('./postgres-repository.mjs');
   repository = await openPostgresRepository(databaseUrl);
 } else {
+  const { openRepository } = await import('./repository.mjs');
   repository = openRepository(process.env.DATABASE_PATH ? resolve(process.env.DATABASE_PATH) : resolve(rootDir, 'data/qivvera.sqlite'));
 }
 
