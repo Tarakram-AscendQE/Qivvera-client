@@ -1,1 +1,8 @@
-{}
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.mjs" },
+    { "source": "/api", "destination": "/api/index.mjs" },
+    { "source": "/healthz", "destination": "/api/index.mjs" }
+  ]
+}

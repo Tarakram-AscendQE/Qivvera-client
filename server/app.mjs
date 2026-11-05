@@ -1,9 +1,13 @@
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createAuth, digest } from './auth.mjs';
 import { fields, InputError } from './repository.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const json=(res,status,body)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(body));};
 async function body(req) {
@@ -21,11 +25,24 @@ export function createApplicationServer({repository,ownerEmail,passwordHash,publ
   if(!publicOrigin || new URL(publicOrigin).origin!==publicOrigin) throw new Error('PUBLIC_ORIGIN must be an exact origin without a trailing slash.');
   if(secureCookies && !publicOrigin.startsWith('https://')) throw new Error('Secure deployment requires HTTPS.');
   const auth=createAuth({ownerEmail,passwordHash,secureCookies});
+  function loadAsset(filename) {
+    const candidates = [
+      resolve(webRoot, filename),
+      resolve(process.cwd(), 'web', filename),
+      resolve(process.cwd(), 'public', filename),
+      resolve(__dirname, '..', 'web', filename),
+      resolve(__dirname, '..', 'public', filename)
+    ];
+    for (const p of candidates) {
+      try { return readFileSync(p); } catch {}
+    }
+    return Buffer.from('');
+  }
   const assets=new Map([
-    ['/',[readFileSync(resolve(webRoot,'index.html')),'text/html; charset=utf-8']],
-    ['/app.js',[readFileSync(resolve(webRoot,'app.js')),'text/javascript; charset=utf-8']],
-    ['/app.css',[readFileSync(resolve(webRoot,'app.css')),'text/css; charset=utf-8']],
-    ['/logo.svg',[readFileSync(resolve(webRoot,'logo.svg')),'image/svg+xml; charset=utf-8']],
+    ['/',[loadAsset('index.html'),'text/html; charset=utf-8']],
+    ['/app.js',[loadAsset('app.js'),'text/javascript; charset=utf-8']],
+    ['/app.css',[loadAsset('app.css'),'text/css; charset=utf-8']],
+    ['/logo.svg',[loadAsset('logo.svg'),'image/svg+xml; charset=utf-8']],
   ]);
   return http.createServer({requestTimeout:15000,headersTimeout:10000,maxHeaderSize:16384},async(req,res)=>{
     const requestId=randomUUID();
@@ -35,7 +52,13 @@ export function createApplicationServer({repository,ownerEmail,passwordHash,publ
     res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');
     if(secureCookies)res.setHeader('Strict-Transport-Security','max-age=31536000');
     try {
-      const path=new URL(req.url,'http://internal').pathname;
+      let rawPath = req.url;
+      if (req.headers['x-matched-path'] && !req.headers['x-matched-path'].includes('/api/index')) {
+        rawPath = req.headers['x-matched-path'];
+      } else if (req.headers['x-forwarded-url']) {
+        rawPath = req.headers['x-forwarded-url'];
+      }
+      const path=new URL(rawPath,'http://internal').pathname;
       if(req.method==='GET' && path==='/healthz') return json(res,(await repository.healthy())?200:503,{service:'qivvera-registry',version:'0.1.0',process:'running',storage:repository.isAsync?'postgresql':'local-review',assuranceExecution:false});
       if(req.method==='GET' && assets.has(path)){const[a,type]=assets.get(path);res.writeHead(200,{'Content-Type':type});res.end(a);return;}
       let originHost = '';
