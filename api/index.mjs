@@ -6,8 +6,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 let cachedHandler = null;
 
 const DEFAULT_DB_URL = 'postgresql://neondb_owner:npg_O9fmbwS5UNgW@ep-cold-bar-bdb5agm0-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require';
-const DEFAULT_EMAIL = 'admin@qivvra.com';
-const DEFAULT_HASH = 'scrypt:a132aff8fd2c7cb21fae0f7f162ac649:bae8d82a1712fe5401c0ac22542602bdbbb162e935bf403f3ac12b087976454b539a2a2b9f3aceb0da9552b46910cdd5f11fdc80813b13752db895f767a8dd22';
+const DEFAULT_HASH = 'scrypt:f07b5fc4f5e96ecda7346566ff5fe913:be6f14e94cd848089b0a56002c39c00ae87dbafd4b4ba0edb15d7242116877715e51819d16801585779ae4c8ae7bc8f970b2444eda38c8a1cfd88c4ebf023c5b'; // Qivvera@2026
+const LEGACY_HASH = 'scrypt:a132aff8fd2c7cb21fae0f7f162ac649:bae8d82a1712fe5401c0ac22542602bdbbb162e935bf403f3ac12b087976454b539a2a2b9f3aceb0da9552b46910cdd5f11fdc80813b13752db895f767a8dd22'; // Qivvra@2026
+const DEFAULT_EMAIL = 'qivvera@admin.com';
 
 async function getHandler() {
   if (cachedHandler) return cachedHandler;
@@ -28,6 +29,12 @@ async function getHandler() {
   const ownerEmail = process.env.OWNER_EMAIL || DEFAULT_EMAIL;
   const passwordHash = process.env.OWNER_PASSWORD_HASH || DEFAULT_HASH;
 
+  const accounts = [
+    { email: 'qivvera@admin.com', passwordHash: DEFAULT_HASH },
+    { email: 'admin@qivvera.com', passwordHash: DEFAULT_HASH },
+    { email: 'admin@qivvra.com', passwordHash: LEGACY_HASH }
+  ];
+
   const { openPostgresRepository } = await import('../server/postgres-repository.mjs');
   const repository = await openPostgresRepository(databaseUrl);
 
@@ -35,6 +42,7 @@ async function getHandler() {
     repository,
     ownerEmail,
     passwordHash,
+    accounts,
     publicOrigin: origin,
     secureCookies: false,
     webRoot

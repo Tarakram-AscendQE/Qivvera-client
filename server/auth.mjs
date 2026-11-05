@@ -13,10 +13,17 @@ export function verifyPassword(password,hash) {
   return timingSafeEqual(scryptSync(password,salt,64),Buffer.from(key,'hex'));
 }
 export const digest = value => createHash('sha256').update(value).digest('hex');
-export function createAuth({ownerEmail,passwordHash,secureCookies=false,ttlMs=8*60*60*1000,now=Date.now}) {
+export function createAuth({ownerEmail,passwordHash,accounts=[],secureCookies=false,ttlMs=8*60*60*1000,now=Date.now}) {
   validatePasswordHash(passwordHash);
   if(!ownerEmail || typeof ownerEmail!=='string' || !ownerEmail.includes('@')) throw new Error('Configure owner email.');
   const owner=ownerEmail.trim().toLowerCase(), sessions=new Map(), attempts=new Map();
+  const knownAccounts = new Map();
+  knownAccounts.set(owner, passwordHash);
+  for (const acc of accounts) {
+    if (acc && acc.email && acc.passwordHash) {
+      knownAccounts.set(acc.email.trim().toLowerCase(), acc.passwordHash);
+    }
+  }
   const cookieName=secureCookies?'__Host-qivvera_session':'qivvera_session';
   const cookie = (value,age) => `${cookieName}=${value}; HttpOnly; Path=/; SameSite=Strict; Max-Age=${age}${secureCookies?'; Secure':''}`;
   const readToken=req=> (req.headers.cookie??'').split(';').map(s=>s.trim()).find(s=>s.startsWith(`${cookieName}=`))?.slice(cookieName.length+1)??'';
@@ -28,15 +35,16 @@ export function createAuth({ownerEmail,passwordHash,secureCookies=false,ttlMs=8*
       const key=digest(remoteAddress), a=attempts.get(key);
       if(a && a.count>=5) return {error:'RATE_LIMITED',status:429};
       if(attempts.size>=1000 && !a) return {error:'RATE_LIMITED',status:429};
-      // Evaluate the password even for an unknown email; never reveal account existence.
-      const valid=verifyPassword(password,passwordHash);
-      if(typeof email!=='string' || email.trim().toLowerCase()!==owner || !valid) {
+      const requestedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+      const targetHash = knownAccounts.get(requestedEmail) || passwordHash;
+      const valid = knownAccounts.has(requestedEmail) && verifyPassword(password, targetHash);
+      if(!valid) {
         attempts.set(key,{count:(a?.count??0)+1,until:a?.until??now()+10*60*1000});
         return {error:'INVALID_CREDENTIALS',status:401};
       }
       attempts.delete(key);
       if(sessions.size>=20) sessions.delete(sessions.keys().next().value);
-      const token=randomBytes(32).toString('hex'),session={email:owner,csrfToken:randomBytes(24).toString('hex'),expiresAt:now()+ttlMs};
+      const token=randomBytes(32).toString('hex'),session={email:requestedEmail,csrfToken:randomBytes(24).toString('hex'),expiresAt:now()+ttlMs};
       sessions.set(digest(token),session);
       return {session,cookie:cookie(token,Math.floor(ttlMs/1000)),token,tokenHash:digest(token)};
     },

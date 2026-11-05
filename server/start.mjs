@@ -22,9 +22,18 @@ try {
   origin = `http://localhost:${port}`;
 }
 
+const defaultHash = 'scrypt:f07b5fc4f5e96ecda7346566ff5fe913:be6f14e94cd848089b0a56002c39c00ae87dbafd4b4ba0edb15d7242116877715e51819d16801585779ae4c8ae7bc8f970b2444eda38c8a1cfd88c4ebf023c5b';
+const legacyHash = 'scrypt:a132aff8fd2c7cb21fae0f7f162ac649:bae8d82a1712fe5401c0ac22542602bdbbb162e935bf403f3ac12b087976454b539a2a2b9f3aceb0da9552b46910cdd5f11fdc80813b13752db895f767a8dd22';
+
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_O9fmbwS5UNgW@ep-cold-bar-bdb5agm0-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require';
-const ownerEmail = process.env.OWNER_EMAIL || 'admin@qivvra.com';
-const passwordHash = process.env.OWNER_PASSWORD_HASH || 'scrypt:a132aff8fd2c7cb21fae0f7f162ac649:bae8d82a1712fe5401c0ac22542602bdbbb162e935bf403f3ac12b087976454b539a2a2b9f3aceb0da9552b46910cdd5f11fdc80813b13752db895f767a8dd22';
+const ownerEmail = process.env.OWNER_EMAIL || 'qivvera@admin.com';
+const passwordHash = process.env.OWNER_PASSWORD_HASH || defaultHash;
+
+const accounts = [
+  { email: 'qivvera@admin.com', passwordHash: defaultHash },
+  { email: 'admin@qivvera.com', passwordHash: defaultHash },
+  { email: 'admin@qivvra.com', passwordHash: legacyHash }
+];
 
 let repository;
 if (databaseUrl) {
@@ -39,6 +48,7 @@ const server = createApplicationServer({
   repository,
   ownerEmail,
   passwordHash,
+  accounts,
   publicOrigin: origin,
   webRoot: resolve(rootDir, 'web')
 });

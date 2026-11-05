@@ -21,7 +21,7 @@ async function body(req) {
     req.on('aborted',()=>reject(new InputError('REQUEST_ABORTED','The request was interrupted.')));
   });
 }
-export function createApplicationServer({repository,ownerEmail,passwordHash,publicOrigin,secureCookies=false,webRoot=resolve('web')}) {
+export function createApplicationServer({repository,ownerEmail,passwordHash,accounts=[],publicOrigin,secureCookies=false,webRoot=resolve('web')}) {
   let normalizedOrigin = '';
   try {
     let s = (publicOrigin || '').trim();
@@ -29,7 +29,7 @@ export function createApplicationServer({repository,ownerEmail,passwordHash,publ
     if (s) normalizedOrigin = new URL(s).origin;
   } catch {}
   const effectiveSecureCookies = Boolean(secureCookies && normalizedOrigin.startsWith('https://'));
-  const auth=createAuth({ownerEmail,passwordHash,secureCookies:effectiveSecureCookies});
+  const auth=createAuth({ownerEmail,passwordHash,accounts,secureCookies:effectiveSecureCookies});
   function loadAsset(filename) {
     const candidates = [
       resolve(webRoot, filename),
