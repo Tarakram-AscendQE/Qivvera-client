@@ -11,8 +11,16 @@ const host = process.env.HOST ?? '0.0.0.0';
 const port = Number(process.env.PORT ?? 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid PORT.');
 
-const rawOrigin = process.env.PUBLIC_ORIGIN ?? `http://localhost:${port}`;
-const origin = rawOrigin.replace(/\/+$/, '');
+let rawOrigin = process.env.PUBLIC_ORIGIN || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${port}`);
+if (rawOrigin && !rawOrigin.startsWith('http://') && !rawOrigin.startsWith('https://')) {
+  rawOrigin = 'https://' + rawOrigin;
+}
+let origin = '';
+try {
+  origin = new URL(rawOrigin).origin;
+} catch {
+  origin = `http://localhost:${port}`;
+}
 
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_O9fmbwS5UNgW@ep-cold-bar-bdb5agm0-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require';
 const ownerEmail = process.env.OWNER_EMAIL || 'admin@qivvra.com';

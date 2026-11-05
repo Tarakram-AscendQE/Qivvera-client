@@ -22,9 +22,14 @@ async function body(req) {
   });
 }
 export function createApplicationServer({repository,ownerEmail,passwordHash,publicOrigin,secureCookies=false,webRoot=resolve('web')}) {
-  if(!publicOrigin || new URL(publicOrigin).origin!==publicOrigin) throw new Error('PUBLIC_ORIGIN must be an exact origin without a trailing slash.');
-  if(secureCookies && !publicOrigin.startsWith('https://')) throw new Error('Secure deployment requires HTTPS.');
-  const auth=createAuth({ownerEmail,passwordHash,secureCookies});
+  let normalizedOrigin = '';
+  try {
+    let s = (publicOrigin || '').trim();
+    if (s && !s.startsWith('http://') && !s.startsWith('https://')) s = 'https://' + s;
+    if (s) normalizedOrigin = new URL(s).origin;
+  } catch {}
+  const effectiveSecureCookies = Boolean(secureCookies && normalizedOrigin.startsWith('https://'));
+  const auth=createAuth({ownerEmail,passwordHash,secureCookies:effectiveSecureCookies});
   function loadAsset(filename) {
     const candidates = [
       resolve(webRoot, filename),
@@ -63,10 +68,10 @@ export function createApplicationServer({repository,ownerEmail,passwordHash,publ
       if(req.method==='GET' && assets.has(path)){const[a,type]=assets.get(path);res.writeHead(200,{'Content-Type':type});res.end(a);return;}
       let originHost = '';
       try { if (req.headers.origin) originHost = new URL(req.headers.origin).host; } catch {}
-      const originAllowed = !publicOrigin || req.headers.origin === publicOrigin ||
+      const originAllowed = !normalizedOrigin || req.headers.origin === normalizedOrigin ||
         (originHost && (originHost === req.headers.host || originHost.endsWith('.vercel.app'))) ||
-        (req.headers.origin === `http://localhost:${process.env.PORT || 5000}`) ||
-        (req.headers.origin === `http://127.0.0.1:${process.env.PORT || 5000}`);
+        (req.headers.origin === `http://localhost:${process.env.PORT || 3000}`) ||
+        (req.headers.origin === `http://127.0.0.1:${process.env.PORT || 3000}`);
       if(req.method!=='GET' && !originAllowed) return json(res,403,{error:'ORIGIN_REJECTED',message:'This request did not originate from this workspace.',requestId});
       if(req.method==='POST' && path==='/api/session'){
         const b=await body(req);fields(b,['email','password']);

@@ -12,8 +12,16 @@ const DEFAULT_HASH = 'scrypt:a132aff8fd2c7cb21fae0f7f162ac649:bae8d82a1712fe5401
 async function getHandler() {
   if (cachedHandler) return cachedHandler;
 
-  const rawOrigin = process.env.PUBLIC_ORIGIN || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-  const origin = rawOrigin.replace(/\/+$/, '');
+  let rawOrigin = process.env.PUBLIC_ORIGIN || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  if (rawOrigin && !rawOrigin.startsWith('http://') && !rawOrigin.startsWith('https://')) {
+    rawOrigin = 'https://' + rawOrigin;
+  }
+  let origin = '';
+  try {
+    origin = new URL(rawOrigin).origin;
+  } catch {
+    origin = 'http://localhost:3000';
+  }
   const webRoot = resolve(__dirname, '..', 'web');
 
   const databaseUrl = process.env.DATABASE_URL || DEFAULT_DB_URL;
