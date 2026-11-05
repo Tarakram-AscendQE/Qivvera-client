@@ -36,6 +36,13 @@ async function getHandler() {
   return cachedHandler;
 }
 
+process.on('uncaughtException', (err) => {
+  console.error('SERVERLESS UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('SERVERLESS UNHANDLED REJECTION at:', promise, 'reason:', reason);
+});
+
 export default async function handler(req, res) {
   try {
     const handle = await getHandler();

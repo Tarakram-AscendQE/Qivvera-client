@@ -34,5 +34,12 @@ const server = createApplicationServer({
   publicOrigin: origin,
   webRoot: resolve(rootDir, 'web')
 });
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION at:', promise, 'reason:', reason);
+});
+
 server.listen(port,host,()=>console.log(`Qivvera registry listening on ${origin} using ${process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite'}`));
 for(const sig of ['SIGTERM','SIGINT'])process.on(sig,()=>server.close(()=>{repository.close();process.exit(0);}));
