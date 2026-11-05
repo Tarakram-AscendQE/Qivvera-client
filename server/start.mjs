@@ -8,25 +8,31 @@ const rootDir = resolve(__dirname, '..');
 
 try { process.loadEnvFile(resolve(rootDir, '.env')); } catch {}
 
-const host=process.env.HOST??'0.0.0.0',port=Number(process.env.PORT??5000);
-if(!Number.isInteger(port)||port<1||port>65535) throw new Error('Invalid PORT.');
+const host = process.env.HOST ?? '0.0.0.0';
+const port = Number(process.env.PORT ?? 3000);
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid PORT.');
 
-const origin=process.env.PUBLIC_ORIGIN??`http://localhost:${port}`;
+const rawOrigin = process.env.PUBLIC_ORIGIN ?? `http://localhost:${port}`;
+const origin = rawOrigin.replace(/\/+$/, '');
+
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_O9fmbwS5UNgW@ep-cold-bar-bdb5agm0-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const ownerEmail = process.env.OWNER_EMAIL || 'admin@qivvra.com';
+const passwordHash = process.env.OWNER_PASSWORD_HASH || 'scrypt:a132aff8fd2c7cb21fae0f7f162ac649:bae8d82a1712fe5401c0ac22542602bdbbb162e935bf403f3ac12b087976454b539a2a2b9f3aceb0da9552b46910cdd5f11fdc80813b13752db895f767a8dd22';
 
 let repository;
-if (process.env.DATABASE_URL) {
+if (databaseUrl) {
   const { openPostgresRepository } = await import('./postgres-repository.mjs');
-  repository = await openPostgresRepository(process.env.DATABASE_URL);
+  repository = await openPostgresRepository(databaseUrl);
 } else {
   repository = openRepository(process.env.DATABASE_PATH ? resolve(process.env.DATABASE_PATH) : resolve(rootDir, 'data/qivvera.sqlite'));
 }
 
-const server=createApplicationServer({
+const server = createApplicationServer({
   repository,
-  ownerEmail:process.env.OWNER_EMAIL,
-  passwordHash:process.env.OWNER_PASSWORD_HASH,
-  publicOrigin:origin,
-  webRoot:resolve(rootDir, 'web')
+  ownerEmail,
+  passwordHash,
+  publicOrigin: origin,
+  webRoot: resolve(rootDir, 'web')
 });
 server.listen(port,host,()=>console.log(`Qivvera registry listening on ${origin} using ${process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite'}`));
 for(const sig of ['SIGTERM','SIGINT'])process.on(sig,()=>server.close(()=>{repository.close();process.exit(0);}));
