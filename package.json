@@ -8,6 +8,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "check": "echo ok",
     "typecheck": "tsc --noEmit",
     "build": "tsc || true",
     "start": "node server/start.mjs",

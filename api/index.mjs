@@ -1,7 +1,5 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openPostgresRepository } from '../server/postgres-repository.mjs';
-import { openRepository } from '../server/repository.mjs';
 import { createApplicationServer } from '../server/app.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -13,9 +11,14 @@ async function getHandler() {
   const origin = process.env.PUBLIC_ORIGIN || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
   const webRoot = resolve(__dirname, '..', 'web');
 
-  const repository = process.env.DATABASE_URL
-    ? await openPostgresRepository(process.env.DATABASE_URL)
-    : openRepository(resolve('/tmp', 'qivvera.sqlite'));
+  let repository;
+  if (process.env.DATABASE_URL) {
+    const { openPostgresRepository } = await import('../server/postgres-repository.mjs');
+    repository = await openPostgresRepository(process.env.DATABASE_URL);
+  } else {
+    const { openRepository } = await import('../server/repository.mjs');
+    repository = openRepository(resolve('/tmp', 'qivvera.sqlite'));
+  }
 
   const server = createApplicationServer({
     repository,
