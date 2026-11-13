@@ -1,0 +1,10 @@
+/* Increment 2 additions. Existing deployed visual identity is preserved. */
+.pill.accepted{background:#e7f0fc;color:#245c91}.pill.clarify{background:#fff3d8;color:#805913}.pill.rejected{background:#f6e9ed;color:#914153}
+.obligation-actions{padding-top:14px;gap:9px}.obligation>p{margin-top:13px;margin-bottom:0}.obligation-actions .button{font-size:12px;padding:8px 11px}
+.boundary-note{margin-top:16px;border:1px solid var(--line);border-radius:9px;padding:20px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.notice.warning{background:#fff7e5;border-color:#e5d5b2;color:#775819;align-items:flex-start;flex-wrap:wrap}.notice.warning strong{color:#674b17}
+.revision-row{display:flex;gap:20px;justify-content:space-between;padding:24px;border-bottom:1px solid var(--line)}.revision-row:last-child{border:0}.revision-row p{margin:8px 0;overflow-wrap:anywhere}.revision-row .pill{align-self:flex-start}
+.review-summary{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:15px;margin-bottom:20px;overflow-wrap:anywhere}.review-summary p{font-size:12px;margin:8px 0}
+.decision-card{padding:18px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.decision-card:last-child{border:0}.decision-card p{margin:10px 0}.decision-actor{color:var(--muted);font-size:11px}details{font-size:12px;color:var(--muted)}summary{cursor:pointer;font-weight:600}details p{padding:4px 0}
+.obligation-top .link-button{white-space:nowrap}.identity .email small{max-width:240px;overflow-wrap:anywhere}.brand svg{flex-shrink:1;min-width:0}
+@media(max-width:780px){.revision-row{flex-direction:column}.heading .actions{width:100%;gap:7px}.heading .button{white-space:normal}.obligation-top{flex-wrap:wrap}.status-panel .chip-row{max-width:100%}.pill{white-space:normal}.stats{grid-template-columns:1fr}.identity .email{display:none}}

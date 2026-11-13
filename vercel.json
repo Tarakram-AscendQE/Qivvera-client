@@ -1,8 +1,53 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "functions": {
+    "api/index.mjs": {
+      "includeFiles": "{web/**,migrations/**}"
+    }
+  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.mjs" },
-    { "source": "/api", "destination": "/api/index.mjs" },
-    { "source": "/healthz", "destination": "/api/index.mjs" }
-  ]
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.mjs"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.mjs"
+    },
+    {
+      "source": "/healthz",
+      "destination": "/api/index.mjs"
+    },
+    {
+      "source": "/readyz",
+      "destination": "/api/index.mjs"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+        }
+      ]
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "increments": false,
+      "increment2": false
+    }
+  }
 }

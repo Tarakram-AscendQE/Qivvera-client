@@ -10,3 +10,5 @@ coverage/
 data/
 *.sqlite
 *.sqlite-*
+*.credentials.json
+review-test-results/

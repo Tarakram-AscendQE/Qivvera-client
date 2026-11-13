@@ -1,26 +1,43 @@
-name: Qivvera foundation checks
+name: Qivvera obligation and revision checks
 on:
   push:
-    branches: [main]
+    branches: [main, increments]
   pull_request:
 permissions:
   contents: read
 concurrency:
-  group: foundation-${{ github.ref }}
+  group: qivvera-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: qivvera_test
+          POSTGRES_PASSWORD: disposable-ci-only
+          POSTGRES_DB: qivvera_test_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U qivvera_test -d qivvera_test_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://qivvera_test:disposable-ci-only@127.0.0.1:5432/qivvera_test_ci
+      REQUIRE_POSTGRES: 'true'
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6, resolved 2026-10-31
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7, resolved 2026-10-31
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '22'
           cache: npm
-      - run: node --version && npm --version
       - run: npm ci --ignore-scripts
       - run: node scripts/selfcheck.mjs
-      - run: npm run check
+      - run: npm run check:release
+      - name: Canonical assets remain in sync
+        run: git diff --exit-code -- public/
+# No deploy, secret provisioning, production database access or paid resource creation.
+# Native hosted browser acceptance and recovery are additional release gates.

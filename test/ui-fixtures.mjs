@@ -1,0 +1,20 @@
+// Synthetic states from the real workflow repository, for offline component rendering.
+import { writeFileSync } from 'node:fs';
+import { openWorkflowRepository } from '../server/workflow-repository.mjs';
+const r = await openWorkflowRepository({ migrate: true });
+const author = { email: 'author@example.test', roles: ['AUTHOR'] }, reviewer = { email: 'reviewer@example.test', roles: ['POLICY_AUTHORITY'] };
+const app = await r.createApplication({ name: 'VendorPay', description: 'Synthetic supplier-payment application used only for review.' }, author);
+const c = await r.createChange({ applicationId: app.id, title: 'Supplier bank changes: controlled approval', intent: 'Require an independent decision before activating a new supplier bank account.', sourceRevision: 'a'.repeat(40), producer: 'AI_ASSISTED' }, author);
+const ob = await r.addObligation(c.id, { statement: 'A requester must not approve their own supplier-bank change.', sourceReference: 'Finance Control Policy · BR-017', sourceVersion: '2.0', criticality: 'CRITICAL', revisionId: c.revision.id }, author);
+const submitted = await r.transitionObligation(ob.id, { action: 'SUBMIT', version: ob.version, revisionId: c.revision.id }, author);
+const pending = await r.getChange(c.id);
+await r.transitionObligation(ob.id, { action: 'ACCEPT', version: submitted.version, revisionId: c.revision.id, rationale: 'BR-017 version 2.0 applies to this workflow and to the declared change revision.' }, reviewer);
+const gap = await r.addObligation(c.id, { statement: 'Already scheduled payments retain their approved destination.', sourceReference: 'Product policy request · PAY-021', sourceVersion: 'Draft 1', criticality: 'HIGH', revisionId: c.revision.id }, author);
+const gs = await r.transitionObligation(gap.id, { action: 'SUBMIT', version: gap.version, revisionId: c.revision.id }, author);
+await r.transitionObligation(gap.id, { action: 'REQUEST_CLARIFICATION', version: gs.version, revisionId: c.revision.id, rationale: 'The product owner must define whether scheduled instructions retain the prior destination.' }, reviewer);
+const accepted = await r.getChange(c.id), oldHistory = await r.getObligationHistory(ob.id);
+const workspace = { applications: await r.listApplications(), changes: await r.listChanges(), activity: await r.listActivity(), storage: 'sqlite', release: '0.3.0', reviewMode: 'independent', capabilities: { registry: true, authorityDecisions: true, changeRevisions: true, verifierExecution: false, evidenceCollection: false, assuranceDisposition: false } };
+const second = await r.createRevision(c.id, { expectedRevisionId: c.revision.id, sourceRevision: 'b'.repeat(40), intent: 'Preserve approval controls in a corrected implementation.', reason: 'The producer supplied a corrected implementation.', copyObligations: true }, author);
+const old = await r.getChange(c.id, c.revision.id);
+writeFileSync(process.env.FIXTURE_OUTPUT ?? '/tmp/qivvera-ui-fixtures.json', JSON.stringify({ author, reviewer, c, ob, pending, accepted, workspace, second, old, oldHistory }, null, 2));
+await r.close();

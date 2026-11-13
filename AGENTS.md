@@ -1,36 +1,37 @@
-# Qivvera development rules
+# Qivvera engineering rules — increment 2 (0.3.0 review candidate)
 
-The founder is the end user/product owner, not the programmer. Deliver working,
-verified increments. Do not use documents or prompts as a substitute for software.
+The founder is the product owner, not the programmer. Deliver working, tested increments.
+Preserve the existing Vercel/PostgreSQL deployment direction. Do not restart the product.
 
 ## Product
-Independent Change Assurance. Change → Obligations → Evidence → Gaps → Disposition.
-Do not build an AI-DLC orchestrator. Keep this project separate from U1/Bugwhistle.
-The Conclave case is a reference fixture, not the platform's scope.
-
-## Truth and controls
-- A new revision never inherits an earlier disposition.
-- Lifecycle, obligation state, evidence applicability, and disposition are separate.
-- Never promote a candidate obligation to authority without an authorized decision.
-- Missing or wrong-target evidence cannot support READY.
-- Keep evidence observations separate from accepted judgments and decisions.
-- Preserve valid counterevidence; do not average a violation away.
-- Exception acceptance never changes an observed violation into support.
-- Keep producer access away from protected policies, verifier configuration and evidence.
-- Do not claim a digest or a separate repository alone establishes independence.
-- Test positive controls as well as negative controls.
-- No fake trust scores, artificial test passes, or simulated results described as live.
+Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
+This increment establishes human acceptance of requirements and revision history. Acceptance is
+NOT evidence that software satisfies a requirement. No verifier or disposition endpoint is enabled.
 
 ## Current implementation
-The core is a provisional internal policy kernel, not an authoritative evidence evaluator.
-Release 0.1 adds a local, single-owner application/change/candidate-obligation registry.
-SQLite is a local review adapter only; the hosted PostgreSQL adapter is not implemented.
-There is a session-protected registry API, but no public assessment or evidence endpoint.
-The registry cannot issue dispositions or approve authority. Do not expose the kernel to
-producer-controlled snapshots. The start script refuses production/public binding.
+The application has a role-protected obligation-review workflow, per-change revisions, decision history,
+shared sessions, and a shared SQL adapter for PostgreSQL and explicit local SQLite. PostgreSQL and
+hosted browser acceptance have not yet been run for this candidate. See docs/increment-2-release.md.
+The prior internal TypeScript policy kernel remains provisional and is not wired to the public API.
 
-## Working method
-Run npm run check. Record actual outcomes and limitations in docs/checkpoint-report.md.
-Keep secrets out of commits. Do not deploy publicly, incur hosting costs, create paid
-services, or attach customer repositories without appropriate authorization.
-Treat remote CI, protected deployment, persistence and rollback as unverified until run.
+## Rules
+- Candidates never become authoritative without a named policy-authority decision and rationale.
+- Require a different recorded content contributor/reviewer in default independent mode.
+- Explicit founder-review mode records same-actor decisions without claiming independence.
+- Historical revisions are read-only through the API. Copying requirements to a new revision creates
+  new candidates, never inherited acceptance, evidence or readiness.
+- An accepted source is a human attestation, not automatically verified source authenticity.
+- Preserve prior obligation text, source version, actors and decisions.
+- Do not invent an author for migrated data; legacy-import candidates require named adoption.
+- No credentials, default accounts, database URLs or raw initialization errors in source/public assets.
+- Hosted storage must fail closed without PostgreSQL; SQLite is explicit local development only.
+- Keep hosted origins exact and cookies secure. Do not restore broad *.vercel.app trust.
+- Database sessions are checked on every request; do not cache authentication across instances.
+- A skipped required suite is NOT release success. Run npm run check:release against a disposable
+  local PostgreSQL database and complete native hosted browser checks before deployment acceptance.
+
+## Publication
+Base: increments at fe5e15f8ae4b1caf58b52b19fed22913ef879a56. This delivery is a local reviewed-source
+candidate, not a remote commit or deployment. An engineer must review it on a separate branch,
+rotate the credentials found in the base, and run the release gates. Do not disable safeguards.
+Do not apply migrations to customer data without the migration/backup review.
