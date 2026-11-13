@@ -48,7 +48,7 @@ async function body(req) {
         reject(new InputError('INVALID_JSON', 'The request is not valid JSON.'));
     } }); req.on('error', reject); req.on('aborted', () => reject(new InputError('REQUEST_ABORTED', 'The request was interrupted.'))); });
 }
-export function createApplicationServer({ repository, accounts, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
+export function createApplicationServer({ repository, assurance = null, accounts, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
     if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin)
         throw new Error('PUBLIC_ORIGIN must be an exact origin.');
     if (secureCookies && !publicOrigin.startsWith('https://'))
@@ -58,8 +58,21 @@ export function createApplicationServer({ repository, accounts, ownerEmail, pass
     // creates the workflow repository and cannot fall back to this adapter.
     const auth = workflow ? createWorkspaceAuth({ accounts: accounts ?? [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], repository, secureCookies }) : createAuth({ ownerEmail, passwordHash, secureCookies });
     const publicSession = s => ({ email: s.email, roles: s.roles ?? ['AUTHOR'], csrfToken: s.csrfToken, reviewMode: workflow ? repository.reviewMode : 'not-available' });
+    const decorate = async change => {
+        if (!change || !assurance) return change;
+        const runs = await assurance.listRuns(change.id, change.revision.id), latest = runs[0];
+        if (!latest) return change;
+        const current = latest.applicability === 'CURRENT';
+        const assessed = current && latest.status === 'COMPLETED' && latest.evidenceIntegrity === 'DIGEST_MATCH';
+        return {...change, assessmentStatus: current ? latest.status : 'NOT_ASSESSED', disposition: assessed ? latest.disposition : null,
+            latestAssessment: {id:latest.id,status:latest.status,applicability:latest.applicability},
+            ...(change.obligations ? {obligations: change.obligations.map(o => {
+                const finding = assessed ? latest.case?.findings.find(f=>f.obligationId===o.id) : null;
+                return {...o,state:finding && finding.state!=='EXCLUDED' ? finding.state : 'NOT_ASSESSED',evidenceCount:finding?.evidenceIds.length??0};
+            })}: {})};
+    };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }
@@ -88,7 +101,7 @@ export function createApplicationServer({ repository, accounts, ownerEmail, pass
                     healthy = await repository.healthy();
                 }
                 catch { }
-                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.3.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
+                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.4.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
             }
             if (req.method === 'GET' && assets.has(path)) {
                 const [a, type] = assets.get(path);
@@ -119,8 +132,26 @@ export function createApplicationServer({ repository, accounts, ownerEmail, pass
                 return json(res, 200, { signedOut: true });
             }
             const actor = workflow ? session : session.email;
+            if (workflow && assurance) {
+                let a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assurance-context$/);
+                if (req.method === 'GET' && a) return json(res,200,await assurance.getContext(a[1],url.searchParams.get('revision')));
+                a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assurance-plan$/);
+                if (req.method === 'POST' && a) return json(res,201,await assurance.approvePlan(a[1],await body(req),session));
+                a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assessments$/);
+                if (req.method === 'POST' && a) return json(res,202,await assurance.requestRun(a[1],await body(req),session));
+                if (req.method === 'GET' && a) return json(res,200,await assurance.listRuns(a[1],url.searchParams.get('revision')));
+                a = path.match(/^\/api\/assessments\/([a-f0-9-]{36})(\/export|\/cancel)?$/);
+                if (a && req.method === 'POST' && a[2] === '/cancel') { fields(await body(req),[]); return json(res,200,await assurance.cancel(a[1],session)); }
+                if (a && req.method === 'GET' && a[2] !== '/cancel') {
+                    const run = await assurance.getRun(a[1]);
+                    if (a[2] === '/export') res.setHeader('Content-Disposition', 'attachment; filename="qivvera-assessment-'+a[1]+'.json"');
+                    return json(res,200,run);
+                }
+                // No worker claim, completion, evidence-upload or arbitrary URL execution endpoint.
+            }
+
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await repository.listChanges(), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: false, evidenceCollection: false, assuranceDisposition: false }, storage: repository.driver ?? 'local-review', release: '0.3.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance }, storage: repository.driver ?? 'local-review', release: '0.4.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());
@@ -143,7 +174,7 @@ export function createApplicationServer({ repository, accounts, ownerEmail, pass
                 const c = await repository.getChange(m[1], url.searchParams.get('revision') || undefined);
                 if (!c)
                     throw new InputError('CHANGE_NOT_FOUND', 'This change was not found.', 404);
-                return json(res, 200, c);
+                return json(res, 200, await decorate(c));
             }
             m = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/obligations$/);
             if (req.method === 'POST' && m)

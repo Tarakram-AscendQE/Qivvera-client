@@ -11,5 +11,5 @@ function walk(dir) { for (const e of readdirSync(dir, { withFileTypes: true })) 
             process.exit(1);
     }
 } }
-for (const d of ['server', 'api', 'scripts', 'web', 'test'])
+for (const d of ['server', 'api', 'scripts', 'web', 'test', 'verifiers', 'fixtures'])
     walk(d);

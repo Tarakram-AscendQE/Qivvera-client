@@ -1,9 +1,9 @@
 {
   "name": "qivvera-foundation",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "Qivvera obligation review and change revision increment",
+  "description": "Qivvera bounded assurance execution, evidence and scoped dispositions",
   "engines": {
     "node": ">=22.16.0 <23"
   },
@@ -11,13 +11,17 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc && node scripts/sync-assets.mjs",
     "check": "node scripts/check-syntax.mjs && npm run typecheck && npm test",
-    "test": "npm run build && node --test test/*.test.mjs",
-    "test:postgres": "REQUIRE_POSTGRES=true node --test test/workflow-postgres.test.mjs",
+    "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
+    "test:postgres": "REQUIRE_POSTGRES=true node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs",
     "start": "node server/start.mjs",
     "start:registry": "node server/start.mjs",
     "migrate": "node scripts/migrate.mjs",
     "check:release": "node scripts/verify-release.mjs",
-    "selfcheck": "node scripts/selfcheck.mjs"
+    "selfcheck": "node scripts/selfcheck.mjs",
+    "worker:once": "node scripts/assurance-worker.mjs --once",
+    "demo:assurance": "node scripts/reference-assurance.mjs",
+    "test:assurance": "node --test test/assurance*.test.mjs",
+    "worker:run": "node scripts/assurance-worker.mjs --poll"
   },
   "dependencies": {
     "pg": "8.23.1"

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "approval-test-1",
+    "name": "Approved synthetic approval environment",
+    "applicationId": "REPLACE_WITH_SAVED_APPLICATION_UUID",
+    "sourceRevision": "REPLACE_WITH_FULL_COMMIT_SHA",
+    "artifactDigest": "REPLACE_WITH_OPERATOR_PINNED_SHA256",
+    "environmentDigest": "REPLACE_WITH_OPERATOR_PINNED_SHA256",
+    "instanceId": "REPLACE_WITH_TEST_INSTANCE_ID",
+    "origin": "https://approval-test.example.invalid",
+    "requesterId": "REPLACE_WITH_REQUESTER_PRINCIPAL",
+    "approverId": "REPLACE_WITH_DIFFERENT_APPROVER_PRINCIPAL",
+    "requesterTokenEnv": "APPROVAL_TEST_REQUESTER_TOKEN",
+    "approverTokenEnv": "APPROVAL_TEST_APPROVER_TOKEN",
+    "bindingStatement": "Describe the operator's approved target and identity binding. This is not independent source/build attestation.",
+    "testOnly": true
+  }
+]

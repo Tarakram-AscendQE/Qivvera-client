@@ -1,49 +1,31 @@
-# Qivvera — Independent Change Assurance
+# Qivvera — Increment 3
 
-## Increment 2 / 0.3.0 review candidate
+**Change → Obligations → Evidence → Gaps → Scope-bound Disposition**
 
-This increment adds requirement acceptance and revision history to the Vercel-deployed registry.
-It preserves the product boundary: **accepting an obligation is not verifying the software**.
+Publication baseline and current release status: see `docs/increment-3-publication.md`.
 
-Users can propose sourced obligations, submit them for review, accept/reject/request clarification,
-inspect prior wording and decision rationale, and register a new change revision. Old revisions remain
-read-only; copied obligations become fresh candidates. Every revision remains NOT ASSESSED with no
-disposition because independent verification is a later increment.
+Version 0.4.0 is an engineering review candidate built on Increment 2 (0.3.0), not a hosted release.
+It adds authority-approved verification mapping, durable assessment requests, a separate worker,
+actual approval-workflow HTTP verification, evidence manifests, current-versus-historical applicability,
+visible gaps, and explainable scoped results. No live application or database was modified by this package.
 
-### Start here
-- `docs/increment-2-release.md`: scope, actual test results, and limitations.
-- `docs/increment-2-engineer.md`: security prerequisites, migration and preview acceptance.
-- `docs/increment-2-contract.md`: routes, state transitions, roles and concurrency rules.
+## Useful commands (engineers, not the founder)
+- `npm ci --ignore-scripts` — clean dependency installation; use the lockfile.
+- `npm run selfcheck` — metadata/pin checks, not installation evidence.
+- `npm run check` — regression, domain, API and local verifier tests; skipped PostgreSQL suites are reported.
+- `npm run check:release` — fail closed unless the mandatory real database suites can run.
+- `npm run demo:assurance` — actual local HTTP app + separate target and worker processes, synthetic data.
+- `npm run migrate` — explicitly authorized database migration; never part of hosted build/start.
+- `npm run worker:once` / `npm run worker:run` — separate worker, approved config and credentials required.
 
-### Engineering checks
-Use Node 22 and the lockfile. In an environment with package-registry access:
+Read `docs/increment-3-contract.md`, `docs/increment-3-engineer.md`, and `docs/increment-3-release.md`.
+The current supported target API is `qivvera.approval-http/1`. Existing applications need a compatible
+interface or reviewed adapter; registration does not automatically make them verifiable.
 
-```sh
-npm ci --ignore-scripts
-npm run selfcheck
-npm run check
-```
-`npm run check` can explicitly skip the PostgreSQL suite if no test database is configured. It is a
-local development check, NOT a release approval. The required release command is:
+The profile keeps every non-rejected obligation in scope. Only one explicit mapping is executable in this
+increment. Other material obligations remain gaps. READY never means universally safe. Target-reported
+identity is not an independently attested source/build chain, and database history is not immutable against
+administrators. A later pass cannot erase an earlier valid counterexample for identical inputs.
 
-```sh
-npm run check:release
-```
-It fails without `TEST_DATABASE_URL`; use a disposable loopback PostgreSQL database named
-`qivvera_test_*`. That suite intentionally resets test tables. Never provide a customer database.
-
-### Data and authentication
-Hosted execution requires PostgreSQL, an exact HTTPS origin, and explicitly configured named accounts.
-Run `npm run migrate` with approved database secrets before starting the hosted application. Migration
-is not performed implicitly on every function startup. SQLite is available only in explicit local mode.
-
-Preferred account configuration is `QIVVERA_ACCOUNTS_JSON`, an array of email/passwordHash/roles,
-held in secret settings. Valid roles: AUTHOR, POLICY_AUTHORITY, VIEWER. The default review mode requires
-a different recorded reviewer identity. There are no shipped default accounts or passwords.
-
-`npm start` starts the real registry. `web/` is canonical; `npm run build` copies its assets into `public/`.
-The Dockerfile is an alternative deployment path and is not certified by the Vercel/local test results.
-
-### Status
-Local regression and workflow tests passed; real PostgreSQL, a clean dependency install, native browser
-E2E, Vercel deployment and recovery acceptance remain required. Do not label this a hosted release yet.
+Vercel serves the product API/UI. An authorized separately supervised process executes the worker.
+No worker hosting, extra paid service, public deployment or infrastructure account is created here.

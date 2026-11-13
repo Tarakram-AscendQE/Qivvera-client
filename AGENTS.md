@@ -1,37 +1,32 @@
-# Qivvera engineering rules — increment 2 (0.3.0 review candidate)
+# Qivvera engineering rules — Increment 3 (0.4.0 review candidate)
 
-The founder is the product owner, not the programmer. Deliver working, tested increments.
-Preserve the existing Vercel/PostgreSQL deployment direction. Do not restart the product.
+The founder is product owner/end user, not programmer or deployment operator. Preserve the working
+Vercel/PostgreSQL direction. Continue from the reviewed Increment 2 package; do not rebuild the product.
 
-## Product
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
-This increment establishes human acceptance of requirements and revision history. Acceptance is
-NOT evidence that software satisfies a requirement. No verifier or disposition endpoint is enabled.
+Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
+HTTP verifier now runs in a separate process with an operator-pinned target catalogue. No arbitrary code,
+user-provided URL, universal obligation discovery, or production release certification is implemented.
 
-## Current implementation
-The application has a role-protected obligation-review workflow, per-change revisions, decision history,
-shared sessions, and a shared SQL adapter for PostgreSQL and explicit local SQLite. PostgreSQL and
-hosted browser acceptance have not yet been run for this candidate. See docs/increment-2-release.md.
-The prior internal TypeScript policy kernel remains provisional and is not wired to the public API.
+## Invariants
+- Every plan/run snapshots the revision, obligation versions and authority, profile, target and verifier.
+- No old revision's disposition transfers. Changed inputs make previous evidence stale, not deleted.
+- All non-rejected obligations stay mandatory. Unaccepted/unmapped requirements are gaps, not passes.
+- A later passing run does not erase a valid prior counterexample for the same target/obligation context.
+- Queued/running/failed/cancelled assessments have no disposition. Expired leases cannot accept results.
+- Only a protected worker stores evidence; there is no client-facing completion or evidence-upload route.
+- Candidate acceptance, proposer/reviewer separation, source version and immutable-through-API history
+  from Increment 2 remain. Founder-review mode never claims independent human approval.
+- Network egress is operator-configured and fixed-path. No redirects, arbitrary destinations or TLS bypass.
+- Target identity matching is operator-pinned + target-reported, not an independently trusted attestation.
+- SHA-256 identity is not a signature, trusted timestamp, or protection from database administrators.
+- Synthetic reference faults are deliberate tests, not authentic AI-generated defects.
+- No secrets/default accounts in Git or assets. Hosted storage cannot fall back to SQLite.
+- Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
-## Rules
-- Candidates never become authoritative without a named policy-authority decision and rationale.
-- Require a different recorded content contributor/reviewer in default independent mode.
-- Explicit founder-review mode records same-actor decisions without claiming independence.
-- Historical revisions are read-only through the API. Copying requirements to a new revision creates
-  new candidates, never inherited acceptance, evidence or readiness.
-- An accepted source is a human attestation, not automatically verified source authenticity.
-- Preserve prior obligation text, source version, actors and decisions.
-- Do not invent an author for migrated data; legacy-import candidates require named adoption.
-- No credentials, default accounts, database URLs or raw initialization errors in source/public assets.
-- Hosted storage must fail closed without PostgreSQL; SQLite is explicit local development only.
-- Keep hosted origins exact and cookies secure. Do not restore broad *.vercel.app trust.
-- Database sessions are checked on every request; do not cache authentication across instances.
-- A skipped required suite is NOT release success. Run npm run check:release against a disposable
-  local PostgreSQL database and complete native hosted browser checks before deployment acceptance.
-
-## Publication
-Base: increments at fe5e15f8ae4b1caf58b52b19fed22913ef879a56. This delivery is a local reviewed-source
-candidate, not a remote commit or deployment. An engineer must review it on a separate branch,
-rotate the credentials found in the base, and run the release gates. Do not disable safeguards.
-Do not apply migrations to customer data without the migration/backup review.
+## Delivery
+Read docs/increment-3-contract.md and docs/increment-3-engineer.md. Run npm run check and
+npm run demo:assurance. npm run check:release requires a disposable real local PostgreSQL database.
+Native HTTPS/Vercel browser acceptance, clean install and recovery are separate mandatory gates.
+Do not equate skipped suites or screenshots with deployed verification. Do not alter live resources,
+credentials, databases, account settings or costs without the appropriate authorization.

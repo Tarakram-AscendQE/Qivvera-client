@@ -1,7 +1,7 @@
-name: Qivvera obligation and revision checks
+name: Qivvera authority, revision and assurance checks
 on:
   push:
-    branches: [main, increments]
+    branches: [main, increments, increment3]
   pull_request:
 permissions:
   contents: read
@@ -37,6 +37,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: node scripts/selfcheck.mjs
       - run: npm run check:release
+      - name: Real local HTTP and separate-process reference execution
+        run: npm run demo:assurance
       - name: Canonical assets remain in sync
         run: git diff --exit-code -- public/
 # No deploy, secret provisioning, production database access or paid resource creation.

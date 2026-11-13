@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {setup} from './assurance-helpers.mjs';
+import {executeApprovalSeparation} from '../verifiers/approval-separation.mjs';
+import {permittedAddress} from '../verifiers/transport.mjs';
+import {digest} from '../server/assurance/contracts.mjs';
+for(const [mode,state,disposition] of [['correct','SUPPORTED','READY'],['self-approval-defect','VIOLATED','NOT_READY'],['deny-but-mutate','VIOLATED','NOT_READY'],['reject-all','INSUFFICIENT','INDETERMINATE'],['unavailable','INSUFFICIENT','INDETERMINATE'],['malformed','INSUFFICIENT','INDETERMINATE'],['redirect','INSUFFICIENT','INDETERMINATE'],['changing-identity','INSUFFICIENT','INDETERMINATE']]){
+ test(`real HTTP target ${mode}: ${state}, ${disposition}`,async t=>{const h=await setup(t,{mode});const r=await h.run();assert.equal(r.status,'COMPLETED');assert.equal(r.evidence.report.outcome,state);assert.equal(r.disposition,disposition);assert.equal(r.evidenceIntegrity,'DIGEST_MATCH');assert.equal(r.evidenceDigest,digest(r.evidence));assert.ok(!JSON.stringify(r).includes(h.makerToken));assert.ok(!JSON.stringify(r).includes(h.checkerToken));});
+}
+test('wrong target revision does not produce supporting evidence',async t=>{const h=await setup(t);const r=await executeApprovalSeparation({...h.target,sourceRevision:'b'.repeat(40)},{requesterToken:h.makerToken,approverToken:h.checkerToken,allowLoopback:true});assert.equal(r.outcome,'INSUFFICIENT');assert.equal(r.observations.length,1);});
+test('invalid requester credentials cannot look like correct rejection',async t=>{const h=await setup(t);const r=await executeApprovalSeparation(h.target,{requesterToken:'invalid-test-token-0000',approverToken:h.checkerToken,allowLoopback:true});assert.equal(r.outcome,'INSUFFICIENT');});
+test('positive control must authenticate as the configured different person',async t=>{const h=await setup(t);const r=await executeApprovalSeparation(h.target,{requesterToken:h.makerToken,approverToken:h.makerToken,allowLoopback:true});assert.equal(r.outcome,'INSUFFICIENT');assert.equal(r.controls.positive,false);});
+test('correct target records actual state observations and both controls',async t=>{const h=await setup(t);const r=await h.run();assert.equal(r.evidence.report.controls.negative,true);assert.equal(r.evidence.report.controls.positive,true);assert.ok(r.evidence.report.observations.some(o=>o.step==='read state after self-approval'&&o.observed.status==='PENDING'));assert.ok(r.evidence.report.observations.some(o=>o.step==='read positive control state'&&o.observed.status==='APPROVED'));});
+for(const address of ['127.0.0.1','10.0.0.1','169.254.169.254','172.16.2.1','192.168.1.1','100.64.1.1','::1','0.0.0.0','224.0.0.1','198.18.0.1','192.0.2.1'])test(`transport denies non-public address ${address}`,()=>assert.equal(permittedAddress(address),false));
+test('explicit local reference mode only permits loopback exception',()=>{assert.equal(permittedAddress('127.0.0.1',{allowLoopback:true}),true);assert.equal(permittedAddress('169.254.169.254',{allowLoopback:true}),false);assert.equal(permittedAddress('1.1.1.1'),true);});

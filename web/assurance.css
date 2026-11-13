@@ -1,0 +1,20 @@
+.finding-bad{background:#fff1f0!important;color:#9d2530!important;border-color:#efc1c5!important}
+.finding-good{background:#edf8f2!important;color:#205f44!important;border-color:#b4d8c4!important}
+.finding-gap{background:#fff7e8!important;color:#80551c!important;border-color:#e6d0a5!important}
+.run-card{padding:16px 0;border-bottom:1px solid #e0e7ee;overflow-wrap:anywhere}
+.run-card:last-child{border-bottom:0}
+.run-card h4{margin:12px 0 6px;font-size:16px;line-height:1.5}
+.run-card .link-button{margin:6px 12px 0 0}
+.assurance-case{max-height:78vh;overflow:auto}
+.assurance-case h3{margin:26px 0 12px}
+.observation{margin:9px 0;border:1px solid #dce5ed;border-radius:8px;padding:12px;background:#fafcfe}
+.observation summary{cursor:pointer;font-weight:600;line-height:1.5}
+.observation-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+.observation pre{font-size:12px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:0}
+.boundary{display:grid;grid-template-columns:135px minmax(0,1fr);gap:10px;font-size:12px;line-height:1.55}
+.boundary dt{color:#64748b}.boundary dd{margin:0;overflow-wrap:anywhere}
+.acknowledge{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5;margin:20px 0}
+.acknowledge input{width:18px!important;flex:0 0 18px;margin-top:2px}
+.status-panel p{max-width:700px}
+.tabs{overflow-x:auto}
+@media(max-width:650px){.observation-grid{grid-template-columns:1fr}.boundary{grid-template-columns:1fr;gap:4px}.boundary dd{margin-bottom:12px}.run-card .chip-row{flex-wrap:wrap}.status-panel{display:block}.status-panel .chip-row{margin-top:16px}}
