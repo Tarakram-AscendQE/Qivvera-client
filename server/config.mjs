@@ -21,18 +21,14 @@ export function normalizeOrigin(value, { hosted = true } = {}) {
     return u.origin;
 }
 function ownerHash(env) {
-    if (env.OWNER_PASSWORD_HASH) {
-        const trimmed = env.OWNER_PASSWORD_HASH.trim().replace(/^["']|["']$/g, '');
-        validatePasswordHash(trimmed);
-        return trimmed;
-    }
-    if (!env.OWNER_PASSWORD)
+    const raw = (env.OWNER_PASSWORD_HASH || env.OWNER_PASSWORD || '').trim().replace(/^["']|["']$/g, '');
+    if (!raw)
         throw new Error('OWNER_CREDENTIAL_REQUIRED');
-    const pwd = env.OWNER_PASSWORD.trim().replace(/^["']|["']$/g, '');
-    if (pwd.length < 16 || pwd.length > 256)
-        throw new Error('OWNER_PASSWORD_LENGTH_INVALID');
+    if (/^scrypt:[a-f0-9]{32}:[a-f0-9]{128}$/.test(raw)) {
+        return raw;
+    }
     const salt = (env.OWNER_PASSWORD_SALT || 'f07b5fc4f5e96ecda7346566ff5fe913').trim();
-    return `scrypt:${salt}:${scryptSync(pwd, salt, 64).toString('hex')}`;
+    return `scrypt:${salt}:${scryptSync(raw, salt, 64).toString('hex')}`;
 }
 export function loadConfig(env = process.env) {
     const hosted = env.VERCEL === '1' || env.NODE_ENV === 'production';
