@@ -16,4 +16,4 @@ try{
   if(closing)return;closing=true;const timer=setTimeout(()=>process.exit(1),10000);timer.unref();
   server.close(async()=>{await assurance?.close();await repository.close();process.exit(0);});
  });
-}catch{console.error('QIVVERA_STARTUP_FAILED: verify protected configuration and migrations.');await assurance?.close();await repository?.close();process.exitCode=1;}
+}catch(err){console.error('QIVVERA_STARTUP_FAILED:', err?.stack || err?.message || err);await assurance?.close();await repository?.close();process.exitCode=1;}

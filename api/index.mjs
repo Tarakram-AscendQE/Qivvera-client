@@ -17,6 +17,6 @@ async function getHandler(){
  })().catch(e=>{initialising=undefined;throw e;});
  return initialising;
 }
-export default async function handler(req,res){try{return await(await getHandler())(req,res);}catch{
- console.error('QIVVERA_FUNCTION_INITIALISATION_FAILED');res.statusCode=503;res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.end(JSON.stringify({error:'SERVICE_UNAVAILABLE',message:'The workspace is unavailable. Contact the deployment owner.'}));
+export default async function handler(req,res){try{return await(await getHandler())(req,res);}catch(err){
+ console.error('QIVVERA_FUNCTION_INITIALISATION_FAILED:', err?.stack || err?.message || err);res.statusCode=503;res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.end(JSON.stringify({error:'SERVICE_UNAVAILABLE',message:'The workspace is unavailable. Contact the deployment owner.',detail:err?.message}));
 }}
