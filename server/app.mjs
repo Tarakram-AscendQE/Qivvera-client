@@ -48,7 +48,7 @@ async function body(req) {
         reject(new InputError('INVALID_JSON', 'The request is not valid JSON.'));
     } }); req.on('error', reject); req.on('aborted', () => reject(new InputError('REQUEST_ABORTED', 'The request was interrupted.'))); });
 }
-export function createApplicationServer({ repository, assurance = null, accounts, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
+export function createApplicationServer({ repository, assurance = null, resolution = null, accounts, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
     if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin)
         throw new Error('PUBLIC_ORIGIN must be an exact origin.');
     if (secureCookies && !publicOrigin.startsWith('https://'))
@@ -72,7 +72,7 @@ export function createApplicationServer({ repository, assurance = null, accounts
             })}: {})};
     };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }
@@ -101,7 +101,7 @@ export function createApplicationServer({ repository, assurance = null, accounts
                     healthy = await repository.healthy();
                 }
                 catch { }
-                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.4.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
+                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.5.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
             }
             if (req.method === 'GET' && assets.has(path)) {
                 const [a, type] = assets.get(path);
@@ -150,8 +150,25 @@ export function createApplicationServer({ repository, assurance = null, accounts
                 // No worker claim, completion, evidence-upload or arbitrary URL execution endpoint.
             }
 
+            if (workflow && resolution) {
+                const page = () => ({offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??50)});
+                if (req.method === 'GET' && path === '/api/resolution-assignees') return json(res,200,await resolution.listAssignees());
+                if (req.method === 'GET' && path === '/api/resolutions') return json(res,200,await resolution.list(page()));
+                let m=path.match(/^\/api\/changes\/([a-f0-9-]{36})\/resolutions$/);
+                if(m&&req.method==='GET')return json(res,200,await resolution.list({changeId:m[1],...page()}));
+                m=path.match(/^\/api\/assessments\/([a-f0-9-]{36})\/resolutions$/);
+                if(m&&req.method==='POST'){const created=await resolution.create(m[1],await body(req),session);return json(res,created.replayed?200:201,created);}
+                m=path.match(/^\/api\/resolutions\/([a-f0-9-]{36})(\/actions|\/export)?$/);
+                if(m&&m[2]==='/actions'&&req.method==='POST')return json(res,200,await resolution.act(m[1],await body(req),session));
+                if(m&&req.method==='GET'&&m[2]!=='/actions'){
+                    if(m[2]==='/export'){res.setHeader('Content-Disposition','attachment; filename="qivvera-resolution-'+m[1]+'.json"');return json(res,200,await resolution.export(m[1]));}
+                    return json(res,200,await resolution.get(m[1]));
+                }
+                // There is deliberately no resolve-by-status, waive, evidence-delete or verdict-edit route.
+            }
+
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance }, storage: repository.driver ?? 'local-review', release: '0.4.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution }, storage: repository.driver ?? 'local-review', release: '0.5.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());

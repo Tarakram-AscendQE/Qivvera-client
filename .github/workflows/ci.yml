@@ -1,7 +1,7 @@
-name: Qivvera authority, revision and assurance checks
+name: Qivvera authority, assurance and resolution checks
 on:
   push:
-    branches: [main, increments, increment3]
+    branches: [main, increments, increment3, increment4]
   pull_request:
 permissions:
   contents: read
@@ -39,6 +39,8 @@ jobs:
       - run: npm run check:release
       - name: Real local HTTP and separate-process reference execution
         run: npm run demo:assurance
+      - name: Resolution reference journey
+        run: npm run demo:resolution
       - name: Canonical assets remain in sync
         run: git diff --exit-code -- public/
 # No deploy, secret provisioning, production database access or paid resource creation.

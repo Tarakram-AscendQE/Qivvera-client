@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 3 (0.4.0 review candidate)
+# Qivvera engineering rules — Increment 4 (0.5.0 review candidate)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from the reviewed Increment 2 package; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from the verified Increment 3 source; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -30,3 +30,11 @@ npm run demo:assurance. npm run check:release requires a disposable real local P
 Native HTTPS/Vercel browser acceptance, clean install and recovery are separate mandatory gates.
 Do not equate skipped suites or screenshots with deployed verification. Do not alter live resources,
 credentials, databases, account settings or costs without the appropriate authorization.
+
+## Resolution invariants
+- Original observations/dispositions never change when a task is updated, challenged or resolved.
+- A violation requires a new declared source/artifact plus fresh evidence of the related requirement.
+- Closing an item is a separate reviewed decision, not a release acceptance or a waiver.
+- Changed requirements/verifiers cannot silently substitute for proof of the original correction.
+- History, contributor checks, challenge freshness, and current applicability must remain visible.
+- Prefer the Increment 4 contract and handoff for new work; older release reports remain historical.
