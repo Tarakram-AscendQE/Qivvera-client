@@ -1,8 +1,9 @@
+import {validateTargets as validateCatalogue,mappingOf,sameExecutionContract} from '../assurance/generalization.mjs';
 /** Finding resolution. No operation writes an assessment, plan, obligation or evidence row. */
 import {randomUUID} from 'node:crypto';
 import {openDatabase} from '../workflow-store.mjs';
 import {InputError,fields,text,identifier,version,actorEmail,requireRole} from '../workflow-input.mjs';
-import {canonical,digest,validateCatalogue,fullRevision} from '../assurance/contracts.mjs';
+import {canonical,digest,fullRevision} from '../assurance/contracts.mjs';
 import {createAssuranceReadModel} from '../assurance/read-model.mjs';
 import {migrateResolution,requireResolution} from './migration.mjs';
 import {directoryOf,reason,kindOf,sameExpectation,expectationOf,RESOLUTION_NOTICE} from './contracts.mjs';
@@ -86,10 +87,10 @@ export async function openResolutionRepository(options={}){
       if(candidate.status!=='COMPLETED')add('COMPLETED_REASSESSMENT_REQUIRED','Wait for an actual completed reassessment, not a queued, failed or cancelled run.');
       if(candidate.evidenceIntegrity!=='DIGEST_MATCH')add('VALID_EVIDENCE_REQUIRED','The reassessment evidence and referenced counterevidence must pass integrity checks.');
       if(candidate.applicability!=='CURRENT')add('CURRENT_EVIDENCE_REQUIRED','The reassessment no longer applies to the current scope, mapping, revision or target.');
-      if(candidate.snapshot.mapping.obligationId!==r.correction_obligation_id)add('MAPPED_REQUIREMENT_REQUIRED','This run did not execute verification for the correction requirement.');
+      if(!mappingOf(candidate.snapshot,r.correction_obligation_id))add('MAPPED_REQUIREMENT_REQUIRED','This run did not execute verification for the correction requirement.');
       finding=candidate.case?.findings.find(f=>f.obligationId===r.correction_obligation_id)??null;
       if(finding?.state!=='SUPPORTED')add('SUPPORTED_FINDING_REQUIRED','The linked requirement is not supported. A prior counterexample or gap cannot be waived here.');
-      if(candidate.snapshot.verifier.digest!==sourceRun.snapshot.verifier.digest||candidate.snapshot.profileDigest!==sourceRun.snapshot.profileDigest)add('VERIFICATION_CONTRACT_CHANGED','A changed verifier or profile requires separate qualification; it cannot establish this correction automatically.');
+      if(!sameExecutionContract(sourceRun.snapshot,candidate.snapshot,r.source_obligation_id,r.correction_obligation_id))add('VERIFICATION_CONTRACT_CHANGED','A changed verifier or profile requires separate qualification; it cannot establish this correction automatically.');
       const latest=(await c.query('SELECT id FROM assurance_runs WHERE revision_id=$1 ORDER BY run_number DESC LIMIT 1',[candidate.revisionId])).rows[0];
       if(latest?.id!==candidate.id)add('NEWER_ASSESSMENT_EXISTS','Review the latest assessment. Older passing evidence cannot mask a later run.');
       if((await c.query("SELECT id FROM assurance_runs WHERE change_id=$1 AND status IN ('QUEUED','RUNNING')",[r.change_id])).rows.length)add('ASSESSMENT_IN_PROGRESS','Wait for queued or running verification before confirming resolution.');
@@ -121,7 +122,7 @@ export async function openResolutionRepository(options={}){
         if(!obligation)fail('SOURCE_OBLIGATION_REQUIRED','The requirement is not in this assessment.',400);
         if(!['COMPLETED','FAILED'].includes(sourceRun.status))fail('TERMINAL_ASSESSMENT_REQUIRED','Only a completed finding or failed assessment can open a resolution.');
         if(sourceRun.status==='COMPLETED'&&sourceRun.evidenceIntegrity!=='DIGEST_MATCH')fail('SOURCE_EVIDENCE_INVALID','Restore or investigate missing/invalid evidence before creating a verified finding resolution.');
-        if(sourceRun.status==='FAILED'&&sourceRun.snapshot.mapping.obligationId!==obligationId)fail('SOURCE_OBLIGATION_REQUIRED','Use the planned obligation for this execution failure.',400);
+        if(sourceRun.status==='FAILED'&&!mappingOf(sourceRun.snapshot,obligationId))fail('SOURCE_OBLIGATION_REQUIRED','Use the planned obligation for this execution failure.',400);
         const finding=sourceRun.case?.findings.find(f=>f.obligationId===obligationId)??{obligationId,state:'NOT_ASSESSED',statement:obligation.statement,reason:sourceRun.failureCode};
         const kind=kindOf(finding,sourceRun.status),id=randomUUID(),time=stamp(now());
         const source={schema:'qivvera.resolution-source/1',runId,obligation, finding,assessmentSnapshotDigest:digest(sourceRun.snapshot),evidenceDigest:sourceRun.evidenceDigest,disposition:sourceRun.disposition,target:sourceRun.snapshot.target,createdFromStatus:sourceRun.status};
@@ -162,7 +163,7 @@ export async function openResolutionRepository(options={}){
         if(action==='LINK_ASSESSMENT'){
           if(r.status!=='AWAITING_REASSESSMENT')fail('CORRECTION_REQUIRED','Propose the correction before linking its reassessment.');
           const selected=await run(c,identifier(input.runId));
-          if(selected.changeId!==r.change_id||selected.revisionId!==r.correction_revision_id||selected.snapshot.mapping.obligationId!==r.correction_obligation_id)fail('REASSESSMENT_SCOPE_MISMATCH','Choose a run of this correction revision and its mapped requirement.');
+          if(selected.changeId!==r.change_id||selected.revisionId!==r.correction_revision_id||!mappingOf(selected.snapshot,r.correction_obligation_id))fail('REASSESSMENT_SCOPE_MISMATCH','Choose a run of this correction revision and its mapped requirement.');
           if(selected.id===r.source_run_id||selected.number<=Number(r.correction_run_floor??0)||Date.parse(selected.queuedAt)<Date.parse(r.correction_proposed_at))fail('FRESH_REASSESSMENT_REQUIRED','Request fresh assurance after proposing the correction.');
           patch={linked_run_id:selected.id};
         }

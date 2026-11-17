@@ -1,16 +1,19 @@
+import {migrateIntake,requireIntake} from '../intake/migration.mjs';
 /** Durable run coordination. Worker mutations are not exposed by any HTTP endpoint. */
 import {createAssuranceReadModel} from './read-model.mjs';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {openDatabase} from '../workflow-store.mjs';
 import {InputError,fields,text,identifier,actorEmail,requireRole} from '../workflow-input.mjs';
 import {migrateAssurance,requireAssurance} from './migration.mjs';
-import {canonical,digest,PROFILE,verifierDigest,validateCatalogue,publicTarget,scopeOf,fullRevision,deriveCase,comparisonKey} from './contracts.mjs';
+import {canonical,digest,PROFILE,verifierDigest,publicTarget,scopeOf,fullRevision} from './contracts.mjs';
+import {CHECKS,PROFILE_V2,isV2,validateTargets as validateCatalogue,verificationIdentity,mappingsOf,mappedKey,reportFor,validateReport,deriveAssessment as deriveCase} from './generalization.mjs';
 const fail=(code,message,status=409)=>{throw new InputError(code,message,status);};
 const stamp=n=>new Date(n).toISOString();
 export async function openAssuranceRepository(options={}) {
   const db=await openDatabase(options);
   try{ if(options.migrate) await migrateAssurance(db); else await requireAssurance(db); }
   catch(e){await db.close();throw e;}
+  if(options.generalizationEnabled){try{if(options.migrate)await migrateIntake(db);else await requireIntake(db);}catch(e){await db.close();throw e;}}
   const catalogue=validateCatalogue(options.targets??[],{local:options.allowLocalTargets===true});
   const localDigest=verifierDigest();
   const now=options.now??Date.now;
@@ -25,13 +28,20 @@ export async function openAssuranceRepository(options={}) {
     close:()=>db.close(),healthy:()=>db.healthy(),enabled:catalogue.length>0,
     async getContext(changeId,revisionId){
       return read(async c=>{const ctx=await context(c,changeId,revisionId);const plan=await latestPlan(c,revisionId);
-        return {scope:ctx.scope,scopeDigest:ctx.scopeDigest,isCurrent:ctx.isCurrent,profile:PROFILE,targets:catalogue.filter(t=>t.applicationId===ctx.change.application_id&&t.sourceRevision===ctx.revision.source_revision).map(publicTarget),
+        return {scope:ctx.scope,scopeDigest:ctx.scopeDigest,isCurrent:ctx.isCurrent,profile:PROFILE,profiles:options.generalizationEnabled?[PROFILE,PROFILE_V2]:[PROFILE],checks:options.generalizationEnabled?CHECKS:[],targets:catalogue.filter(t=>t.applicationId===ctx.change.application_id&&t.sourceRevision===ctx.revision.source_revision).map(publicTarget),
           plan:plan?{id:plan.id,version:Number(plan.version),approvedBy:plan.approved_by,rationale:plan.rationale,createdAt:plan.created_at,current:validPlan(plan,ctx),snapshot:JSON.parse(plan.snapshot)}:null};
       });
     },
     async approvePlan(changeId,input,actor){
-      requireRole(actor,'POLICY_AUTHORITY');fields(input,['revisionId','scopeDigest','expectedPlanVersion','obligationId','targetId','rationale','acknowledgeLimits']);
-      identifier(input.revisionId);identifier(input.obligationId);
+      requireRole(actor,'POLICY_AUTHORITY');fields(input,['revisionId','scopeDigest','expectedPlanVersion','obligationId','targetId','rationale','acknowledgeLimits','mappings']);
+      identifier(input.revisionId);
+      const multi=Object.hasOwn(input,'mappings');
+      if(multi){
+        if(!options.generalizationEnabled)fail('GENERALIZATION_DISABLED','Multi-obligation execution requires the enabled feature and schema 5.',400);
+        if(input.obligationId!==undefined||!Array.isArray(input.mappings)||input.mappings.length<1||input.mappings.length>2)fail('INVALID_MAPPINGS','Choose one or two distinct supported checks.',400);
+        const ids=new Set(),checks=new Set();
+        for(const m of input.mappings){fields(m,['obligationId','checkId','rationale']);identifier(m.obligationId);text(m.rationale,'Mapping rationale',2000);if(m.rationale.trim().length<10||ids.has(m.obligationId)||checks.has(m.checkId)||!CHECKS.some(c=>c.id===m.checkId))fail('INVALID_MAPPINGS','Use distinct accepted obligations and supported checks with meaningful reasons.',400);ids.add(m.obligationId);checks.add(m.checkId);}
+      }else identifier(input.obligationId);
       if(!Number.isInteger(input.expectedPlanVersion)||input.expectedPlanVersion<0)fail('PLAN_VERSION_REQUIRED','Reload the assurance plan before changing it.',400);
       if(input.acknowledgeLimits!==true)fail('SCOPE_ACKNOWLEDGEMENT_REQUIRED','Confirm the declared scope, mapping and limitations.',400);
       const rationale=text(input.rationale,'Mapping rationale',2000);if(rationale.length<10)fail('REASON_REQUIRED','Explain why this check supports the mapped obligation.',400);
@@ -41,15 +51,19 @@ export async function openAssuranceRepository(options={}) {
         if(input.scopeDigest!==ctx.scopeDigest)fail('SCOPE_CHANGED','Obligations changed. Reload before approving a plan.');
         fullRevision(ctx.revision.source_revision);
         const old=await latestPlan(c,input.revisionId);if(Number(old?.version??0)!==input.expectedPlanVersion)fail('PLAN_CONFLICT','A newer plan exists. Reload.');
-        const o=ctx.obligations.find(x=>x.id===input.obligationId);
-        if(!o||o.review_state!=='ACCEPTED')fail('ACCEPTED_OBLIGATION_REQUIRED','Map an accepted obligation on this revision.',400);
-        const accepted=(await c.query("SELECT * FROM obligation_history WHERE obligation_id=$1 AND version=$2 AND action='ACCEPT'",[o.id,o.version])).rows[0];
-        if(!accepted)fail('ACCEPTANCE_RECORD_REQUIRED','No matching acceptance decision is available.');
         const t=catalogue.find(x=>x.id===input.targetId);
-        if(!t||t.applicationId!==ctx.change.application_id||t.sourceRevision!==ctx.revision.source_revision)fail('TARGET_NOT_APPROVED','Choose an operator-configured target matching this application and full source revision.',400);
-        const snapshot={schema:'qivvera.assurance-plan/1',scope:ctx.scope,scopeDigest:ctx.scopeDigest,profile:PROFILE,profileDigest:digest(PROFILE),target:publicTarget(t),
-          mapping:{obligationId:o.id,obligationVersion:Number(o.version),acceptanceDecisionId:accepted.id,acceptedBy:accepted.actor,independentReviewer:!!Number(accepted.independent_actor),rationale},
-          verifier:{id:PROFILE.verifierId,version:PROFILE.verifierVersion,digest:localDigest}};
+        if(!t||t.applicationId!==ctx.change.application_id||t.sourceRevision!==ctx.revision.source_revision)fail('TARGET_NOT_APPROVED','Choose a configured target matching this application and full source revision.',400);
+        if(!multi&&t.adapterId&&t.adapterId!=='approval-v1')fail('MULTI_PROFILE_REQUIRED','This adapter requires the version 2 plan.',400);
+        const mappings=[];
+        for(const chosen of multi?input.mappings:[{obligationId:input.obligationId,rationale}]){
+          const o=ctx.obligations.find(x=>x.id===chosen.obligationId);
+          if(!o||o.review_state!=='ACCEPTED')fail('ACCEPTED_OBLIGATION_REQUIRED','Map accepted obligations on this revision.',400);
+          const accepted=(await c.query("SELECT * FROM obligation_history WHERE obligation_id=$1 AND version=$2 AND action='ACCEPT'",[o.id,o.version])).rows[0];
+          if(!accepted)fail('ACCEPTANCE_RECORD_REQUIRED','No matching acceptance decision is available.');
+          mappings.push({obligationId:o.id,obligationVersion:Number(o.version),acceptanceDecisionId:accepted.id,acceptedBy:accepted.actor,independentReviewer:!!Number(accepted.independent_actor),rationale:chosen.rationale.trim(),...(multi?{checkId:chosen.checkId,verifier:verificationIdentity(chosen.checkId,t.adapterId??'approval-v1')}:{})});
+        }
+        const snapshot=multi?{schema:'qivvera.assurance-plan/2',scope:ctx.scope,scopeDigest:ctx.scopeDigest,profile:PROFILE_V2,profileDigest:digest(PROFILE_V2),target:publicTarget(t),mappings:mappings.sort((a,b)=>a.obligationId.localeCompare(b.obligationId))}:
+          {schema:'qivvera.assurance-plan/1',scope:ctx.scope,scopeDigest:ctx.scopeDigest,profile:PROFILE,profileDigest:digest(PROFILE),target:publicTarget(t),mapping:mappings[0],verifier:{id:PROFILE.verifierId,version:PROFILE.verifierVersion,digest:localDigest}};
         const id=randomUUID(),v=Number(old?.version??0)+1;
         await c.query('INSERT INTO assurance_plans(id,change_id,revision_id,version,scope_digest,snapshot,approved_by,rationale,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[id,changeId,input.revisionId,v,ctx.scopeDigest,canonical(snapshot),email,rationale,stamp(now())]);
         await audit(c,email,'ASSURANCE_PLAN_APPROVED',changeId,`Approved plan ${v}; all non-rejected obligations retained in scope.`);
@@ -68,7 +82,7 @@ export async function openAssuranceRepository(options={}) {
         await expire(c);
         if(!ctx.isCurrent)fail('REVISION_CONFLICT','Assess the current revision.');
         const plan=await latestPlan(c,input.revisionId);
-        if(plan?.id!==input.planId||!validPlan(plan,ctx))fail('CURRENT_APPROVED_PLAN_REQUIRED','The plan or target changed. Obtain a current mapping decision.');
+        if(plan?.id!==input.planId||!validPlan(plan,ctx)||isV2(JSON.parse(plan.snapshot))&&!options.generalizationEnabled)fail('CURRENT_APPROVED_PLAN_REQUIRED','The plan or target changed. Obtain a current mapping decision.');
         if((await c.query("SELECT id FROM assurance_runs WHERE change_id=$1 AND status IN ('QUEUED','RUNNING')",[changeId])).rows.length)fail('ASSESSMENT_ACTIVE','An assessment is already queued or running.');
         const count=(await c.query("SELECT COUNT(*) AS n FROM assurance_runs WHERE status IN ('QUEUED','RUNNING')")).rows[0];
         if(Number(count.n)>=32)fail('QUEUE_CAPACITY','The review queue is full. Retry after active runs finish.',429);
@@ -103,7 +117,7 @@ export async function openAssuranceRepository(options={}) {
       const ctx=await context(c,row.change_id,row.revision_id);
       const locked=(await c.query('SELECT * FROM assurance_runs WHERE id=$1'+db.lock,[row.id])).rows[0];if(locked.status!=='QUEUED')return null;
       const plan=await latestPlan(c,row.revision_id),snapshot=JSON.parse(row.snapshot);
-      if(!ctx.isCurrent||plan?.id!==row.plan_id||snapshot.scopeDigest!==ctx.scopeDigest||!configured(snapshot)){
+      if(isV2(snapshot)&&!options.generalizationEnabled||!ctx.isCurrent||plan?.id!==row.plan_id||snapshot.scopeDigest!==ctx.scopeDigest||!configured(snapshot)){
         await c.query("UPDATE assurance_runs SET status='FAILED',failure_code='INPUTS_CHANGED_BEFORE_EXECUTION',finished_at=$1 WHERE id=$2",[stamp(now()),row.id]);return null;
       }
       const leaseToken=randomBytes(32).toString('hex'),until=now()+120000;
@@ -111,22 +125,28 @@ export async function openAssuranceRepository(options={}) {
       return {id:row.id,snapshot,leaseToken,leaseUntil:until,workerId};
     });},
     async complete(job,report){
-      if(!report||!['SUPPORTED','VIOLATED','INSUFFICIENT'].includes(report.outcome)||!Array.isArray(report.observations)||report.observations.length>20)throw new Error('INVALID_VERIFIER_REPORT');
-      if(Buffer.byteLength(canonical(report))>65536)throw new Error('EVIDENCE_TOO_LARGE');
       return db.transaction(async c=>{
         const row=(await c.query('SELECT * FROM assurance_runs WHERE id=$1'+db.lock,[job.id])).rows[0];
         if(!row||row.status!=='RUNNING'||row.lease_hash!==digest(job.leaseToken)||Number(row.lease_until)<=now()||row.worker_id!==job.workerId)fail('LEASE_REJECTED','This worker no longer owns the active run.');
         if(digest(JSON.parse(row.snapshot))!==digest(job.snapshot))fail('SNAPSHOT_MISMATCH','Job inputs do not match the queued snapshot.');
+        validateReport(job.snapshot,report);
         // A later pass does not erase an earlier valid counterexample to the same obligation/target.
-        const previous=(await c.query("SELECT e.run_id,e.manifest,e.digest,r.snapshot FROM assurance_evidence e JOIN assurance_runs r ON r.id=e.run_id WHERE r.revision_id=$1 AND r.status='COMPLETED' ORDER BY r.run_number",[row.revision_id])).rows;
+        const previous=(await c.query("SELECT r.id AS run_id,e.manifest,e.digest,r.snapshot FROM assurance_runs r LEFT JOIN assurance_evidence e ON r.id=e.run_id WHERE r.revision_id=$1 AND r.status='COMPLETED' ORDER BY r.run_number",[row.revision_id])).rows;
         const counterevidence=[];
         for(const e of previous){
-          const prior=JSON.parse(e.manifest),oldSnapshot=JSON.parse(e.snapshot);
-          if(comparisonKey(oldSnapshot)!==comparisonKey(job.snapshot))continue;
-          if(digest(prior)!==e.digest)throw new Error('PRIOR_EVIDENCE_INTEGRITY_FAILED');
-          if(prior.report.outcome==='VIOLATED')counterevidence.push({runId:e.run_id,evidenceDigest:e.digest,obligationId:job.snapshot.mapping.obligationId,reason:prior.report.reason});
+          const oldSnapshot=JSON.parse(e.snapshot);
+          for(const m of mappingsOf(job.snapshot)){
+            const old=mappingsOf(oldSnapshot).find(x=>x.obligationId===m.obligationId);
+            if(!old||mappedKey(oldSnapshot,old)!==mappedKey(job.snapshot,m))continue;
+            if(!e.manifest)throw new Error('PRIOR_EVIDENCE_UNAVAILABLE');
+            const prior=JSON.parse(e.manifest);
+            if(digest(prior)!==e.digest||prior.runId!==e.run_id||prior.snapshotDigest!==digest(oldSnapshot))throw new Error('PRIOR_EVIDENCE_INTEGRITY_FAILED');
+            validateReport(oldSnapshot,prior.report);
+            const previousReport=reportFor(oldSnapshot,prior.report,old.obligationId);
+            if(previousReport?.outcome==='VIOLATED')counterevidence.push({runId:e.run_id,evidenceDigest:e.digest,obligationId:m.obligationId,reason:previousReport.reason});
+          }
         }
-        const manifest={schema:'qivvera.evidence/1',runId:row.id,changeId:row.change_id,revisionId:row.revision_id,planId:row.plan_id,snapshotDigest:digest(job.snapshot),target:job.snapshot.target,verifier:job.snapshot.verifier,workerId:job.workerId,startedAt:row.started_at,completedAt:stamp(now()),report,counterevidence,
+        const manifest={schema:isV2(job.snapshot)?'qivvera.evidence/2':'qivvera.evidence/1',runId:row.id,changeId:row.change_id,revisionId:row.revision_id,planId:row.plan_id,snapshotDigest:digest(job.snapshot),target:job.snapshot.target,...(isV2(job.snapshot)?{verifiers:job.snapshot.mappings.map(m=>({obligationId:m.obligationId,...m.verifier}))}:{verifier:job.snapshot.verifier}),workerId:job.workerId,startedAt:row.started_at,completedAt:stamp(now()),report,counterevidence,
           integrityNotice:'SHA-256 binds these serialized observations; no signature, trusted timestamp, or database-admin tamper resistance is claimed.'};
         const serialized=canonical(manifest),hash=digest(manifest);
         await c.query('INSERT INTO assurance_evidence(run_id,manifest,digest,created_at) VALUES($1,$2,$3,$4)',[row.id,serialized,hash,stamp(now())]);

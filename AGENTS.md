@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 4 (0.5.0 review candidate)
+# Qivvera engineering rules — Increment 5 (0.6.0 local review candidate)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from the verified Increment 3 source; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from the published Increment 4 source; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -38,3 +38,13 @@ credentials, databases, account settings or costs without the appropriate author
 - Changed requirements/verifiers cannot silently substitute for proof of the original correction.
 - History, contributor checks, challenge freshness, and current applicability must remain visible.
 - Prefer the Increment 4 contract and handoff for new work; older release reports remain historical.
+
+## Increment 5 invariants
+- Preserve legacy executor/profile bytes and prior plan/report semantics. Version 2 mappings are explicit.
+- Support only the declared separation/finality contracts and fixed approved adapters. No arbitrary scripts.
+- Missing/corrupt earlier completed evidence cannot make a new pass admissible.
+- GitHub source metadata is untrusted context, not authority, code execution, artifact attestation or readiness.
+- Preview is actor-bound, short-lived and revalidated; import/copy is atomic and candidate-only.
+- No outbound GitHub writes, deploy, database reset or secret provisioning through these endpoints.
+- All four PostgreSQL suites and hosted/live-integration/QE gates are mandatory before release.
+- Read docs/increment-5-contract.md and docs/increment-5-engineer.md. A local Git commit is not remote publication.

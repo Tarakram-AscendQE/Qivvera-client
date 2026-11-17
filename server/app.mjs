@@ -48,7 +48,7 @@ async function body(req) {
         reject(new InputError('INVALID_JSON', 'The request is not valid JSON.'));
     } }); req.on('error', reject); req.on('aborted', () => reject(new InputError('REQUEST_ABORTED', 'The request was interrupted.'))); });
 }
-export function createApplicationServer({ repository, assurance = null, resolution = null, accounts, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
+export function createApplicationServer({ repository, assurance = null, resolution = null, intake = null, accounts, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
     if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin)
         throw new Error('PUBLIC_ORIGIN must be an exact origin.');
     if (secureCookies && !publicOrigin.startsWith('https://'))
@@ -72,7 +72,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             })}: {})};
     };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }
@@ -101,7 +101,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                     healthy = await repository.healthy();
                 }
                 catch { }
-                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.5.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
+                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.6.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
             }
             if (req.method === 'GET' && assets.has(path)) {
                 const [a, type] = assets.get(path);
@@ -150,6 +150,14 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 // No worker claim, completion, evidence-upload or arbitrary URL execution endpoint.
             }
 
+            if (workflow && intake) {
+                if(req.method==='GET'&&path==='/api/source-repositories')return json(res,200,await intake.listRepositories());
+                if(req.method==='POST'&&path==='/api/source-previews')return json(res,201,await intake.preview(await body(req),session));
+                if(req.method==='POST'&&path==='/api/source-imports'){const result=await intake.importPreview(await body(req),session);return json(res,result.replayed?200:201,result);}
+                const sourcePath=path.match(/^\/api\/changes\/([a-f0-9-]{36})\/source-imports$/);
+                if(req.method==='GET'&&sourcePath)return json(res,200,await intake.list(sourcePath[1]));
+            }
+
             if (workflow && resolution) {
                 const page = () => ({offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??50)});
                 if (req.method === 'GET' && path === '/api/resolution-assignees') return json(res,200,await resolution.listAssignees());
@@ -168,7 +176,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             }
 
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution }, storage: repository.driver ?? 'local-review', release: '0.5.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake }, storage: repository.driver ?? 'local-review', release: '0.6.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());

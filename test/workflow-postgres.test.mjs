@@ -13,7 +13,7 @@ else {
         throw new Error('Integration tests require an isolated loopback qivvera_test_* database. Never point this test at customer data.');
     const { default: pg } = await import('pg');
     const reset = async () => { const p = new pg.Pool({ connectionString: url }); try {
-        await p.query('DROP TABLE IF EXISTS resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');
+        await p.query('DROP TABLE IF EXISTS source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');
     }
     finally {
         await p.end();

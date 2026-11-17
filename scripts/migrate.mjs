@@ -1,3 +1,4 @@
+import {migrateIntake} from '../server/intake/migration.mjs';
 import { migrateResolution } from '../server/resolution/migration.mjs';
 import { migrateAssurance } from '../server/assurance/migration.mjs';
 import { openDatabase, migrateDatabase } from '../server/workflow-store.mjs';
@@ -11,7 +12,8 @@ try {
     await migrateDatabase(db);
     await migrateAssurance(db);
     await migrateResolution(db);
-    console.log('Workflow, assurance and resolution schema 4 are current. Existing records retained.');
+    await migrateIntake(db);
+    console.log('Schema 5 is current. Existing evidence and resolution history retained.');
 }
 catch {
     console.error('MIGRATION_FAILED: no secrets logged. Ask the database owner to inspect the failure.');

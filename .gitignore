@@ -12,3 +12,6 @@ data/
 *.sqlite-*
 *.credentials.json
 review-test-results/
+
+__pycache__/
+*.pyc

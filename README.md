@@ -1,3 +1,16 @@
+# Qivvera — Increment 5 review candidate (0.6.0)
+
+Cumulative application on published Increment 4. Adds two bounded approval-control mappings,
+a fixed adapter for an independently implemented synthetic Python/SQLite expense application,
+and reviewed GitHub pull-request metadata intake.
+
+Start with [Increment 5 contract](docs/increment-5-contract.md),
+[engineering handoff](docs/increment-5-engineer.md), and [verification](docs/increment-5-verification.md).
+No claim of automatic obligation discovery, customer validation, deployment, universal coverage or
+source-to-running-binary attestation. Source publication status is in the delivery receipt.
+
+## Previous release context (historical)
+
 # Qivvera — Independent Change Assurance
 
 **Change → Obligations → Evidence → Gaps → scope-bound Disposition**

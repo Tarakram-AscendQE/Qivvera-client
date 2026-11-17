@@ -94,7 +94,7 @@ export async function migrateDatabase(db) {
         await c.exec(legacySql);
         await c.exec(workflowSql);
         const versions = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-        if (versions.some(v => Number(v.version) > 4))
+        if (versions.some(v => Number(v.version) > 5))
             throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
         const old = versions.find(v => Number(v.version) === 2);
         if (old) {
@@ -118,5 +118,5 @@ export async function migrateDatabase(db) {
         await c.query('INSERT INTO qivvera_migrations (version,checksum,applied_at) VALUES (2,$1,$2)', [migrationChecksum, new Date().toISOString()]);
     });
 }
-export async function requireSchema(db) { return db.transaction(async (c) => { const r = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows; const v = r.find(x => Number(x.version) === 2); if (!v || r.some(x => Number(x.version) > 4) || v.checksum !== migrationChecksum)
+export async function requireSchema(db) { return db.transaction(async (c) => { const r = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows; const v = r.find(x => Number(x.version) === 2); if (!v || r.some(x => Number(x.version) > 5) || v.checksum !== migrationChecksum)
     throw new Error('WORKFLOW_MIGRATION_REQUIRED'); }, true); }

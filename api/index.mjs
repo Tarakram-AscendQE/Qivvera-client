@@ -1,3 +1,5 @@
+import {loadIntakeConfig} from '../server/intake/github.mjs';
+import {openIntakeRepository} from '../server/intake/repository.mjs';
 /** Requests only. Never runs verification inside a Vercel invocation. */
 import {loadConfig} from '../server/config.mjs';
 import {loadAssuranceConfig} from '../server/assurance/config.mjs';
@@ -10,12 +12,13 @@ let initialising;
 async function getHandler(){
  if(!initialising)initialising=(async()=>{
   const cfg=loadConfig({...process.env,NODE_ENV:'production'}),ac=loadAssuranceConfig({...process.env,NODE_ENV:'production'});
-  const repository=await openWorkflowRepository({...cfg.database,migrate:false});let assurance,resolution;
+  const repository=await openWorkflowRepository({...cfg.database,migrate:false});let assurance,resolution,intake;
   try{if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac,migrate:false});
    if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,accounts:cfg.accounts,reviewMode:cfg.reviewMode,migrate:false});}
-   const server=createApplicationServer({repository,assurance,resolution,accounts:cfg.accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../web',import.meta.url))});
+ const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:false});
+   const server=createApplicationServer({repository,assurance,resolution,intake,accounts:cfg.accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../web',import.meta.url))});
    return server.listeners('request')[0];
-  }catch(e){await resolution?.close();await assurance?.close();await repository.close();throw e;}
+  }catch(e){await intake?.close();await resolution?.close();await assurance?.close();await repository.close();throw e;}
  })().catch(e=>{initialising=undefined;throw e;});
  return initialising;
 }

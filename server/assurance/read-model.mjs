@@ -1,11 +1,12 @@
 /** Shared assessment read model. Resolution never writes assurance evidence or dispositions. */
 import {InputError} from '../workflow-input.mjs';
-import {digest,verifierDigest,publicTarget,scopeOf,deriveCase} from './contracts.mjs';
+import {digest,scopeOf} from './contracts.mjs';
+import {configuredSnapshot,validateReport,deriveAssessment as deriveCase} from './generalization.mjs';
 const oq="SELECT o.*, w.revision_id,w.source_version,w.review_state,h.id AS review_event_id,h.action AS review_action,h.actor AS review_actor,h.rationale AS review_reason,h.independent_actor FROM obligations o JOIN obligation_workflow w ON w.obligation_id=o.id LEFT JOIN obligation_history h ON h.obligation_id=o.id AND h.version=o.version";
 
 const fail=(code,message,status=409)=>{throw new InputError(code,message,status);};
 export function createAssuranceReadModel(db,catalogue){
-  const localDigest=verifierDigest();
+
   async function context(c,changeId,revisionId,lock=false){
     const change=(await c.query('SELECT * FROM changes WHERE id=$1'+(lock?db.lock:''),[changeId])).rows[0];
     if(!change)fail('CHANGE_NOT_FOUND','Change not found.',404);
@@ -17,10 +18,7 @@ export function createAssuranceReadModel(db,catalogue){
     return {change,revision,obligations,scope,scopeDigest:digest(scope),isCurrent:revisions[0]?.id===revisionId};
   }
   const latestPlan=async(c,rev)=>(await c.query('SELECT * FROM assurance_plans WHERE revision_id=$1 ORDER BY version DESC LIMIT 1',[rev])).rows[0];
-  function configured(snapshot){
-    const t=catalogue.find(x=>x.id===snapshot.target.id);
-    return !!t && digest(publicTarget(t))===digest(snapshot.target) && snapshot.verifier.digest===localDigest;
-  }
+  const configured=snapshot=>configuredSnapshot(snapshot,catalogue);
   function validPlan(plan,ctx){return !!plan&&plan.scope_digest===ctx.scopeDigest&&configured(JSON.parse(plan.snapshot));}
   async function viewRun(c,row,ctx){
     const snapshot=JSON.parse(row.snapshot),plan=await latestPlan(c,row.revision_id);
@@ -31,6 +29,7 @@ export function createAssuranceReadModel(db,catalogue){
     if(evidence){
       try{manifest=JSON.parse(evidence.manifest);integrity=digest(manifest)===evidence.digest?'DIGEST_MATCH':'DIGEST_MISMATCH';}
       catch{integrity='DIGEST_MISMATCH';}
+      if(integrity==='DIGEST_MATCH'){try{if(manifest.runId!==row.id||manifest.revisionId!==row.revision_id||manifest.snapshotDigest!==digest(snapshot)||digest(manifest.target)!==digest(snapshot.target))throw new Error('BINDING_MISMATCH');validateReport(snapshot,manifest.report);}catch{integrity='EVIDENCE_BINDING_INVALID';}}
       if(integrity!=='DIGEST_MATCH')manifest=null;
     }
     if(manifest){
