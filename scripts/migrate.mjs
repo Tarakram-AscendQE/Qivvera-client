@@ -1,3 +1,4 @@
+import { migrateResolution } from '../server/resolution/migration.mjs';
 import { migrateAssurance } from '../server/assurance/migration.mjs';
 import { openDatabase, migrateDatabase } from '../server/workflow-store.mjs';
 
@@ -9,7 +10,8 @@ const db = await openDatabase({ driver: 'postgres', connectionString: process.en
 try {
     await migrateDatabase(db);
     await migrateAssurance(db);
-    console.log('Workflow and assurance schema 3 are current. Existing records retained.');
+    await migrateResolution(db);
+    console.log('Workflow, assurance and resolution schema 4 are current. Existing records retained.');
 }
 catch {
     console.error('MIGRATION_FAILED: no secrets logged. Ask the database owner to inspect the failure.');

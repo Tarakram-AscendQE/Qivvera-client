@@ -4,7 +4,7 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.mjs": {
-      "includeFiles": "{web/**,migrations/**,verifiers/**,server/assurance/**}"
+      "includeFiles": "{web/**,migrations/**,verifiers/**,server/assurance/**,server/resolution/**}"
     }
   },
   "rewrites": [
@@ -48,7 +48,8 @@
     "deploymentEnabled": {
       "increments": false,
       "increment2": false,
-      "increment3": false
+      "increment3": true,
+      "increment4": false
     }
   }
 }

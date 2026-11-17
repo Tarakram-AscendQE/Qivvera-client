@@ -1,0 +1,543 @@
+{
+  "version": "0.5.0",
+  "status": "Authored; not manually executed",
+  "source_baseline": "f91f10807017b3ba4f7165f5c9546b3706254234 plus Increment 4 review delta",
+  "instructions": "Execute only on an approved isolated test environment. Operator-assisted fixtures require the deployment engineer. Do not reset live/customer records. Actual Result and Pass/Fail are deliberately blank. Record BLOCKED separately, not as a pass.",
+  "test_cases": [
+    {
+      "id": "RES-001",
+      "title": "Track an actual violation with an accountable owner",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Open the failing assessment and select Track resolution.",
+        "Select Author A, enter a 10\u20132000 character action plan and optional ticket reference.",
+        "Save and open the resolution."
+      ],
+      "expected_result": "One OPEN item shows original requirement/finding, assigned person, action plan and numbered CREATED history. The source assessment stays NOT READY. The ticket reference is not a connected integration.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-002",
+      "title": "Start work and retain action history",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. An OPEN item exists.",
+      "steps": [
+        "Select Start work; supply a meaningful reason.",
+        "Reload the page and inspect history."
+      ],
+      "expected_result": "Status is IN PROGRESS, version increments once and START retains identity/time/reason. Original evidence and disposition are unchanged.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-003",
+      "title": "Record and independently verify a corrected implementation",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI / operator",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. An IN PROGRESS item exists.",
+      "steps": [
+        "Create a new revision with explicitly copied obligations and obtain independent acceptance.",
+        "Operator configures the reviewed corrected synthetic target with a different source/artifact.",
+        "Propose correction, selecting the related requirement, before starting its new assessment.",
+        "Run assurance, link the new completed assessment, then sign in as a different eligible Policy Authority.",
+        "Select Verify resolution and record a reason."
+      ],
+      "expected_result": "The related finding is SUPPORTED and the resolution is verified with an accountable decision, fresh run/evidence references and preserved original VIOLATED/NOT READY case. No assessment is rewritten.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-004",
+      "title": "Resolve an evidence gap without claiming a code fix",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI / operator",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. Original completed assessment is INSUFFICIENT because the configured positive control was unavailable; restore the same controlled target without altering requirement or contract.",
+      "steps": [
+        "Track the gap and propose the original/current related requirement.",
+        "Request and link a fresh, complete reassessment.",
+        "Different authority verifies after both verifier controls succeed."
+      ],
+      "expected_result": "EVIDENCE GAP can be resolved on the same source revision when fresh valid evidence supports the unchanged accepted requirement. It is not labelled an implementation fix.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-005",
+      "title": "Resolve an authority gap using explicit source acceptance",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI / operator",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed case includes an unresolved candidate requirement.",
+      "steps": [
+        "Track its authority gap.",
+        "Supply source/version and obtain acceptance without changing the statement or criticality.",
+        "Map the accepted requirement through an approved plan, propose correction and obtain fresh supported evidence.",
+        "Different authority verifies."
+      ],
+      "expected_result": "Original unresolved finding remains visible. Acceptance alone does not close the gap; valid fresh verification is required. Supplied authority details are recorded, not claimed independently authenticated.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-006",
+      "title": "Resolve one finding while other obligations remain unsupported",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI / operator",
+      "technique": "Decision table / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge. Another non-rejected obligation is unmapped in the fresh assessment.",
+      "steps": [
+        "Confirm the mapped correction is SUPPORTED but overall disposition is INDETERMINATE.",
+        "Verify that resolution as the independent authority.",
+        "Inspect comparison and export."
+      ],
+      "expected_result": "The individual resolution can be verified while the overall change remains INDETERMINATE. No READY claim is introduced by task closure.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-007",
+      "title": "Challenge a finding and preserve the evidence",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. An item exists.",
+      "steps": [
+        "As A select Challenge finding and supply a reason.",
+        "As different authority P record Finding upheld with rationale.",
+        "Inspect both original case and challenge history."
+      ],
+      "expected_result": "Challenge and response remain attributable and visible. Neither action deletes evidence, changes findings, grants an exception or marks the item resolved.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-008",
+      "title": "A request for reassessment makes an older linked pass ineligible",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API",
+      "technique": "State transition / temporal boundary",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge.",
+      "steps": [
+        "Raise a challenge.",
+        "A different authority responds Reassessment required.",
+        "Attempt to relink the old passing run.",
+        "Request and link a genuinely new run after the response."
+      ],
+      "expected_result": "The former linked run is cleared; freshness floor advances. The old pass cannot satisfy the new request. A new eligible run is required before verification.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-009",
+      "title": "Reopen a verified resolution without deleting the earlier decision",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge. Item was independently verified.",
+      "steps": [
+        "Select Reopen resolution and give a reason.",
+        "Inspect the timeline."
+      ],
+      "expected_result": "Stored state returns to OPEN. Current correction linkage and proof are cleared, but prior verification and its evidence references remain in history.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-010",
+      "title": "Changed scope invalidates current resolution",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / operator",
+      "technique": "State transition / consistency",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge. Item was verified.",
+      "steps": [
+        "Add a new candidate obligation on the correction revision.",
+        "Refresh the resolution and its export."
+      ],
+      "expected_result": "Effective status becomes REASSESSMENT REQUIRED. Historical verification remains visible; it no longer establishes current resolution.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-011",
+      "title": "New revision invalidates old resolution currency",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge. Item was verified.",
+      "steps": [
+        "Create another revision.",
+        "Open the previous resolution."
+      ],
+      "expected_result": "The earlier correction is not current; effective status is REASSESSMENT REQUIRED. There is no automatic carry-forward to the new revision.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-012",
+      "title": "An unexecuted or unsuccessful run cannot verify resolution",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API / operator",
+      "technique": "Equivalence partitioning / state transition",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. Correction proposal exists.",
+      "steps": [
+        "In separate isolated fixtures link a QUEUED, RUNNING, FAILED and CANCELLED mapped run.",
+        "Attempt VERIFY in each state."
+      ],
+      "expected_result": "Linkage may support investigation, but every attempted verification is rejected. No state is converted into a completed supported finding.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-013",
+      "title": "Older or equal-timestamp reassessment cannot be treated as fresh",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API / operator",
+      "technique": "Boundary-value / temporal ordering",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A correction revision already has a passing run. Operator can control clock/run order in an isolated fixture.",
+      "steps": [
+        "Propose correction after that run was requested.",
+        "Try linking the older run; repeat with equal millisecond timestamps."
+      ],
+      "expected_result": "Both attempts are rejected by the saved run-number floor. Timestamp equality cannot turn earlier evidence into fresh verification.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-014",
+      "title": "A later assessment supersedes eligibility of an older pass",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge.",
+      "steps": [
+        "Queue a later run for the same correction revision.",
+        "Try verifying with the earlier pass.",
+        "Repeat after the later run completes or fails."
+      ],
+      "expected_result": "Older pass cannot hide a later run; verification is blocked until the latest appropriate evidence is reviewed. No active run may be ignored.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-015",
+      "title": "A confirmed violation cannot close on unchanged source/artifact",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API / operator",
+      "technique": "Decision table / negative scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Attempt a same-revision correction.",
+        "In an isolated fixture use another source reference with the original artifact digest, then attempt VERIFY."
+      ],
+      "expected_result": "Same-revision proposal is rejected; unchanged artifact cannot establish a corrected implementation even with a passing rerun.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-016",
+      "title": "Weaker or different requirement cannot establish the original fix",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API",
+      "technique": "Equivalence partitioning",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Copy to a new revision, then change wording, criticality, source reference or source version in separate trials.",
+        "Obtain acceptance and fresh passing evidence for the changed requirement.",
+        "Attempt verification of the original item."
+      ],
+      "expected_result": "Verification is blocked for each material contract difference. Requirement supersession is not silently treated as correction. Authority-gap source completion is a separately allowed case.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-017",
+      "title": "Unrelated requirement cannot launder a resolution",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Create a new requirement with identical text but no copied lineage.",
+        "Try proposing it as the correction.",
+        "Repeat with a requirement or revision belonging to another change."
+      ],
+      "expected_result": "All unrelated links are rejected. Matching words alone do not establish lineage; original/change relationships remain unchanged.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-018",
+      "title": "Author or contributor cannot verify their own correction",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API",
+      "technique": "Permission decision table",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge.",
+      "steps": [
+        "Try VERIFY as Author A.",
+        "In an isolated identity fixture give A the authority role and try again.",
+        "Reassign the item to another person and retry as the original correction proposer."
+      ],
+      "expected_result": "Role-only author is denied. In independent mode a creator or correction proposer remains ineligible even after role changes or reassignment.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-019",
+      "title": "A configured viewer cannot mutate resolution workflow",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API",
+      "technique": "Permission partitioning",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Sign in as Viewer V.",
+        "Attempt creation, start, update, proposal, linkage, note, challenge, response, verification and reopen.",
+        "Read and export the item."
+      ],
+      "expected_result": "All mutations are denied without partial history changes; authenticated read/export remains available.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-020",
+      "title": "An open challenge blocks verification and needs another reviewer",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge.",
+      "steps": [
+        "Raise a challenge.",
+        "Attempt VERIFY while it remains open.",
+        "Attempt RESPOND_CHALLENGE using the same challenger even when that identity has authority."
+      ],
+      "expected_result": "Pending challenge blocks verification; same-identity response is denied in independent mode. Other eligible authority must respond.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-021",
+      "title": "Unknown owner and disabled owner are not accepted as accountability",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API / operator",
+      "technique": "Equivalence partitioning / configuration change",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Try assigning an unknown email or a Viewer-only identity.",
+        "Operator removes the owner from active account configuration after a resolution is verified; refresh."
+      ],
+      "expected_result": "Invalid assignment is rejected. Removed owner prevents current verification and makes a previously verified item require reassessment until legitimate ownership is re-established.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-022",
+      "title": "Stale and concurrent actions do not overwrite decisions",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API",
+      "technique": "Concurrency / state transition",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. Existing item version N.",
+      "steps": [
+        "Open it in two sessions.",
+        "Save different changes using version N from both.",
+        "Retry the stale version and inspect history."
+      ],
+      "expected_result": "One action succeeds; the other conflicts. Versions/history remain contiguous; no partial update or overwritten evidence is accepted.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-023",
+      "title": "Repeated identical creation does not duplicate tracking",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "API",
+      "technique": "Idempotency / decision table",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Submit the same source run, requirement, owner and action plan twice.",
+        "Repeat with a different action plan for the same source pair."
+      ],
+      "expected_result": "Exact retry returns the same item. Different duplicate conflicts instead of creating a second item or silently changing ownership.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-024",
+      "title": "Non-actionable assessments cannot create resolution items",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API",
+      "technique": "Equivalence partitioning",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data.",
+      "steps": [
+        "Attempt create from SUPPORTED finding, arbitrary text, QUEUED, RUNNING and CANCELLED run in separate fixtures."
+      ],
+      "expected_result": "Each source is rejected; only actual completed VIOLATED/INSUFFICIENT or a FAILED assessment mapped requirement is supported.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-025",
+      "title": "Missing or altered original evidence cannot be silently ignored",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API / operator",
+      "technique": "Error guessing / integrity",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge.",
+      "steps": [
+        "Operator prepares an isolated clone with missing/altered original evidence or source snapshot.",
+        "Read the resolution and attempt VERIFY."
+      ],
+      "expected_result": "Integrity failure blocks verification; it is not converted into a pass or ordinary administrative closure. Investigate/restore original evidence.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-026",
+      "title": "Altered correction evidence invalidates closure",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API / operator",
+      "technique": "State transition / scenario",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge. Item was verified.",
+      "steps": [
+        "Operator alters only isolated fixture correction evidence.",
+        "Refresh resolution and export."
+      ],
+      "expected_result": "Effective status requires reassessment; prior confirmation remains historical, with evidence-integrity blocker. No proof is recomputed to hide alteration.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-027",
+      "title": "Direct status, readiness and waiver writes are rejected",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API",
+      "technique": "Error guessing / invalid partition",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "POST actions containing status=RESOLVED, disposition=READY or action=WAIVE; try DELETE item.",
+        "Try extra actor or proof fields."
+      ],
+      "expected_result": "Unknown fields/actions/methods cannot manufacture closure, delete history, set readiness or grant a waiver. Persisted item and assessment are unchanged.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-028",
+      "title": "Authentication, origin and CSRF apply to resolution APIs",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "API",
+      "technique": "Security-related functional partitions",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Call list/detail/export without a session.",
+        "Attempt authenticated mutation with a wrong/missing Origin or CSRF token.",
+        "Retry after logout."
+      ],
+      "expected_result": "Private reads and writes require authentication; unsafe-origin/CSRF mutation rejected; logout removes access. No secret or session value is exported.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-029",
+      "title": "Reason and reference length boundaries",
+      "classification": "Negative",
+      "priority": "P0",
+      "channel": "UI / API",
+      "technique": "Boundary-value analysis",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding.",
+      "steps": [
+        "Try action-plan/rationale lengths 9,10,2000,2001 trimmed readable characters.",
+        "Try external-reference lengths 0,500,501.",
+        "Repeat with whitespace-only reasons."
+      ],
+      "expected_result": "Reasons accept 10 and 2000, reject 9/2001/whitespace. Reference accepts empty and500, rejects501. Rejection creates no partial item/history.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-030",
+      "title": "History, exports and persistence survive a controlled restart",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI / operator",
+      "technique": "Scenario / persistence",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. A completed, digest-valid assessment has a VIOLATED approval-separation finding. A resolution has a correction on the current new revision, a copied/reaccepted equivalent obligation, a fresh mapped SUPPORTED reassessment with different source/artifact, and no open challenge. Verified item with challenge history.",
+      "steps": [
+        "Export JSON and capture IDs.",
+        "Operator performs a controlled test redeploy/restart.",
+        "Sign in and reopen resolution, original case and corrected case."
+      ],
+      "expected_result": "Source IDs, original findings, correction linkage, challenges and proof/history persist. Export is a resolution record, not a software-safety certificate.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-031",
+      "title": "Inbox navigation, paging and mobile readability",
+      "classification": "Positive",
+      "priority": "P1",
+      "channel": "UI / API",
+      "technique": "Boundary / navigation",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data. Operator-seeded resolution records spanning more than one page.",
+      "steps": [
+        "Open workspace Resolutions and change-specific Resolutions.",
+        "Traverse pages without duplicate/missing IDs.",
+        "Try limit1,100,0,101 and negative offset via API.",
+        "Inspect 390px and1366px viewport and escaped text notes."
+      ],
+      "expected_result": "Valid paging works; invalid limits/offset rejected. Text is rendered as data; no horizontal page overflow obscures controls. Change view includes its historical-revision items explicitly.",
+      "actual_result": "",
+      "pass_fail": ""
+    },
+    {
+      "id": "RES-032",
+      "title": "Feature-disabled baseline remains usable",
+      "classification": "Positive",
+      "priority": "P0",
+      "channel": "UI / operator",
+      "technique": "Configuration pair / regression",
+      "preconditions": "Isolated schema-4 test workspace; resolution and assurance enabled; distinct named Author A and Policy Authority P; Viewer V; synthetic target and worker configured. No production credentials or customer data.",
+      "steps": [
+        "Disable resolution feature only on isolated test deployment; retain assurance.",
+        "Sign in and exercise existing registry/authority/assurance journeys.",
+        "Inspect new navigation/routes."
+      ],
+      "expected_result": "Existing workflows continue. Resolution navigation/capability is absent and resolution endpoints are unavailable; no fake empty success suggests feature enablement.",
+      "actual_result": "",
+      "pass_fail": ""
+    }
+  ]
+}
