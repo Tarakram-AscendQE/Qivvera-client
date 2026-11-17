@@ -9,7 +9,7 @@ if(!url){test('RESOLUTION POSTGRES NOT EXECUTED: disposable database required',{
 else{
  const u=new URL(url);if(!['localhost','127.0.0.1','[::1]'].includes(u.hostname)||!/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname))throw new Error('Only disposable LOOPBACK qivvera_test_* databases are allowed.');
  const {default:pg}=await import('pg');
- async function reset(){const pool=new pg.Pool({connectionString:url});try{await pool.query('DROP TABLE IF EXISTS resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');}finally{await pool.end();}}
+ async function reset(){const pool=new pg.Pool({connectionString:url});try{await pool.query('DROP TABLE IF EXISTS source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');}finally{await pool.end();}}
  test('POSTGRES resolution / full correction preserves original evidence and resolution history',async t=>{
   await reset();const h=await resolutionSetup(t,{postgresURL:url});let {item}=await h.prepare();item=await h.act(item,'VERIFY',{},authority);assert.equal(item.status,'RESOLVED');assert.equal(item.effectiveStatus,'RESOLVED');assert.equal((await h.service.getRun(h.source.id)).evidenceDigest,h.source.evidenceDigest);
  });

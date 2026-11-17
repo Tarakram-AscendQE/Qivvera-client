@@ -49,7 +49,8 @@
       "increments": false,
       "increment2": false,
       "increment3": true,
-      "increment4": false
+      "increment4": false,
+      "increment5": false
     }
   }
 }

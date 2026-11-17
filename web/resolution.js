@@ -20,7 +20,7 @@ export function createResolutionUI({S,api,h,badge,date,can,field,openForm,modal,
   }
   function sourceButtons(r){
     if(!S.workspace?.capabilities.resolutionWorkflow||!writable())return '';
-    const findings=r.status==='FAILED'?[{obligationId:r.snapshot.mapping.obligationId,statement:'Investigate execution failure'}]:(r.case?.findings??[]).filter(f=>['VIOLATED','INSUFFICIENT'].includes(f.state));
+    const findings=r.status==='FAILED'?(r.snapshot.mappings??[r.snapshot.mapping]).map(m=>({obligationId:m.obligationId,statement:'Investigate execution failure'})):(r.case?.findings??[]).filter(f=>['VIOLATED','INSUFFICIENT'].includes(f.state));
     return findings.map(f=>`<button class="button" data-resolution="create" data-run="${h(r.id)}" data-obligation="${h(f.obligationId)}">Track resolution: ${h(f.statement.slice(0,65))}${f.statement.length>65?'…':''}</button>`).join('');
   }
   async function loadChange(offset=0){S.resolutionError=null;try{S.resolutions=await api(`/api/changes/${S.change.id}/resolutions?offset=${offset}`);}catch(e){if(e.status===401)throw e;S.resolutionError=e.message;S.resolutions=null;}}
@@ -58,7 +58,7 @@ export function createResolutionUI({S,api,h,badge,date,can,field,openForm,modal,
     }
     if(action==='link'){
       const runs=await api(`/api/changes/${item.changeId}/assessments?revision=${item.correctionRevisionId}`);
-      const fresh=runs.filter(r=>r.number>item.correctionRunFloor&&r.snapshot.mapping.obligationId===item.correctionObligationId);
+      const fresh=runs.filter(r=>r.number>item.correctionRunFloor&&(r.snapshot.mappings??[r.snapshot.mapping]).some(m=>m.obligationId===item.correctionObligationId));
       if(!fresh.length){toast('No new reassessment exists. Open the correction revision, approve its plan, and run assurance first.');return true;}
       form('Link reassessment','Only a fresh, related assessment can be linked. Failed or incomplete runs do not verify a correction.',`<div class="form-field"><label for="runId">Reassessment *</label><select id="runId" name="runId">${fresh.map(r=>`<option value="${h(r.id)}">Run ${r.number} · ${h(runLabel(r))} · ${h(r.applicability)} · ${h(date(r.queuedAt))}</option>`).join('')}</select></div>`+reasonField(),'Link assessment','LINK_ASSESSMENT');
     }
