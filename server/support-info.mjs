@@ -17,8 +17,9 @@ export function createSupportReader({ repository, assurance, resolution, intake,
         obligationDrafting: workflow && !!repository.drafting,
         aiDrafting: workflow && repository.drafting?.methods?.openai === true,
         revisionImpact: workflow && !!repository.impact,
+        verificationTemplates: workflow && !!assurance?.templates,
     });
-    const requiredSchemaVersion = capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
+    const requiredSchemaVersion = capabilities.verificationTemplates ? 7 : capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
     // Account identities are compared only here; neither identities nor counts enter the response.
     const named = accounts.map(a => ({ email: typeof a.email === 'string' ? a.email.trim().toLowerCase() : '', roles: Array.isArray(a.roles) ? a.roles : [] }));
     const authors = named.filter(a => a.email && a.roles.includes('AUTHOR'));
@@ -76,6 +77,7 @@ export function createSupportReader({ repository, assurance, resolution, intake,
                 importSource: capabilities.githubIntake && author,
                 manageResolution: capabilities.resolution && (author || authority),
                 draftObligations: capabilities.obligationDrafting && author,
+                manageVerificationTemplates: capabilities.verificationTemplates && authority,
             },
             authorizationNotice: 'These are role and configuration hints. Each action still requires its current record, permitted transition and applicable authority checks.',
             warnings,

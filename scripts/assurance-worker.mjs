@@ -14,7 +14,9 @@ try{
  const local=process.env.QIVVERA_LOCAL_SQLITE==='true'&&process.env.NODE_ENV!=='production'&&process.env.VERCEL!=='1';
  if(!connectionString&&!local)throw new Error('WORKER_DATABASE_REQUIRED');
  if(!process.env.QIVVERA_WORKER_ID)throw new Error('WORKER_IDENTITY_REQUIRED');
- repository=await openAssuranceRepository({driver:connectionString?'postgres':'sqlite',connectionString,path:process.env.DATABASE_PATH,sslMode:process.env.DATABASE_SSL_MODE??'verify-full',ca:process.env.DATABASE_CA,...config,worker:true,migrate:false});
+ // Template preparation belongs to the web service; shared environment settings must not
+ // grant the worker template access or make it require template-table privileges.
+ repository=await openAssuranceRepository({driver:connectionString?'postgres':'sqlite',connectionString,path:process.env.DATABASE_PATH,sslMode:process.env.DATABASE_SSL_MODE??'verify-full',ca:process.env.DATABASE_CA,...config,templatesEnabled:false,worker:true,migrate:false});
  do{
   const result=await workOnce({repository,...config,workerId:process.env.QIVVERA_WORKER_ID,allowLoopback:config.allowLocalTargets});
   if(result.worked||!poll)console.log(JSON.stringify(result));

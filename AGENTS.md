@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 8 (0.9.0)
+# Qivvera engineering rules — Increment 9 (0.10.0)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from published Increment 7 commit 12042ab; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from published Increment 8 commit 60153c7; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -25,7 +25,7 @@ user-provided URL, universal obligation discovery, or production release certifi
 - Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
 ## Delivery
-Read docs/increment-8-contract.md and docs/increment-8-engineer.md alongside the earlier invariants.
+Read docs/increment-9-contract.md and docs/increment-9-engineer.md alongside the earlier invariants.
 Run npm run check and all three demo commands. npm run check:release requires a disposable real local
 PostgreSQL database. Run the native browser suites with the pinned test-only tools. Native HTTPS/Vercel
 browser acceptance, clean install and recovery are separate mandatory gates.
@@ -92,3 +92,22 @@ credentials, databases, account settings or costs without the appropriate author
 - Schema 6 and published verification executables remain unchanged. This increment needs no new migration.
 - All six PostgreSQL and six native browser suites are mandatory for the cumulative engineering gate.
   Hosted acceptance, actual runtime permissions, recovery and independent QE remain separate evidence.
+
+## Increment 9 invariants
+- Publish on increment9 from the exact verified Increment 8 commit; preserve earlier branches and holds.
+- Verification templates are immutable versioned preparation records, not configurable assurance policy.
+  Existing fixed profile/verifier bytes and version-1/version-2 evidence contracts remain unchanged.
+- Capture only a valid current approved v2 plan. Preserve exact source, requirement/acceptance provenance,
+  mapping reasons, profile/check identities and protected review-mode qualification.
+- Reuse requires a fresh current scope, deliberate accepted-obligation choices, current configured target,
+  same adapter, exact supported check set, fresh rationale and Policy Authority approval.
+- Template metadata and the new plan-use receipt are stored atomically with the plan. All non-rejected
+  obligations remain mandatory. No source approval, evidence, pass or counterexample resolution transfers.
+- Only the latest active template version permits a new use. Archive prevents new use/versioning but
+  never rewrites prior templates, plans, runs or evidence, or changes their established applicability.
+- Actor-bound request receipts preserve at-most-once mutations. Stale/malformed/conflicting inputs fail;
+  uncertain responses are not automatically retried. Snapshot/history corruption cannot produce a fallback.
+- Schema 7 is additive; old published binaries reject it. Protected templates enablement defaults off and
+  requires generalized assurance, the reviewed migration and grants. Worker gains no template writes.
+- All seven PostgreSQL and seven native browser suites plus cumulative/reference checks are mandatory.
+  Report exact-commit verification separately from hosted deployment, independent QE and release acceptance.

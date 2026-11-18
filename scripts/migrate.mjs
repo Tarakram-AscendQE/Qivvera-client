@@ -1,5 +1,6 @@
 import {migrateIntake} from '../server/intake/migration.mjs';
 import {migrateDrafting} from '../server/drafting/migration.mjs';
+import {migrateTemplates} from '../server/templates/migration.mjs';
 import { migrateResolution } from '../server/resolution/migration.mjs';
 import { migrateAssurance } from '../server/assurance/migration.mjs';
 import { openDatabase, migrateDatabase } from '../server/workflow-store.mjs';
@@ -12,7 +13,8 @@ try {
     await migrateResolution(db);
     await migrateIntake(db);
     await migrateDrafting(db);
-    console.log('Schema 6 is current. Existing evidence, resolution history and source receipts retained.');
+    await migrateTemplates(db);
+    console.log('Schema 7 is current. Existing evidence, resolution history, source receipts and drafting records retained.');
 }
 catch {
     console.error('MIGRATION_FAILED: no secrets logged. Ask the database owner to inspect the failure.');

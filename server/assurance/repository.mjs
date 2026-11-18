@@ -1,6 +1,8 @@
 import {migrateIntake,requireIntake} from '../intake/migration.mjs';
 /** Durable run coordination. Worker mutations are not exposed by any HTTP endpoint. */
 import {createAssuranceReadModel} from './read-model.mjs';
+import {migrateTemplates,requireTemplates} from '../templates/migration.mjs';
+import {createTemplateRepository,normalizeTemplateUse} from '../templates/repository.mjs';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {openDatabase} from '../workflow-store.mjs';
 import {InputError,fields,text,identifier,actorEmail,requireRole} from '../workflow-input.mjs';
@@ -10,31 +12,39 @@ import {CHECKS,PROFILE_V2,isV2,validateTargets as validateCatalogue,verification
 const fail=(code,message,status=409)=>{throw new InputError(code,message,status);};
 const stamp=n=>new Date(n).toISOString();
 export async function openAssuranceRepository(options={}) {
+  if(options.templatesEnabled&&(!options.generalizationEnabled||options.worker))throw new Error('TEMPLATES_REQUIRE_WEB_GENERALIZATION');
   const db=await openDatabase(options);
   try{ if(options.migrate) await migrateAssurance(db); else await requireAssurance(db); }
   catch(e){await db.close();throw e;}
   if(options.generalizationEnabled){try{if(options.migrate)await migrateIntake(db);else await requireIntake(db);}catch(e){await db.close();throw e;}}
-  const catalogue=validateCatalogue(options.targets??[],{local:options.allowLocalTargets===true});
+  if(options.templatesEnabled){try{if(options.migrate)await migrateTemplates(db);else await requireTemplates(db);}catch(e){await db.close();throw e;}}
+  let catalogue;
+  try{catalogue=validateCatalogue(options.targets??[],{local:options.allowLocalTargets===true});}catch(e){await db.close();throw e;}
   const localDigest=verifierDigest();
   const now=options.now??Date.now;
   const read=f=>db.transaction(f,true);
   const audit=(c,actor,action,id,detail)=>c.query('INSERT INTO activity(id,actor,action,entity_id,detail,created_at) VALUES($1,$2,$3,$4,$5,$6)',[randomUUID(),actor,action,id,detail,stamp(now())]);
-  const {context,latestPlan,configured,validPlan,viewRun}=createAssuranceReadModel(db,catalogue);
+  const model=createAssuranceReadModel(db,catalogue);
+  const {context,latestPlan,configured,validPlan,viewRun}=model;
+  let templates;
+  try{templates=options.templatesEnabled?createTemplateRepository({db,model,catalogue,now,reviewMode:options.reviewMode??'independent'}):null;}catch(e){await db.close();throw e;}
   async function expire(c){
     await c.query("UPDATE assurance_runs SET status='FAILED',finished_at=$1,failure_code='QUEUE_DEADLINE_EXCEEDED',lease_hash=NULL WHERE status='QUEUED' AND queued_deadline<=$2",[stamp(now()),now()]);
     await c.query("UPDATE assurance_runs SET status='FAILED',finished_at=$1,failure_code='WORKER_LEASE_EXPIRED',lease_hash=NULL WHERE status='RUNNING' AND lease_until<=$2",[stamp(now()),now()]);
   }
   const publicAPI={
     close:()=>db.close(),healthy:()=>db.healthy(),enabled:catalogue.length>0,generalizationEnabled:options.generalizationEnabled===true,
+    templates:templates?.api??null,
     async getContext(changeId,revisionId){
       return read(async c=>{const ctx=await context(c,changeId,revisionId);const plan=await latestPlan(c,revisionId);
         return {scope:ctx.scope,scopeDigest:ctx.scopeDigest,isCurrent:ctx.isCurrent,profile:PROFILE,profiles:options.generalizationEnabled?[PROFILE,PROFILE_V2]:[PROFILE],checks:options.generalizationEnabled?CHECKS:[],targets:catalogue.filter(t=>t.applicationId===ctx.change.application_id&&t.sourceRevision===ctx.revision.source_revision).map(publicTarget),
-          plan:plan?{id:plan.id,version:Number(plan.version),approvedBy:plan.approved_by,rationale:plan.rationale,createdAt:plan.created_at,current:validPlan(plan,ctx),snapshot:JSON.parse(plan.snapshot)}:null};
+          plan:plan?{id:plan.id,version:Number(plan.version),approvedBy:plan.approved_by,rationale:plan.rationale,createdAt:plan.created_at,current:validPlan(plan,ctx),snapshot:JSON.parse(plan.snapshot),...(templates?{templateUse:await templates.useReceipt(c,plan)}:{})}:null};
       });
     },
     async approvePlan(changeId,input,actor){
-      requireRole(actor,'POLICY_AUTHORITY');fields(input,['revisionId','scopeDigest','expectedPlanVersion','obligationId','targetId','rationale','acknowledgeLimits','mappings']);
+      requireRole(actor,'POLICY_AUTHORITY');fields(input,['revisionId','scopeDigest','expectedPlanVersion','obligationId','targetId','rationale','acknowledgeLimits','mappings','templateUse']);
       identifier(input.revisionId);
+      if(Object.hasOwn(input,'templateUse')){if(!templates)fail('TEMPLATES_DISABLED','Verification templates are not configured for this workspace.',400);normalizeTemplateUse(input.templateUse);if(!Object.hasOwn(input,'mappings'))fail('TEMPLATE_MULTI_PLAN_REQUIRED','Template use requires explicit version 2 mappings.',400);}
       const multi=Object.hasOwn(input,'mappings');
       if(multi){
         if(!options.generalizationEnabled)fail('GENERALIZATION_DISABLED','Multi-obligation execution requires the enabled feature and schema 5.',400);
@@ -47,6 +57,7 @@ export async function openAssuranceRepository(options={}) {
       const rationale=text(input.rationale,'Mapping rationale',2000);if(rationale.length<10)fail('REASON_REQUIRED','Explain why this check supports the mapped obligation.',400);
       const email=actorEmail(actor);
       return db.transaction(async c=>{
+        if(input.templateUse){await templates.lock(c);const replay=await templates.replayUse(c,changeId,input,actor);if(replay)return replay;}
         const ctx=await context(c,changeId,input.revisionId,true);if(!ctx.isCurrent)fail('REVISION_CONFLICT','Only the current revision can receive a new plan.');
         if(input.scopeDigest!==ctx.scopeDigest)fail('SCOPE_CHANGED','Obligations changed. Reload before approving a plan.');
         fullRevision(ctx.revision.source_revision);
@@ -54,6 +65,7 @@ export async function openAssuranceRepository(options={}) {
         const t=catalogue.find(x=>x.id===input.targetId);
         if(!t||t.applicationId!==ctx.change.application_id||t.sourceRevision!==ctx.revision.source_revision)fail('TARGET_NOT_APPROVED','Choose a configured target matching this application and full source revision.',400);
         if(!multi&&t.adapterId&&t.adapterId!=='approval-v1')fail('MULTI_PROFILE_REQUIRED','This adapter requires the version 2 plan.',400);
+        const prepared=input.templateUse?await templates.prepareUse(c,ctx,input):null;
         const mappings=[];
         for(const chosen of multi?input.mappings:[{obligationId:input.obligationId,rationale}]){
           const o=ctx.obligations.find(x=>x.id===chosen.obligationId);
@@ -67,7 +79,9 @@ export async function openAssuranceRepository(options={}) {
         const id=randomUUID(),v=Number(old?.version??0)+1;
         await c.query('INSERT INTO assurance_plans(id,change_id,revision_id,version,scope_digest,snapshot,approved_by,rationale,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[id,changeId,input.revisionId,v,ctx.scopeDigest,canonical(snapshot),email,rationale,stamp(now())]);
         await audit(c,email,'ASSURANCE_PLAN_APPROVED',changeId,`Approved plan ${v}; all non-rejected obligations retained in scope.`);
-        return {id,version:v,snapshot};
+        const result={id,version:v,snapshot};
+        if(prepared){result.templateUse=await templates.recordUse(c,prepared,result,changeId,input,actor);result.replayed=false;}
+        return result;
       });
     },
     async requestRun(changeId,input,actor){

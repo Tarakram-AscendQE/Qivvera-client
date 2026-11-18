@@ -2,18 +2,18 @@
 
 **Change → Obligations → Evidence → Gaps → scope-bound Disposition**
 
-## Increment 8 · version 0.9.0
+## Increment 9 · version 0.10.0
 
-Cumulative implementation on published Increment 7, adding **Impact & next checks**.
-Users compare a change revision with its recorded parent, inspect exact obligation changes and
-items not carried forward, and see explained review, mapping and reassessment guidance.
-The report uses recorded lineage and existing assurance evidence; it does not infer software
-dependencies, carry earlier approval or evidence forward, or change the declared mandatory scope.
+Cumulative implementation on verified Increment 8 commit `60153c7`, adding **Verification templates**.
+A Policy Authority saves a versioned template from a current approved plan, then explicitly matches
+its supported checks to accepted requirements on another current revision and approves a fresh plan.
+Templates retain their source provenance and immutable history. Every use requires fresh review and
+execution; earlier approval, evidence and passing results do not transfer.
 
-Start with the [contract](docs/increment-8-contract.md),
-[verification record](docs/increment-8-verification.md),
-[operator handoff](docs/increment-8-engineer.md) and
-[unfilled release acceptance record](docs/increment-8-release-acceptance.md).
+Start with the [contract](docs/increment-9-contract.md),
+[verification record](docs/increment-9-verification.md),
+[operator handoff](docs/increment-9-engineer.md) and
+[unfilled release acceptance record](docs/increment-9-release-acceptance.md).
 
 ## What the product supports
 
@@ -33,6 +33,8 @@ Start with the [contract](docs/increment-8-contract.md),
   Retry receipts prevent duplicate candidates; source quotations do not establish policy authority.
 - Inspect declared revision impact, exact copied-obligation differences and current assurance context.
   Follow reasoned next steps while preserving every mandatory obligation and prior evidence record.
+- Save, version, inspect and archive verification templates; reuse their supported check choices through
+  explicit fresh mappings and a new plan decision with atomic, inspectable preparation provenance.
 
 The two fixed adapters and synthetic reference applications demonstrate bounded reuse in one
 workspace. Qivvera does not discover all requirements, execute arbitrary uploaded checks, attest a
@@ -64,7 +66,7 @@ npm run demo:generalization
 ```
 
 `npm run check:release` requires a disposable, explicitly named loopback PostgreSQL database.
-All six database suites must execute; missing execution fails the gate. Never reset working data.
+All seven database suites must execute; missing execution fails the gate. Never reset working data.
 
 For genuine local HTTP browser journeys:
 
@@ -77,20 +79,21 @@ python3 -m venv .venv-browser
 
 CI runs these browser checks alongside cumulative regression/reference tests. Hosted HTTPS,
 actual provider grants/migration, cold starts, persistence, isolated restore and independent QE
-remain separate checks. The [QE supplement](docs/increment-8-qe.md) leaves Actual Result and
+remain separate checks. The [QE supplement](docs/increment-9-qe.md) leaves Actual Result and
 Pass/Fail blank for the executing team.
 
 ## Deployment and compatibility
 
 Keep the existing Vercel/PostgreSQL/worker architecture and team-controlled deployment method.
-Increment 8 retains schema 6; no new database migration, account or provider is required for impact.
-The workbench shares the existing workflow database and uses the configured assurance catalogue
-when assurance is enabled. With assurance disabled it still compares recorded declarations and
-clearly states that assessment guidance is unavailable. Earlier deployment baselines need the
-reviewed cumulative migration/grants sequence through their enabled features. Hosted startup and
-builds do not migrate. Optional drafting AI remains separately configured and requires live evaluation.
+Increment 9 adds schema 7 and reviewed template runtime grants. The protected feature switch
+`QIVVERA_TEMPLATES_ENABLED` defaults off; enabling it requires assurance and generalization enabled.
+Templates share the existing assurance database and introduce no external provider or credentials.
+Earlier deployment baselines need the reviewed cumulative migration/grants sequence. Hosted startup
+and builds do not migrate. Older published binaries reject schema 7; switching application code back
+does not reverse a database upgrade. Optional drafting AI remains separately configured and requires
+live evaluation. See the operator handoff for the isolated migration/recovery rehearsal.
 
-Automatic Git deployment for `increment8` remains held in `vercel.json`; prior flags are preserved.
+Automatic Git deployment for `increment9` remains held in `vercel.json`; prior flags are preserved.
 Source publication performs no live migration, secret provisioning, paid resource creation or
 deployment. Exact current verification/publication status belongs in the delivery record.
 Earlier increment contracts and handoffs remain in `docs/` as historical records.

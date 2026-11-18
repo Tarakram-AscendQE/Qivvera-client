@@ -292,7 +292,7 @@ try:
             page.goto(impact_url(fixture, change_id, revision_id), wait_until='domcontentloaded')
         delayed = pending.value
         page.evaluate("location.hash = '#/guide'")
-        delayed.finished()
+        delayed.body()  # Wait for the real delayed body without a lingering target-close waiter.
         expect(page.get_by_role('heading', name='Your guide to Qivvera', exact=True)).to_be_visible()
         assert page.locator('#impact-report').count() == 0
         check('A delayed genuine impact response cannot replace a newer navigation destination.')
@@ -303,7 +303,7 @@ try:
         sign_out(page)
         page.evaluate("location.hash = '#/guide'")
         sign_in(page, fixture, 'policy@example.test')
-        delayed.finished()
+        delayed.body()
         expect(page.get_by_role('heading', name='Your guide to Qivvera', exact=True)).to_be_visible()
         expect(page.locator('.identity .email > span')).to_have_text('policy@example.test')
         assert page.locator('#impact-report').count() == 0

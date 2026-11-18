@@ -353,7 +353,7 @@ try:
         sign_out(page)
         page.evaluate("location.hash = '#/guide'")
         sign_in(page, fixture, 'viewer@example.test')
-        delayed.finished()
+        delayed.body()  # Wait for the real delayed body without a lingering target-close waiter.
         page.wait_for_timeout(100)  # Allow the delayed browser continuation to run.
         expect(page.get_by_role('heading', name='Your guide to Qivvera', exact=True)).to_be_visible()
         expect(page.locator('.identity .email > span')).to_have_text('viewer@example.test')

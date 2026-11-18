@@ -314,7 +314,7 @@ try:
         history_response = old_history.value
         sign_out(page)
         sign_in(page, fixture, 'viewer@example.test')
-        history_response.finished()
+        history_response.body()  # Wait for the real delayed body without a lingering target-close waiter.
         page.wait_for_timeout(100)  # Let the completed response's browser continuation run.
         expect(page.locator('dialog[open]')).to_have_count(0)
         expect(page.locator('.identity .email > span')).to_have_text('viewer@example.test')
@@ -327,7 +327,7 @@ try:
         support_response = old_support.value
         sign_out(page)
         sign_in(page, fixture, 'policy@example.test')
-        support_response.finished()
+        support_response.body()
         expect(page.get_by_role('heading', name='Workspace support', exact=True)).to_be_visible()
         current_diagnostic = download_support(page)
         assert current_diagnostic['roles'] == ['POLICY_AUTHORITY']

@@ -4,7 +4,7 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.mjs": {
-      "includeFiles": "{web/**,migrations/**,verifiers/**,server/assurance/**,server/resolution/**,server/drafting/**,server/impact/**}"
+      "includeFiles": "{web/**,migrations/**,verifiers/**,server/assurance/**,server/resolution/**,server/drafting/**,server/impact/**,server/templates/**}"
     }
   },
   "rewrites": [
@@ -53,7 +53,8 @@
       "increment5": false,
       "increment6": false,
       "increment7": false,
-      "increment8": false
+      "increment8": false,
+      "increment9": false
     }
   }
 }
