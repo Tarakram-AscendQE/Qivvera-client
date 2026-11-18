@@ -110,7 +110,18 @@ def save_from_source(page, fixture, meta, name):
 
 
 def open_mapping(page, fixture, meta, template):
-    page.goto(fixture.origin + f'/#/template-plan/{meta["destinationId"]}/{meta["destinationRevisionId"]}/{template["family"]["id"]}/{template["version"]["id"]}', wait_until='networkidle')
+    url = fixture.origin + f'/#/template-plan/{meta["destinationId"]}/{meta["destinationRevisionId"]}/{template["family"]["id"]}/{template["version"]["id"]}'
+    endpoint = f'/api/verification-templates/{template["family"]["id"]}?version={template["version"]["id"]}'
+    with page.expect_response(lambda response: response.request.method == 'GET' and response.url.endswith(endpoint)) as pending:
+        if page.url == url:
+            # The same hash URL does not reload its data. Use the product's real
+            # reload action after concurrent changes made in another session.
+            page.get_by_role('button', name='Reload approval inputs', exact=True).click()
+        else:
+            page.goto(url, wait_until='networkidle')
+    response = pending.value
+    assert response.status == 200, response.text()
+    assert response.json()['version']['id'] == template['version']['id']
     expect(page.get_by_role('heading', name='Review template mappings', exact=True)).to_be_visible()
 
 

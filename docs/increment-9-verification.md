@@ -114,6 +114,26 @@ than the pinned Playwright response-finished cleanup path. Navigation/session as
 remain intact. The earlier successful CI runs contained cleanup `Target closed` noise; disappearance
 of that noise must be observed in the new native CI logs, not assumed from this code change.
 
+## First CI observation and native navigation correction
+
+Run `44338008690` on commit `263a424` executed **705 automated tests, all passed, zero skipped**.
+All seven PostgreSQL suites genuinely executed, comprising 86 cases, including the 10 new template
+cases. All three reference commands and the six earlier native browser suites also passed; those
+earlier native suites completed 84 checks. Their modified delayed-response tests produced none of
+the earlier response-finished cleanup warnings.
+
+The new template browser suite completed its first 11 checks, then failed the historical-revision
+assertion. After a genuine second user created a revision, the helper navigated to the already
+active hash URL. That did not request a fresh mapping view; the assertion still inspected the
+previous scope-conflict form. The real **Reload approval inputs** control was present on that form.
+
+The helper now clicks that existing control when revisiting the same URL, waits for the genuine
+template response, verifies its exact version identity and consumes the response body before the
+existing UI assertions. Different-URL navigation is preserved. No application code, assertion or
+timeout was relaxed. The remaining seven native checks and canonical-asset check were not established
+by the first run. Its failed template-suite teardown also produced pending-task/target-close warnings.
+The corrected commit requires a complete new CI run before engineering clearance.
+
 ## Publication and acceptance
 
 Publish to `increment9` directly from the verified Increment 8 baseline and preserve earlier branch
