@@ -1,2 +1,2 @@
-export const PRODUCT_VERSION = '0.7.0';
-export const MAX_SUPPORTED_SCHEMA_VERSION = 5;
+export const PRODUCT_VERSION = '0.8.0';
+export const MAX_SUPPORTED_SCHEMA_VERSION = 6;

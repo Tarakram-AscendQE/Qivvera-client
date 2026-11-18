@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 6 (0.7.0)
+# Qivvera engineering rules — Increment 7 (0.8.0)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from the published Increment 5 source; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from published Increment 6 commit 0351da4; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -25,7 +25,7 @@ user-provided URL, universal obligation discovery, or production release certifi
 - Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
 ## Delivery
-Read docs/increment-6-contract.md and docs/increment-6-engineer.md alongside the earlier invariants.
+Read docs/increment-7-contract.md and docs/increment-7-engineer.md alongside the earlier invariants.
 Run npm run check and all three demo commands. npm run check:release requires a disposable real local
 PostgreSQL database. Run the native browser suites with the pinned test-only tools. Native HTTPS/Vercel
 browser acceptance, clean install and recovery are separate mandatory gates.
@@ -58,6 +58,20 @@ credentials, databases, account settings or costs without the appropriate author
 - A lost mutation response has an uncertain outcome. Do not automatically repeat the action.
 - Session expiry and sign-out clear the authenticated view; old-session responses cannot restore it.
 - Native local browser tests must fail when blocked or unavailable; do not substitute stubbed rendering.
-- Schema remains 5. Preserve published verification executables, migrations and earlier evidence.
-- Publish on increment6 while preserving existing branches and deployment holds; external release gates
-  and independent QE must be explicitly evidenced before controlled early access is approved.
+- Increment 6 retained schema 5. Preserve published verification executables, prior migrations and evidence.
+- External release gates and independent QE must be explicitly evidenced before early access is approved.
+
+## Increment 7 invariants
+- Publish on increment7 from the exact Increment 6 baseline; preserve other branches and deployment holds.
+- Source-grounded drafts are preparation records. Explicit candidate creation uses the existing workflow.
+- Every created candidate is DRAFT / CANDIDATE / NOT_ASSESSED; independent authority review remains required.
+- Source, generator identity, exact quotation and human decisions are durable and inspectable.
+- A quote match is not semantic correctness, authenticity, completeness, authority or software evidence.
+- Built-in explicit clauses are rule-based. Optional AI suggestions require configured access and explicit
+  source-processing confirmation. No tools, arbitrary destinations, automatic retries or hidden fallback.
+- Source/model text cannot supply roles, authority, criticality, evidence, mappings or dispositions.
+- Case, Unicode form and internal spacing can be significant; do not normalize distinct requirements away.
+- Persist generation reservations before provider work. Decision receipts and candidate creation are atomic.
+- Schema 6 is additive. Older published binaries reject it; application rollback is not database rollback.
+- All five PostgreSQL and five native browser suites are mandatory. Live AI quality and hosted acceptance
+  are separate gates; protocol fixtures or a configured feature do not establish successful live integration.

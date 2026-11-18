@@ -2,16 +2,18 @@
 
 **Change → Obligations → Evidence → Gaps → scope-bound Disposition**
 
-## Increment 6 · version 0.7.0
+## Increment 7 · version 0.8.0
 
-Cumulative implementation on published Increment 5, with guided first use, contextual next steps,
-a product guide, clearer session/error handling and authenticated support diagnostics. It prepares
-controlled early access within the declared supported scope.
+Cumulative implementation on published Increment 6, adding source-grounded obligation drafting.
+Authors provide a named, versioned excerpt, inspect suggestions and exact source quotations, and
+explicitly create or dismiss individual candidates. The built-in method extracts explicit clauses;
+optional operator-configured AI suggestions require explicit external-processing confirmation.
+Every created candidate still needs ordinary authority review and verification.
 
-Start with the [contract](docs/increment-6-contract.md),
-[verification record](docs/increment-6-verification.md),
-[operator handoff](docs/increment-6-engineer.md) and
-[unfilled release acceptance record](docs/increment-6-release-acceptance.md).
+Start with the [contract](docs/increment-7-contract.md),
+[verification record](docs/increment-7-verification.md),
+[operator handoff](docs/increment-7-engineer.md) and
+[unfilled release acceptance record](docs/increment-7-release-acceptance.md).
 
 ## What the product supports
 
@@ -27,6 +29,8 @@ Start with the [contract](docs/increment-6-contract.md),
 - Preview and explicitly import GitHub PR metadata from an operator-configured repository as
   source context, using a separately provisioned product read credential.
 - Follow role-aware guidance, read the product Guide and download a safe Support summary.
+- Prepare source-grounded drafts with durable source, generator and human-decision provenance.
+  Retry receipts prevent duplicate candidates; source quotations do not establish policy authority.
 
 The two fixed adapters and synthetic reference applications demonstrate bounded reuse in one
 workspace. Qivvera does not discover all requirements, execute arbitrary uploaded checks, attest a
@@ -58,7 +62,7 @@ npm run demo:generalization
 ```
 
 `npm run check:release` requires a disposable, explicitly named loopback PostgreSQL database.
-All four database suites must execute; missing execution fails the gate. Never reset working data.
+All five database suites must execute; missing execution fails the gate. Never reset working data.
 
 For genuine local HTTP browser journeys:
 
@@ -71,16 +75,18 @@ python3 -m venv .venv-browser
 
 CI runs these browser checks alongside cumulative regression/reference tests. Hosted HTTPS,
 actual provider grants/migration, cold starts, persistence, isolated restore and independent QE
-remain separate checks. The [QE supplement](docs/increment-6-qe.md) leaves Actual Result and
+remain separate checks. The [QE supplement](docs/increment-7-qe.md) leaves Actual Result and
 Pass/Fail blank for the executing team.
 
 ## Deployment and compatibility
 
 Keep the existing Vercel/PostgreSQL/worker architecture and team-controlled deployment method.
-Increment 6 adds no SQL migration; schema 5 remains current. Earlier deployment baselines still
+Increment 7 adds schema 6 for drafting sources, proposals and decisions. Earlier deployment baselines
 need the reviewed cumulative migration/grants sequence. Hosted startup and builds do not migrate.
+The feature is disabled until configured after migration. Optional AI access needs a separately
+provisioned provider key and approved model; fixture tests do not establish live-provider quality.
 
-Automatic Git deployment for `increment6` remains held in `vercel.json`; prior flags are preserved.
+Automatic Git deployment for `increment7` remains held in `vercel.json`; prior flags are preserved.
 Source publication performs no live migration, secret provisioning, paid resource creation or
 deployment. Exact current verification/publication status belongs in the delivery record.
 Earlier increment contracts and handoffs remain in `docs/` as historical records.

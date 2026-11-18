@@ -8,7 +8,7 @@ export async function migrateResolution(db){
   return db.transaction(async c=>{
     if(db.driver==='postgres')await c.query('SELECT pg_advisory_xact_lock(78124422)');
     const versions=(await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-    if(versions.some(v=>Number(v.version)>5))throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
+    if(versions.some(v=>Number(v.version)>6))throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
     const old=versions.find(v=>Number(v.version)===4);
     if(old){if(old.checksum!==resolutionChecksum)throw new Error('RESOLUTION_MIGRATION_CHECKSUM_MISMATCH');return;}
     await c.exec(sql);
@@ -19,6 +19,6 @@ export async function requireResolution(db){
   await requireAssurance(db);
   return db.transaction(async c=>{
     const versions=(await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-    if(!versions.some(v=>Number(v.version)===4&&v.checksum===resolutionChecksum)||versions.some(v=>Number(v.version)>5))throw new Error('RESOLUTION_MIGRATION_REQUIRED');
+    if(!versions.some(v=>Number(v.version)===4&&v.checksum===resolutionChecksum)||versions.some(v=>Number(v.version)>6))throw new Error('RESOLUTION_MIGRATION_REQUIRED');
   },true);
 }

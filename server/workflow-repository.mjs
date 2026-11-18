@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { openDatabase, migrateDatabase, requireSchema } from './workflow-store.mjs';
 import { InputError, fields, text, version, identifier, actorEmail, requireRole, applicationInput, changeInput, obligationInput, sourceRevision, appView, obligationView, revisionView, iso } from './workflow-input.mjs';
+import { createDraftingRepository } from './drafting/repository.mjs';
+import { migrateDrafting, requireDrafting } from './drafting/migration.mjs';
 const oq = `SELECT o.*,w.revision_id,w.source_version,w.review_state,w.proposed_by,w.last_edited_by,w.imported,w.copied_from FROM obligations o JOIN obligation_workflow w ON w.obligation_id=o.id`;
 const eventView = r => ({ id: r.id, obligationId: r.obligation_id, version: Number(r.version), revisionId: r.revision_id, action: r.action, actor: r.actor, rationale: r.rationale, independentActor: !!Number(r.independent_actor), snapshot: JSON.parse(r.snapshot), createdAt: iso(r.created_at) });
 export async function openWorkflowRepository(options = {}) {
@@ -10,6 +12,10 @@ export async function openWorkflowRepository(options = {}) {
             await migrateDatabase(db);
         else
             await requireSchema(db);
+        if (options.drafting?.enabled === true) {
+            if (options.migrate) await migrateDrafting(db);
+            else await requireDrafting(db);
+        }
     }
     catch (e) {
         await db.close();
@@ -154,5 +160,8 @@ export async function openWorkflowRepository(options = {}) {
             return false; await c.query('UPDATE auth_buckets SET attempt_count=attempt_count+1 WHERE bucket_key=$1', [key]); return true; }),
         cleanupSessions: () => db.transaction(async (c) => { await c.query('DELETE FROM workspace_sessions WHERE expires_at<=$1', [Date.now()]); await c.query('DELETE FROM auth_buckets WHERE reset_at<=$1', [Date.now()]); }),
     };
+    if (options.drafting?.enabled === true) result.drafting = createDraftingRepository({
+        db, config: options.drafting, helpers: { head, lockedChange, ensureHead, createOb, audit },
+    });
     return result;
 }

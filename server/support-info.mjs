@@ -14,8 +14,10 @@ export function createSupportReader({ repository, assurance, resolution, intake,
         multiObligation: workflow && !!assurance && assurance.generalizationEnabled === true,
         resolution: workflow && !!resolution,
         githubIntake: workflow && !!intake,
+        obligationDrafting: workflow && !!repository.drafting,
+        aiDrafting: workflow && repository.drafting?.methods?.openai === true,
     });
-    const requiredSchemaVersion = capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
+    const requiredSchemaVersion = capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
     // Account identities are compared only here; neither identities nor counts enter the response.
     const named = accounts.map(a => ({ email: typeof a.email === 'string' ? a.email.trim().toLowerCase() : '', roles: Array.isArray(a.roles) ? a.roles : [] }));
     const authors = named.filter(a => a.email && a.roles.includes('AUTHOR'));
@@ -72,12 +74,14 @@ export function createSupportReader({ repository, assurance, resolution, intake,
                 requestAssessment: capabilities.configuredTargets && (author || authority),
                 importSource: capabilities.githubIntake && author,
                 manageResolution: capabilities.resolution && (author || authority),
+                draftObligations: capabilities.obligationDrafting && author,
             },
             authorizationNotice: 'These are role and configuration hints. Each action still requires its current record, permitted transition and applicable authority checks.',
             warnings,
             limitations: {
                 workerStatus: 'not-observed',
                 githubConnection: 'not-probed',
+                aiProviderConnection: 'not-probed',
                 releaseStatus: 'not-evaluated',
                 schemaCheck: 'version-observed-only',
                 notice: 'Configuration checks do not establish worker availability, evidence correctness, migration checksum integrity, deployment acceptance or release approval.',

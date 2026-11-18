@@ -9,7 +9,7 @@ export async function migrateIntake(db){
  return db.transaction(async c=>{
   if(db.driver==='postgres')await c.query('SELECT pg_advisory_xact_lock(78124422)');
   const rows=(await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-  if(rows.some(r=>Number(r.version)>5))throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
+  if(rows.some(r=>Number(r.version)>6))throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
   const old=rows.find(r=>Number(r.version)===5);
   if(old){if(old.checksum!==intakeChecksum)throw new Error('INTAKE_CHECKSUM_MISMATCH');return;}
   await c.exec(sql);await c.query('INSERT INTO qivvera_migrations(version,checksum,applied_at) VALUES(5,$1,$2)',[intakeChecksum,new Date().toISOString()]);
@@ -17,5 +17,5 @@ export async function migrateIntake(db){
 }
 export async function requireIntake(db){await requireResolution(db);return db.transaction(async c=>{
  const rows=(await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
- if(!rows.some(r=>Number(r.version)===5&&r.checksum===intakeChecksum)||rows.some(r=>Number(r.version)>5))throw new Error('INTAKE_MIGRATION_REQUIRED');
+ if(!rows.some(r=>Number(r.version)===5&&r.checksum===intakeChecksum)||rows.some(r=>Number(r.version)>6))throw new Error('INTAKE_MIGRATION_REQUIRED');
 },true);}

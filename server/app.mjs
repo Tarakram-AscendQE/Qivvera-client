@@ -8,12 +8,12 @@ import { fields, InputError } from './errors.mjs';
 import { PRODUCT_VERSION } from './release.mjs';
 import { createSupportReader } from './support-info.mjs';
 const json = (res, status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
-async function body(req) {
+async function body(req, maxBytes = 16384) {
     if ((req.headers['content-type'] ?? '').split(';')[0].trim() !== 'application/json')
         throw new InputError('JSON_REQUIRED', 'Send JSON.', 415);
-    if (Number(req.headers['content-length'] ?? 0) > 16384) {
+    if (Number(req.headers['content-length'] ?? 0) > maxBytes) {
         req.resume?.();
-        throw new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413);
+        throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
     }
     // Some serverless adapters have already parsed the request body. Validate the same size/shape.
     if (req.body !== undefined) {
@@ -22,12 +22,12 @@ async function body(req) {
             raw = raw.toString('utf8');
         if (typeof raw !== 'string') {
             const s = JSON.stringify(raw);
-            if (Buffer.byteLength(s) > 16384)
-                throw new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413);
+            if (Buffer.byteLength(s) > maxBytes)
+                throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
             return raw;
         }
-        if (Buffer.byteLength(raw) > 16384)
-            throw new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413);
+        if (Buffer.byteLength(raw) > maxBytes)
+            throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
         try {
             return JSON.parse(raw);
         }
@@ -35,9 +35,9 @@ async function body(req) {
             throw new InputError('INVALID_JSON', 'The request is not valid JSON.');
         }
     }
-    return new Promise((accept, reject) => { let n = 0, chunks = [], oversize = false; req.on('data', chunk => { n += chunk.length; if (n > 16384) {
+    return new Promise((accept, reject) => { let n = 0, chunks = [], oversize = false; req.on('data', chunk => { n += chunk.length; if (n > maxBytes) {
         if (!oversize)
-            reject(new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413));
+            reject(new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413));
         oversize = true;
         chunks = [];
     }
@@ -75,7 +75,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             })}: {})};
     };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['drafting.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }
@@ -139,6 +139,25 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 return json(res, 200, { signedOut: true });
             }
             const actor = workflow ? session : session.email;
+            if (workflow && repository.drafting) {
+                const drafting = repository.drafting;
+                let d = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/drafting$/);
+                if (d && req.method === 'GET') {
+                    for (const key of url.searchParams.keys()) if (!['revision', 'offset', 'limit'].includes(key)) throw new InputError('DRAFTING_QUERY_UNSUPPORTED', 'Use only revision and pagination parameters.');
+                    return json(res, 200, await drafting.getContext(d[1], url.searchParams.get('revision') || undefined, { offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 20) }));
+                }
+                d = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/drafting-runs$/);
+                if (d && req.method === 'POST') { const run = await drafting.generate(d[1], await body(req, 32768), session); return json(res, run.replayed ? 200 : 201, run); }
+                d = path.match(/^\/api\/drafting-runs\/([a-f0-9-]{36})\/suggestions\/([a-f0-9-]{36})\/actions$/);
+                if (d && req.method === 'POST') return json(res, 200, await drafting.act(d[1], d[2], await body(req), session));
+                d = path.match(/^\/api\/drafting-runs\/([a-f0-9-]{36})(\/export)?$/);
+                if (d && req.method === 'GET') {
+                    if (url.search) throw new InputError('DRAFTING_QUERY_UNSUPPORTED', 'Drafting records do not accept query parameters.');
+                    const run = await drafting.get(d[1]);
+                    if (d[2]) res.setHeader('Content-Disposition', 'attachment; filename="qivvera-drafting-'+d[1]+'.json"');
+                    return json(res, 200, run);
+                }
+            }
             if (workflow && assurance) {
                 let a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assurance-context$/);
                 if (req.method === 'GET' && a) return json(res,200,await assurance.getContext(a[1],url.searchParams.get('revision')));
@@ -183,7 +202,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             }
 
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, obligationDrafting: !!repository.drafting }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());

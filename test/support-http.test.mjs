@@ -112,7 +112,7 @@ test('support HTTP / signed-in author gets observed schema and explicit disabled
     assert.equal(r.body.workspace.reviewMode, 'independent');
     assert.equal(r.body.workspace.secureSession, false);
     assert.deepEqual(r.body.roles, ['AUTHOR']);
-    assert.deepEqual(r.body.actions, { createChange: true, reviewObligations: false, approvePlans: false, requestAssessment: false, importSource: false, manageResolution: false });
+    assert.deepEqual(r.body.actions, { createChange: true, reviewObligations: false, approvePlans: false, requestAssessment: false, importSource: false, manageResolution: false, draftObligations: false });
     for (const code of ['LOCAL_REVIEW_STORAGE', 'ASSURANCE_DISABLED', 'RESOLUTION_DISABLED', 'GITHUB_INTAKE_DISABLED']) assert.ok(warningCodes(r.body).includes(code), code);
     assert.ok(r.body.warnings.every(w => w.message.length && w.nextStep.length));
 });
@@ -137,7 +137,7 @@ test('support HTTP / role hints match configured capabilities without replacing 
     ]) {
         const session = await h.login(identity.email), r = await h.call(undefined, { session });
         assert.equal(r.status, 200);
-        assert.deepEqual(r.body.actions, expected);
+        assert.deepEqual(r.body.actions, { ...expected, draftObligations: false });
         assert.equal(r.body.workspace.schemaVersion, 5);
         assert.equal(r.body.workspace.requiredSchemaVersion, 5);
         assert.equal(r.body.capabilities.multiObligation, true);
@@ -242,11 +242,11 @@ test('support HTTP / a removed required migration is reported without applying o
 test('support HTTP / an unsupported newer schema is reported without rollback', async t => {
     const h = await fixture(t), session = await h.login();
     const d = new DatabaseSync(h.db.path); t.after(() => d.close());
-    d.prepare('INSERT INTO qivvera_migrations(version,checksum,applied_at) VALUES(?,?,?)').run(6, 'test-future-schema', new Date().toISOString());
+    d.prepare('INSERT INTO qivvera_migrations(version,checksum,applied_at) VALUES(?,?,?)').run(7, 'test-future-schema', new Date().toISOString());
     const r = await h.call(undefined, { session });
-    assert.equal(r.body.workspace.schemaVersion, 6);
+    assert.equal(r.body.workspace.schemaVersion, 7);
     assert.ok(warningCodes(r.body).includes('SCHEMA_TOO_NEW'));
-    assert.equal(d.prepare('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=6').get().n, 1);
+    assert.equal(d.prepare('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=7').get().n, 1);
 });
 
 test('support HTTP / missing schema observation remains unknown instead of a pass', async t => {
