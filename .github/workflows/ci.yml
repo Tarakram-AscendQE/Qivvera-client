@@ -1,7 +1,7 @@
-name: Qivvera authority, assurance, resolution and intake checks
+name: Qivvera cumulative functional and browser checks
 on:
   push:
-    branches: [main, increments, increment3, increment4, increment5]
+    branches: [main, increments, increment3, increment4, increment5, increment6]
   pull_request:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17
@@ -43,7 +43,22 @@ jobs:
         run: npm run demo:resolution
       - name: Two-application and multi-obligation reference journeys
         run: npm run demo:generalization
+      - name: Install pinned browser test dependencies
+        run: |
+          python3 -m venv .venv-browser
+          .venv-browser/bin/python3 -m pip install -r test/requirements-browser.txt
+          .venv-browser/bin/python3 -m playwright install --with-deps chromium
+      - name: Native browser workflows and first-use acceptance
+        run: .venv-browser/bin/python3 test/run-browser-suites.py
       - name: Canonical assets remain in sync
         run: git diff --exit-code -- public/
+      - name: Retain synthetic verification reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qivvera-verification-${{ github.sha }}
+          path: review-test-results/
+          if-no-files-found: ignore
+          retention-days: 14
 # No deploy, secret provisioning, production database access or paid resource creation.
-# Native hosted browser acceptance and recovery are additional release gates.
+# Native local HTTP browser checks do not replace hosted HTTPS, recovery or independent QE.

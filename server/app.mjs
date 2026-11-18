@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { createAuth } from './auth.mjs';
 import { createWorkspaceAuth } from './workspace-auth.mjs';
 import { fields, InputError } from './errors.mjs';
+import { PRODUCT_VERSION } from './release.mjs';
+import { createSupportReader } from './support-info.mjs';
 const json = (res, status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
 async function body(req) {
     if ((req.headers['content-type'] ?? '').split(';')[0].trim() !== 'application/json')
@@ -57,6 +59,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
     // Legacy adapter retained only for baseline local regression tests. Hosted startup always
     // creates the workflow repository and cannot fall back to this adapter.
     const auth = workflow ? createWorkspaceAuth({ accounts: accounts ?? [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], repository, secureCookies }) : createAuth({ ownerEmail, passwordHash, secureCookies });
+    const readSupport = createSupportReader({ repository, assurance, resolution, intake, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies });
     const publicSession = s => ({ email: s.email, roles: s.roles ?? ['AUTHOR'], csrfToken: s.csrfToken, reviewMode: workflow ? repository.reviewMode : 'not-available' });
     const decorate = async change => {
         if (!change || !assurance) return change;
@@ -72,7 +75,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             })}: {})};
     };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }
@@ -101,7 +104,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                     healthy = await repository.healthy();
                 }
                 catch { }
-                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.6.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
+                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: PRODUCT_VERSION, process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
             }
             if (req.method === 'GET' && assets.has(path)) {
                 const [a, type] = assets.get(path);
@@ -125,6 +128,10 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 return json(res, 401, { error: 'AUTH_REQUIRED', message: 'Sign in to your workspace.', requestId });
             if (req.method === 'GET' && path === '/api/session')
                 return json(res, 200, publicSession(session));
+            if (req.method === 'GET' && path === '/api/support-info') {
+                if (url.search) throw new InputError('SUPPORT_QUERY_UNSUPPORTED', 'Support information does not accept query parameters.', 400);
+                return json(res, 200, await readSupport(session, requestId));
+            }
             if (req.method !== 'GET' && !auth.validCsrf(req, session))
                 return json(res, 403, { error: 'CSRF_REJECTED', message: 'Reload the page before submitting this request.', requestId });
             if (req.method === 'DELETE' && path === '/api/session') {
@@ -176,7 +183,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             }
 
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake }, storage: repository.driver ?? 'local-review', release: '0.6.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());

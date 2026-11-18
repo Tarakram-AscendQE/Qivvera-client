@@ -1,5 +1,6 @@
 import http from "node:http";
 import { pathToFileURL } from "node:url";
+import { PRODUCT_VERSION } from '../server/release.mjs';
 
 // Process health only. No assessment endpoint and no customer data.
 export function createHealthServer() {
@@ -9,7 +10,7 @@ export function createHealthServer() {
     res.setHeader("X-Content-Type-Options", "nosniff");
     if (req.method === "GET" && req.url === "/healthz") {
       res.writeHead(200);
-      res.end(JSON.stringify({service:"qivvera-foundation",version:"0.0.1",process:"running",productReady:false}));
+      res.end(JSON.stringify({service:"qivvera-foundation",version:PRODUCT_VERSION,process:"running",productReady:false}));
       return;
     }
     res.writeHead(404);

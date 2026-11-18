@@ -23,7 +23,7 @@ export function createResolutionUI({S,api,h,badge,date,can,field,openForm,modal,
     const findings=r.status==='FAILED'?(r.snapshot.mappings??[r.snapshot.mapping]).map(m=>({obligationId:m.obligationId,statement:'Investigate execution failure'})):(r.case?.findings??[]).filter(f=>['VIOLATED','INSUFFICIENT'].includes(f.state));
     return findings.map(f=>`<button class="button" data-resolution="create" data-run="${h(r.id)}" data-obligation="${h(f.obligationId)}">Track resolution: ${h(f.statement.slice(0,65))}${f.statement.length>65?'…':''}</button>`).join('');
   }
-  async function loadChange(offset=0){S.resolutionError=null;try{S.resolutions=await api(`/api/changes/${S.change.id}/resolutions?offset=${offset}`);}catch(e){if(e.status===401)throw e;S.resolutionError=e.message;S.resolutions=null;}}
+  async function loadChange(offset=0){S.resolutionError=null;try{S.resolutions=await api(`/api/changes/${S.change.id}/resolutions?offset=${offset}`);}catch(e){if(e.status===401||e.staleSession)throw e;S.resolutionError=e.message;S.resolutions=null;}}
   function renderChange(){
     if(S.resolutionError)return `<div class="notice warning">${h(S.resolutionError)}</div>`;
     const data=S.resolutions??{items:[],total:0,limit:50,offset:0,hasMore:false};

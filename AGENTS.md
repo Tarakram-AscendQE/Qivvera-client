@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 5 (0.6.0 local review candidate)
+# Qivvera engineering rules — Increment 6 (0.7.0)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from the published Increment 4 source; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from the published Increment 5 source; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -25,9 +25,10 @@ user-provided URL, universal obligation discovery, or production release certifi
 - Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
 ## Delivery
-Read docs/increment-3-contract.md and docs/increment-3-engineer.md. Run npm run check and
-npm run demo:assurance. npm run check:release requires a disposable real local PostgreSQL database.
-Native HTTPS/Vercel browser acceptance, clean install and recovery are separate mandatory gates.
+Read docs/increment-6-contract.md and docs/increment-6-engineer.md alongside the earlier invariants.
+Run npm run check and all three demo commands. npm run check:release requires a disposable real local
+PostgreSQL database. Run the native browser suites with the pinned test-only tools. Native HTTPS/Vercel
+browser acceptance, clean install and recovery are separate mandatory gates.
 Do not equate skipped suites or screenshots with deployed verification. Do not alter live resources,
 credentials, databases, account settings or costs without the appropriate authorization.
 
@@ -48,3 +49,15 @@ credentials, databases, account settings or costs without the appropriate author
 - No outbound GitHub writes, deploy, database reset or secret provisioning through these endpoints.
 - All four PostgreSQL suites and hosted/live-integration/QE gates are mandatory before release.
 - Read docs/increment-5-contract.md and docs/increment-5-engineer.md. A local Git commit is not remote publication.
+
+## Increment 6 invariants
+- Guidance and support are read-only explanations. They cannot create authority, evidence or a disposition.
+- Support diagnostics are authenticated and allowlisted: no credentials, account lists, target/repository
+  configuration or business records. No provider/target probes or migrations from the support endpoint.
+- Reported configuration is not observed worker availability, verified deployment or release approval.
+- A lost mutation response has an uncertain outcome. Do not automatically repeat the action.
+- Session expiry and sign-out clear the authenticated view; old-session responses cannot restore it.
+- Native local browser tests must fail when blocked or unavailable; do not substitute stubbed rendering.
+- Schema remains 5. Preserve published verification executables, migrations and earlier evidence.
+- Publish on increment6 while preserving existing branches and deployment holds; external release gates
+  and independent QE must be explicitly evidenced before controlled early access is approved.

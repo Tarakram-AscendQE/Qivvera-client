@@ -25,7 +25,7 @@ export async function openAssuranceRepository(options={}) {
     await c.query("UPDATE assurance_runs SET status='FAILED',finished_at=$1,failure_code='WORKER_LEASE_EXPIRED',lease_hash=NULL WHERE status='RUNNING' AND lease_until<=$2",[stamp(now()),now()]);
   }
   const publicAPI={
-    close:()=>db.close(),healthy:()=>db.healthy(),enabled:catalogue.length>0,
+    close:()=>db.close(),healthy:()=>db.healthy(),enabled:catalogue.length>0,generalizationEnabled:options.generalizationEnabled===true,
     async getContext(changeId,revisionId){
       return read(async c=>{const ctx=await context(c,changeId,revisionId);const plan=await latestPlan(c,revisionId);
         return {scope:ctx.scope,scopeDigest:ctx.scopeDigest,isCurrent:ctx.isCurrent,profile:PROFILE,profiles:options.generalizationEnabled?[PROFILE,PROFILE_V2]:[PROFILE],checks:options.generalizationEnabled?CHECKS:[],targets:catalogue.filter(t=>t.applicationId===ctx.change.application_id&&t.sourceRevision===ctx.revision.source_revision).map(publicTarget),

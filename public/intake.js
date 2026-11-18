@@ -7,7 +7,7 @@ export function createIntakeUI({S,api,h,shell,can,openForm,field,toast}){
   document.querySelector('#source-preview')?.addEventListener('submit',async e=>{
    e.preventDefault();const form=e.currentTarget,button=form.querySelector('button'),error=form.querySelector('.form-error');button.disabled=true;error.textContent='';
    try{const d=Object.fromEntries(new FormData(form));const preview=await api('/api/source-previews',{method:'POST',data:{repositoryKey:d.repositoryKey,pullNumber:Number(d.pullNumber)}});if(!location.hash.startsWith('#/intake'))return;render(preview);}
-   catch(err){error.textContent=err.message;document.querySelector('#source-preview-result')?.replaceChildren();}finally{button.disabled=false;}
+   catch(err){if(err.sessionExpired||err.staleSession)return;error.textContent=err.message;document.querySelector('#source-preview-result')?.replaceChildren();}finally{button.disabled=false;}
   });
  }
  function render(preview){

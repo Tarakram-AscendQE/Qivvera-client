@@ -50,7 +50,8 @@
       "increment2": false,
       "increment3": true,
       "increment4": false,
-      "increment5": false
+      "increment5": false,
+      "increment6": false
     }
   }
 }

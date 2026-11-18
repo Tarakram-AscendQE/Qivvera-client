@@ -66,7 +66,7 @@ try:
   page.get_by_role('button',name='Obligations',exact=True).click()
   expect(page.get_by_text('Historical revision · read-only',exact=True)).to_be_visible();expect(page.get_by_text('Requirement accepted',exact=True)).to_be_visible();expect(page.get_by_role('button',name='+ Add obligation')).to_be_disabled();check('Revision 1 remains accepted historically and cannot be edited')
   page.screenshot(path=str(out/'04-historical-obligation.png'),full_page=True)
-  page.get_by_role('link',name='Open current revision').click()
+  page.locator('.notice.warning').get_by_role('link',name='Open current revision').click()
   page.set_viewport_size({'width':390,'height':844});page.wait_for_timeout(100)
   overflow=page.evaluate('document.documentElement.scrollWidth>window.innerWidth')
   assert not overflow,'Horizontal overflow';check('390px layout has no horizontal page overflow')

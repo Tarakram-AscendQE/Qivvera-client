@@ -1,9 +1,9 @@
 {
   "name": "qivvera-foundation",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
-  "description": "Qivvera reusable approval controls and reviewed GitHub source intake",
+  "description": "Qivvera guided change assurance and controlled early-access support",
   "engines": {
     "node": ">=22.16.0 <23"
   },
@@ -24,7 +24,8 @@
     "worker:run": "node scripts/assurance-worker.mjs --poll",
     "test:resolution": "node --test --test-concurrency=1 test/resolution*.test.mjs",
     "demo:resolution": "node scripts/reference-resolution.mjs",
-    "demo:generalization": "node scripts/reference-generalization.mjs"
+    "demo:generalization": "node scripts/reference-generalization.mjs",
+    "test:browser": "python3 test/run-browser-suites.py"
   },
   "dependencies": {
     "pg": "8.23.1"
