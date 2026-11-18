@@ -43,7 +43,11 @@ jobs:
         run: npm run demo:resolution
       - name: Two-application and multi-obligation reference journeys
         run: npm run demo:generalization
-      - name: Install pinned browser test dependencies
+      - name: Set up Python for browser checks
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: '3.12'
+      - name: Install browser runtime
         run: |
           python3 -m venv .venv-browser
           .venv-browser/bin/python3 -m pip install -r test/requirements-browser.txt

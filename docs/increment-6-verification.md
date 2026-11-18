@@ -74,6 +74,16 @@ The exact commit's workflow and retained synthetic reports provide its result af
 
 ## Independent review and manual execution
 
+The first published candidate, `351c4f06a01c32e3da5cb1da49f49b3582a4a671`, ran in
+[CI 44311596399](https://github.com/mmronanki/qivvera/actions/runs/44311596399).
+Its cumulative release gate passed **450 tests, 0 failures, 0 skips**, including the new
+SELECT-only PostgreSQL support check; all reference journeys passed. Native registry/review
+(12 checks) and assurance (4 checks) passed. The retained resolution browser test then failed at
+its exact sign-in-button selector, which did not include the visible arrow. This was a failing
+pipeline, not completed browser acceptance. The selector was corrected, the browser runner now
+reports every journey independently, and CI pins Python 3.12 to the documented browser runtime.
+The subsequent exact-commit pipeline must establish the final cumulative outcome.
+
 An independent source review identified invalid-body 401 handling and delayed-response/session
 races. Those findings were fixed before publication; regression cases are in the native suite.
 The review also found an expired-session Sign out path and delayed module navigation handling,

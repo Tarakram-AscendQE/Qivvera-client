@@ -43,9 +43,8 @@ for name in suites:
             status = 124
     report['suites'].append({'name': name, 'exitCode': status, 'passed': status == 0})
     print(log_path.read_text(errors='replace')[-18000:], flush=True)
-    # A blocked browser is a failed gate. Never replace it with rendered/stubbed components.
-    if status != 0:
-        break
+    # Every suite reports independently. A blocked or failed suite still fails the entire gate;
+    # it never gets replaced by rendered/stubbed components or prevents other journeys from running.
 
 report['passed'] = len(report['suites']) == len(suites) and all(x['passed'] for x in report['suites'])
 (out / 'browser-suites-report.json').write_text(json.dumps(report, indent=2) + '\n')

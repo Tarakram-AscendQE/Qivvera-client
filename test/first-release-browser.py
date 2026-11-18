@@ -150,6 +150,7 @@ try:
         page.locator('summary').filter(has_text='READY, NOT_READY and INDETERMINATE').click()
         expect(page.get_by_text('A valid violation takes priority over missing evidence.', exact=False)).to_be_visible()
         check('Keyboard navigation opens the complete product guide and the scoped-status explanation.')
+        page.screenshot(path=str(OUTPUT / 'increment6-guide-desktop.png'), full_page=True)
 
         nav(page, 'Support')
         expect(page.get_by_role('heading', name='Workspace support', exact=True)).to_be_visible()
@@ -174,6 +175,7 @@ try:
         check('Native support download contains the allowlisted diagnostic data without account names, session tokens or fixture secrets.')
         assert request_json(page, fixture, '/api/workspace') == before_guidance
         check('Guide and Support reads/downloads leave domain records and activity unchanged.')
+        page.screenshot(path=str(OUTPUT / 'increment6-support-desktop.png'), full_page=True)
 
         nav(page, 'Workspace')
         page.get_by_role('button', name='+ Register application', exact=True).click()
@@ -279,6 +281,7 @@ try:
         nav(page, 'Support')
         expect(page.get_by_role('heading', name='Workspace support', exact=True)).to_be_visible()
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        page.screenshot(path=str(OUTPUT / 'increment6-support-mobile.png'), full_page=True)
         page.set_viewport_size({'width': 1440, 'height': 1000})
         check('Guide and Support remain usable without horizontal page overflow at 390px.')
 
