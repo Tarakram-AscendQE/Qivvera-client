@@ -1,19 +1,25 @@
 """Run native local-HTTP browser journeys with explicit, non-skippable results."""
 from pathlib import Path
+import asyncio
 import json
 import os
 import signal
 import subprocess
 import sys
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 
 work = Path(__file__).resolve().parents[1]
 out = Path(os.environ.get('QIVVERA_TEST_OUTPUT', str(work / 'review-test-results'))).resolve()
 out.mkdir(parents=True, exist_ok=True)
 env = {**os.environ, 'QIVVERA_TEST_OUTPUT': str(out)}
+
+async def bundled_chromium_path():
+    # Await driver initialization before this property-only probe shuts it down.
+    async with async_playwright() as playwright:
+        return Path(playwright.chromium.executable_path)
+
 if not env.get('CHROMIUM_EXECUTABLE'):
-    with sync_playwright() as playwright:
-        bundled = Path(playwright.chromium.executable_path)
+    bundled = asyncio.run(bundled_chromium_path())
     env['CHROMIUM_EXECUTABLE'] = str(bundled if bundled.is_file() else Path('/usr/bin/chromium'))
 
 suites = ['browser-workflow.py', 'browser-assurance.py', 'browser-resolution.py', 'first-release-browser.py', 'drafting-browser.py', 'impact-browser.py', 'templates-browser.py']

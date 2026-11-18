@@ -131,8 +131,33 @@ The helper now clicks that existing control when revisiting the same URL, waits 
 template response, verifies its exact version identity and consumes the response body before the
 existing UI assertions. Different-URL navigation is preserved. No application code, assertion or
 timeout was relaxed. The remaining seven native checks and canonical-asset check were not established
-by the first run. Its failed template-suite teardown also produced pending-task/target-close warnings.
-The corrected commit requires a complete new CI run before engineering clearance.
+by the first run. Its final log also contained runner shutdown warnings; the outer runner's lifecycle
+was subsequently isolated as described below. The corrected commit required a complete new CI run.
+
+## Complete second CI result and runner lifecycle correction
+
+Run `44339521210` on commit `4c3e2e4` completed successfully: **705 automated tests passed, zero
+failed, zero skipped**, including all seven PostgreSQL suites and their 86 cases. All three reference
+commands passed. All seven native browser suites completed **102 checks**, including all 18 template
+checks, and the canonical-asset check passed. The retained artifact digest was verified, and its
+desktop and 390px mobile template screenshots were inspected.
+
+Every individual browser-suite runner log was free of target-close or unfinished-task warnings.
+The final job log still reported a pending initialization task after the outer runner printed its
+successful aggregate report. The outer runner had opened a short synchronous Playwright connection
+only to read the cached Chromium executable path, then stopped it before initialization completed.
+This warning was test-tool cleanup, not an application-page error or a failed product assertion.
+
+An isolated local reproduction with the pinned Playwright version produced the same warning in
+three of three synchronous path probes. Three equivalent asynchronous probes returned the same
+executable path with empty stderr. The runner now obtains that path with `async_playwright` under
+`asyncio.run`, allowing initialization and shutdown to complete. Its existing executable override,
+bundled/system fallback, child suites, timeouts and assertions are unchanged. Syntax verification
+and an isolated subprocess running the exact final resolver also passed with empty stderr. No
+browser was launched for this resolver-only check.
+
+The lifecycle correction requires a new full CI run on its final commit. The run associated with
+that exact SHA remains authoritative; the successful second run alone does not certify a later tree.
 
 ## Publication and acceptance
 
