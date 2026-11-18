@@ -68,6 +68,18 @@ Additional checks validate plan/run identities, actual acceptance-history links,
 target binding and database cleanup after invalid configuration. Earlier evidence, migration checksums
 and published verification executable bytes remain unchanged.
 
+## First CI observation and native-test correction
+
+Run `44324194201` on commit `5739c82` executed **612 automated tests, all passed, zero skipped**, including
+all six PostgreSQL suites. All three reference commands and five existing browser suites also passed.
+The new impact browser suite completed its first 12 checks, then timed out in its mobile setup because
+the helper waited for a new response while navigating to the already active hash URL.
+
+The test now uses the real **Refresh impact report** control when revisiting that same URL. All original
+response and product assertions remain; no timeout was relaxed and no application code was changed.
+The amended commit requires a complete new CI run before engineering clearance. The first run alone
+does not establish the remaining mobile, navigation-race or session-race outcomes.
+
 ## Publication and team acceptance
 
 The source is prepared for branch `increment8`, preserving earlier branch heads and deployment holds.

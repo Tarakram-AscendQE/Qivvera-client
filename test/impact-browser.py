@@ -95,8 +95,14 @@ def impact_url(fixture, change_id, revision_id):
 
 def view_impact(page, fixture, change_id, revision_id):
     endpoint = f'/api/changes/{change_id}/impact?revision={revision_id}'
+    url = impact_url(fixture, change_id, revision_id)
     with page.expect_response(lambda response: response.url.endswith(endpoint) and response.request.method == 'GET') as pending:
-        page.goto(impact_url(fixture, change_id, revision_id), wait_until='networkidle')
+        if page.url == url:
+            # An unchanged hash route does not request a new report. Exercise the
+            # real refresh control when rechecking the same revision (e.g. mobile).
+            page.get_by_role('button', name='Refresh impact report', exact=True).click()
+        else:
+            page.goto(url, wait_until='networkidle')
     response = pending.value
     assert response.status == 200, response.text()
     saved = response.json()
