@@ -1,9 +1,9 @@
 {
   "name": "qivvera-foundation",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
-  "description": "Qivvera source-grounded obligation drafting and independent change assurance",
+  "description": "Qivvera revision impact, reassessment guidance and independent change assurance",
   "engines": {
     "node": ">=22.16.0 <23"
   },
@@ -12,7 +12,7 @@
     "build": "tsc && node scripts/sync-assets.mjs",
     "check": "node scripts/check-syntax.mjs && npm run typecheck && npm test",
     "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
-    "test:postgres": "REQUIRE_POSTGRES=true node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs test/resolution-postgres.test.mjs test/generalization-postgres.test.mjs test/drafting-postgres.test.mjs",
+    "test:postgres": "REQUIRE_POSTGRES=true node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs test/resolution-postgres.test.mjs test/generalization-postgres.test.mjs test/drafting-postgres.test.mjs test/impact-postgres.test.mjs",
     "start": "node server/start.mjs",
     "start:registry": "node server/start.mjs",
     "migrate": "node scripts/migrate.mjs",
@@ -26,7 +26,8 @@
     "demo:resolution": "node scripts/reference-resolution.mjs",
     "demo:generalization": "node scripts/reference-generalization.mjs",
     "test:browser": "python3 test/run-browser-suites.py",
-    "test:drafting": "node --test --test-concurrency=1 test/drafting*.test.mjs"
+    "test:drafting": "node --test --test-concurrency=1 test/drafting*.test.mjs",
+    "test:impact": "node --test --test-concurrency=1 test/impact*.test.mjs"
   },
   "dependencies": {
     "pg": "8.23.1"

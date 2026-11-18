@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 7 (0.8.0)
+# Qivvera engineering rules — Increment 8 (0.9.0)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from published Increment 6 commit 0351da4; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from published Increment 7 commit 12042ab; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -25,7 +25,7 @@ user-provided URL, universal obligation discovery, or production release certifi
 - Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
 ## Delivery
-Read docs/increment-7-contract.md and docs/increment-7-engineer.md alongside the earlier invariants.
+Read docs/increment-8-contract.md and docs/increment-8-engineer.md alongside the earlier invariants.
 Run npm run check and all three demo commands. npm run check:release requires a disposable real local
 PostgreSQL database. Run the native browser suites with the pinned test-only tools. Native HTTPS/Vercel
 browser acceptance, clean install and recovery are separate mandatory gates.
@@ -75,3 +75,20 @@ credentials, databases, account settings or costs without the appropriate author
 - Schema 6 is additive. Older published binaries reject it; application rollback is not database rollback.
 - All five PostgreSQL and five native browser suites are mandatory. Live AI quality and hosted acceptance
   are separate gates; protocol fixtures or a configured feature do not establish successful live integration.
+
+## Increment 8 invariants
+- Publish on increment8 from the exact Increment 7 baseline; preserve earlier branches and deployment holds.
+- Impact is an authenticated read-only explanation of recorded declarations and assurance context.
+  No code/dependency analysis, semantic equivalence, universal completeness or release approval is implied.
+- Compare only the selected revision and its recorded direct parent. Pair obligations only by valid
+  copied_from lineage. Exact case, Unicode and internal whitespace remain significant.
+- Missing copied obligations are not proved resolved or inapplicable. Keep previous declarations visible.
+- Read comparison and assurance context in one database snapshot. Report reads and exports never expire
+  leases, create activity, call providers, alter plans, approve requirements or queue assessments.
+- Every non-rejected obligation stays mandatory. Prior mapping hints require fresh human review;
+  no reduced execution scope, inherited approval or transferred supporting evidence is created.
+- Use the latest recorded assessment, preserve integrity failures and distinguish historical recorded
+  dispositions from currently applicable evidence. Never select an older pass to hide a later failure.
+- Schema 6 and published verification executables remain unchanged. This increment needs no new migration.
+- All six PostgreSQL and six native browser suites are mandatory for the cumulative engineering gate.
+  Hosted acceptance, actual runtime permissions, recovery and independent QE remain separate evidence.

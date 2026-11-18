@@ -13,7 +13,7 @@ let initialising;
 async function getHandler(){
  if(!initialising)initialising=(async()=>{
   const cfg=loadConfig({...process.env,NODE_ENV:'production'}),ac=loadAssuranceConfig({...process.env,NODE_ENV:'production'});
-  const repository=await openWorkflowRepository({...cfg.database,migrate:false,drafting:loadDraftingConfig()});let assurance,resolution,intake;
+  const repository=await openWorkflowRepository({...cfg.database,migrate:false,drafting:loadDraftingConfig(),impact:{...ac,assuranceEnabled:ac.enabled}});let assurance,resolution,intake;
   try{if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac,migrate:false});
    if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,accounts:cfg.accounts,reviewMode:cfg.reviewMode,migrate:false});}
  const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:false});

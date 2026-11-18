@@ -75,7 +75,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             })}: {})};
     };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['drafting.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['drafting.js', 'text/javascript'], ['impact.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }
@@ -139,6 +139,17 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 return json(res, 200, { signedOut: true });
             }
             const actor = workflow ? session : session.email;
+            if (workflow && repository.impact) {
+                const impactPath = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/impact(\/export)?$/);
+                if (impactPath && req.method === 'GET') {
+                    const entries = [...url.searchParams.entries()];
+                    if (entries.length !== 1 || entries[0][0] !== 'revision' || !entries[0][1])
+                        throw new InputError('IMPACT_QUERY_UNSUPPORTED', 'Select exactly one revision. No other query parameters are supported.', 400);
+                    const report = await repository.impact.get(impactPath[1], entries[0][1]);
+                    if (impactPath[2]) res.setHeader('Content-Disposition', 'attachment; filename="qivvera-impact-' + impactPath[1] + '.json"');
+                    return json(res, 200, report);
+                }
+            }
             if (workflow && repository.drafting) {
                 const drafting = repository.drafting;
                 let d = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/drafting$/);
@@ -202,7 +213,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             }
 
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, obligationDrafting: !!repository.drafting }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());

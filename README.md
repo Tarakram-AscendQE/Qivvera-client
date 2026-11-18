@@ -2,18 +2,18 @@
 
 **Change → Obligations → Evidence → Gaps → scope-bound Disposition**
 
-## Increment 7 · version 0.8.0
+## Increment 8 · version 0.9.0
 
-Cumulative implementation on published Increment 6, adding source-grounded obligation drafting.
-Authors provide a named, versioned excerpt, inspect suggestions and exact source quotations, and
-explicitly create or dismiss individual candidates. The built-in method extracts explicit clauses;
-optional operator-configured AI suggestions require explicit external-processing confirmation.
-Every created candidate still needs ordinary authority review and verification.
+Cumulative implementation on published Increment 7, adding **Impact & next checks**.
+Users compare a change revision with its recorded parent, inspect exact obligation changes and
+items not carried forward, and see explained review, mapping and reassessment guidance.
+The report uses recorded lineage and existing assurance evidence; it does not infer software
+dependencies, carry earlier approval or evidence forward, or change the declared mandatory scope.
 
-Start with the [contract](docs/increment-7-contract.md),
-[verification record](docs/increment-7-verification.md),
-[operator handoff](docs/increment-7-engineer.md) and
-[unfilled release acceptance record](docs/increment-7-release-acceptance.md).
+Start with the [contract](docs/increment-8-contract.md),
+[verification record](docs/increment-8-verification.md),
+[operator handoff](docs/increment-8-engineer.md) and
+[unfilled release acceptance record](docs/increment-8-release-acceptance.md).
 
 ## What the product supports
 
@@ -31,6 +31,8 @@ Start with the [contract](docs/increment-7-contract.md),
 - Follow role-aware guidance, read the product Guide and download a safe Support summary.
 - Prepare source-grounded drafts with durable source, generator and human-decision provenance.
   Retry receipts prevent duplicate candidates; source quotations do not establish policy authority.
+- Inspect declared revision impact, exact copied-obligation differences and current assurance context.
+  Follow reasoned next steps while preserving every mandatory obligation and prior evidence record.
 
 The two fixed adapters and synthetic reference applications demonstrate bounded reuse in one
 workspace. Qivvera does not discover all requirements, execute arbitrary uploaded checks, attest a
@@ -62,7 +64,7 @@ npm run demo:generalization
 ```
 
 `npm run check:release` requires a disposable, explicitly named loopback PostgreSQL database.
-All five database suites must execute; missing execution fails the gate. Never reset working data.
+All six database suites must execute; missing execution fails the gate. Never reset working data.
 
 For genuine local HTTP browser journeys:
 
@@ -75,18 +77,20 @@ python3 -m venv .venv-browser
 
 CI runs these browser checks alongside cumulative regression/reference tests. Hosted HTTPS,
 actual provider grants/migration, cold starts, persistence, isolated restore and independent QE
-remain separate checks. The [QE supplement](docs/increment-7-qe.md) leaves Actual Result and
+remain separate checks. The [QE supplement](docs/increment-8-qe.md) leaves Actual Result and
 Pass/Fail blank for the executing team.
 
 ## Deployment and compatibility
 
 Keep the existing Vercel/PostgreSQL/worker architecture and team-controlled deployment method.
-Increment 7 adds schema 6 for drafting sources, proposals and decisions. Earlier deployment baselines
-need the reviewed cumulative migration/grants sequence. Hosted startup and builds do not migrate.
-The feature is disabled until configured after migration. Optional AI access needs a separately
-provisioned provider key and approved model; fixture tests do not establish live-provider quality.
+Increment 8 retains schema 6; no new database migration, account or provider is required for impact.
+The workbench shares the existing workflow database and uses the configured assurance catalogue
+when assurance is enabled. With assurance disabled it still compares recorded declarations and
+clearly states that assessment guidance is unavailable. Earlier deployment baselines need the
+reviewed cumulative migration/grants sequence through their enabled features. Hosted startup and
+builds do not migrate. Optional drafting AI remains separately configured and requires live evaluation.
 
-Automatic Git deployment for `increment7` remains held in `vercel.json`; prior flags are preserved.
+Automatic Git deployment for `increment8` remains held in `vercel.json`; prior flags are preserved.
 Source publication performs no live migration, secret provisioning, paid resource creation or
 deployment. Exact current verification/publication status belongs in the delivery record.
 Earlier increment contracts and handoffs remain in `docs/` as historical records.

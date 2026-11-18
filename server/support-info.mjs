@@ -16,6 +16,7 @@ export function createSupportReader({ repository, assurance, resolution, intake,
         githubIntake: workflow && !!intake,
         obligationDrafting: workflow && !!repository.drafting,
         aiDrafting: workflow && repository.drafting?.methods?.openai === true,
+        revisionImpact: workflow && !!repository.impact,
     });
     const requiredSchemaVersion = capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
     // Account identities are compared only here; neither identities nor counts enter the response.
