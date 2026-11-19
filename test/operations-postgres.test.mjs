@@ -20,7 +20,7 @@ if (!url) test('OPERATIONS POSTGRES NOT EXECUTED: disposable database and matchi
 else {
     // Strict component validation precedes any client construction; URL routing/session overrides are rejected.
     const base = databaseConfig(url, { sslMode: 'disable', kind: 'source' });
-    async function fixture(t, { differentEncoding = false } = {}) {
+    async function fixture(t, { differentLocale = false } = {}) {
         const adminURL = new URL(base.connectionString); adminURL.pathname = '/postgres';
         const admin = await connectDatabase(databaseConfig(adminURL.toString(), { sslMode: 'disable', kind: 'admin' }));
         const name = 'qivvera_test_ops_' + randomUUID().replaceAll('-', ''), sourceURL = new URL(base.connectionString);
@@ -34,8 +34,19 @@ else {
             for (const role of roles.reverse()) await admin.query(`DROP ROLE ${quoteIdentifier(role)}`);
             await admin.end();
         });
-        const templateEncoding = (await admin.query("SELECT pg_encoding_to_char(encoding) AS encoding FROM pg_database WHERE datname='template0'")).rows[0].encoding;
-        const options = differentEncoding ? ` ENCODING '${templateEncoding === 'UTF8' ? 'LATIN1' : 'UTF8'}' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C'` : '';
+        const defaults = (await admin.query(`SELECT datlocprovider AS provider,datctype AS ctype,
+            current_setting('server_version_num')::integer AS version FROM pg_database WHERE datname='template0'`)).rows[0];
+        // Seed the genuine Unicode plan snapshots in UTF8. LATIN1 would reject the protected
+        // profile's en dash before the recovery command could test incompatible text semantics.
+        let options = '';
+        if (differentLocale) {
+            if (defaults.version >= 170000 && defaults.provider !== 'b')
+                options = " ENCODING 'UTF8' LOCALE_PROVIDER builtin BUILTIN_LOCALE 'C.UTF-8'";
+            else {
+                const locale = defaults.provider === 'b' || !['C', 'POSIX'].includes(defaults.ctype) ? 'C' : 'C.UTF-8';
+                options = ` ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE '${locale}' LC_CTYPE '${locale}'`;
+            }
+        }
         await admin.query(`CREATE DATABASE ${quoteIdentifier(name)} TEMPLATE template0${options}`); created = true;
         source = await connectDatabase(databaseConfig(sourceURL.toString(), { sslMode: 'disable', kind: 'source' }));
         const life = { after: fn => cleanups.push(fn) }, h = await setupTemplates(life, { postgresURL: sourceURL.toString() });
@@ -204,8 +215,8 @@ else {
         await assert.rejects(rehearseRecovery(input), error => error.code === 'OPERATIONS_MIGRATION_MISMATCH' && error.receipt.destinationCreated === false);
         assert.equal((await f.admin.query('SELECT COUNT(*)::integer AS count FROM pg_database WHERE datname=$1', [input.destinationDatabase])).rows[0].count, 0);
     });
-    test('POSTGRES operations / incompatible encoding and locale defaults fail before destination creation', async t => {
-        const f = await fixture(t, { differentEncoding: true }), input = f.recoveryInput();
+    test('POSTGRES operations / incompatible locale or provider defaults fail before destination creation', async t => {
+        const f = await fixture(t, { differentLocale: true }), input = f.recoveryInput();
         await assert.rejects(rehearseRecovery(input), error => error.code === 'RECOVERY_DATABASE_PROPERTIES_MISMATCH' && error.receipt.destinationCreated === false);
         assert.equal((await f.admin.query('SELECT COUNT(*)::integer AS count FROM pg_database WHERE datname=$1', [input.destinationDatabase])).rows[0].count, 0);
     });
