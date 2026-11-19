@@ -50,7 +50,7 @@ export function postgresOptions(raw, { sslMode = 'verify-full', ca, max = 3 } = 
     u.searchParams.delete('channel_binding');
     if (!Number.isInteger(max) || max < 1 || max > 5)
         throw new Error('INVALID_POOL_SIZE');
-    return { connectionString: u.toString(), ssl: sslMode === 'disable' ? false : { rejectUnauthorized: Boolean(ca), ...(ca ? { ca } : {}) }, enableChannelBinding: channelBinding === 'require' || channelBinding === 'prefer', max, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000, query_timeout: 15000, statement_timeout: 15000 };
+    return { connectionString: u.toString(), ssl: sslMode === 'disable' ? false : { rejectUnauthorized: true, ...(ca ? { ca } : {}) }, enableChannelBinding: channelBinding === 'require' || channelBinding === 'prefer', max, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000, query_timeout: 15000, statement_timeout: 15000 };
 }
 export async function openDatabase({ driver = 'sqlite', path = ':memory:', connectionString, sslMode, ca } = {}) {
     if (driver === 'postgres') {

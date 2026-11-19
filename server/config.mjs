@@ -21,14 +21,20 @@ export function normalizeOrigin(value, { hosted = true } = {}) {
     return u.origin;
 }
 function ownerHash(env) {
-    const raw = (env.OWNER_PASSWORD_HASH || env.OWNER_PASSWORD || '').trim().replace(/^["']|["']$/g, '');
-    if (!raw)
-        throw new Error('OWNER_CREDENTIAL_REQUIRED');
-    if (/^scrypt:[a-f0-9]{32}:[a-f0-9]{128}$/.test(raw)) {
-        return raw;
+    if (env.OWNER_PASSWORD_HASH) {
+        validatePasswordHash(env.OWNER_PASSWORD_HASH.trim());
+        return env.OWNER_PASSWORD_HASH.trim();
     }
-    const salt = (env.OWNER_PASSWORD_SALT || 'f07b5fc4f5e96ecda7346566ff5fe913').trim();
-    return `scrypt:${salt}:${scryptSync(raw, salt, 64).toString('hex')}`;
+    if (!env.OWNER_PASSWORD)
+        throw new Error('OWNER_CREDENTIAL_REQUIRED');
+    // Prefer a precomputed scrypt hash. Raw-password compatibility requires an explicit
+    // random stable salt, stored with the secret configuration, never derived from a password.
+    if (env.OWNER_PASSWORD.length < 16 || env.OWNER_PASSWORD.length > 256)
+        throw new Error('OWNER_PASSWORD_LENGTH_INVALID');
+    const salt = env.OWNER_PASSWORD_SALT;
+    if (typeof salt !== 'string' || !/^[a-f0-9]{32}$/.test(salt))
+        throw new Error('OWNER_PASSWORD_SALT_REQUIRED');
+    return `scrypt:${salt}:${scryptSync(env.OWNER_PASSWORD, salt, 64).toString('hex')}`;
 }
 export function loadConfig(env = process.env) {
     const hosted = env.VERCEL === '1' || env.NODE_ENV === 'production';
