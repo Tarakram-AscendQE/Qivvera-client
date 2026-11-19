@@ -13,6 +13,7 @@
     "check": "node scripts/check-syntax.mjs && npm run typecheck && npm test",
     "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
     "test:postgres": "REQUIRE_POSTGRES=true node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs test/resolution-postgres.test.mjs test/generalization-postgres.test.mjs",
+    "dev": "npm run build && node scripts/dev.mjs",
     "start": "node server/start.mjs",
     "start:registry": "node server/start.mjs",
     "migrate": "node scripts/migrate.mjs",
