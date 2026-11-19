@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 5 (0.6.0 local review candidate)
+# Qivvera engineering rules — Increment 10 (0.11.0)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from the published Increment 4 source; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from verified Increment 9 commit 1e67bd6; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -25,9 +25,10 @@ user-provided URL, universal obligation discovery, or production release certifi
 - Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
 ## Delivery
-Read docs/increment-3-contract.md and docs/increment-3-engineer.md. Run npm run check and
-npm run demo:assurance. npm run check:release requires a disposable real local PostgreSQL database.
-Native HTTPS/Vercel browser acceptance, clean install and recovery are separate mandatory gates.
+Read docs/increment-10-contract.md and docs/operations-verification.md alongside the earlier invariants.
+Run npm run check and all three demo commands. npm run check:release requires a disposable real local
+PostgreSQL database. Run the native browser suites with the pinned test-only tools. Native HTTPS/Vercel
+browser acceptance, clean install and recovery are separate mandatory gates.
 Do not equate skipped suites or screenshots with deployed verification. Do not alter live resources,
 credentials, databases, account settings or costs without the appropriate authorization.
 
@@ -48,3 +49,80 @@ credentials, databases, account settings or costs without the appropriate author
 - No outbound GitHub writes, deploy, database reset or secret provisioning through these endpoints.
 - All four PostgreSQL suites and hosted/live-integration/QE gates are mandatory before release.
 - Read docs/increment-5-contract.md and docs/increment-5-engineer.md. A local Git commit is not remote publication.
+
+## Increment 6 invariants
+- Guidance and support are read-only explanations. They cannot create authority, evidence or a disposition.
+- Support diagnostics are authenticated and allowlisted: no credentials, account lists, target/repository
+  configuration or business records. No provider/target probes or migrations from the support endpoint.
+- Reported configuration is not observed worker availability, verified deployment or release approval.
+- A lost mutation response has an uncertain outcome. Do not automatically repeat the action.
+- Session expiry and sign-out clear the authenticated view; old-session responses cannot restore it.
+- Native local browser tests must fail when blocked or unavailable; do not substitute stubbed rendering.
+- Increment 6 retained schema 5. Preserve published verification executables, prior migrations and evidence.
+- External release gates and independent QE must be explicitly evidenced before early access is approved.
+
+## Increment 7 invariants
+- Publish on increment7 from the exact Increment 6 baseline; preserve other branches and deployment holds.
+- Source-grounded drafts are preparation records. Explicit candidate creation uses the existing workflow.
+- Every created candidate is DRAFT / CANDIDATE / NOT_ASSESSED; independent authority review remains required.
+- Source, generator identity, exact quotation and human decisions are durable and inspectable.
+- A quote match is not semantic correctness, authenticity, completeness, authority or software evidence.
+- Built-in explicit clauses are rule-based. Optional AI suggestions require configured access and explicit
+  source-processing confirmation. No tools, arbitrary destinations, automatic retries or hidden fallback.
+- Source/model text cannot supply roles, authority, criticality, evidence, mappings or dispositions.
+- Case, Unicode form and internal spacing can be significant; do not normalize distinct requirements away.
+- Persist generation reservations before provider work. Decision receipts and candidate creation are atomic.
+- Schema 6 is additive. Older published binaries reject it; application rollback is not database rollback.
+- All five PostgreSQL and five native browser suites are mandatory. Live AI quality and hosted acceptance
+  are separate gates; protocol fixtures or a configured feature do not establish successful live integration.
+
+## Increment 8 invariants
+- Publish on increment8 from the exact Increment 7 baseline; preserve earlier branches and deployment holds.
+- Impact is an authenticated read-only explanation of recorded declarations and assurance context.
+  No code/dependency analysis, semantic equivalence, universal completeness or release approval is implied.
+- Compare only the selected revision and its recorded direct parent. Pair obligations only by valid
+  copied_from lineage. Exact case, Unicode and internal whitespace remain significant.
+- Missing copied obligations are not proved resolved or inapplicable. Keep previous declarations visible.
+- Read comparison and assurance context in one database snapshot. Report reads and exports never expire
+  leases, create activity, call providers, alter plans, approve requirements or queue assessments.
+- Every non-rejected obligation stays mandatory. Prior mapping hints require fresh human review;
+  no reduced execution scope, inherited approval or transferred supporting evidence is created.
+- Use the latest recorded assessment, preserve integrity failures and distinguish historical recorded
+  dispositions from currently applicable evidence. Never select an older pass to hide a later failure.
+- Schema 6 and published verification executables remain unchanged. This increment needs no new migration.
+- All six PostgreSQL and six native browser suites are mandatory for the cumulative engineering gate.
+  Hosted acceptance, actual runtime permissions, recovery and independent QE remain separate evidence.
+
+## Increment 9 invariants
+- Publish on increment9 from the exact verified Increment 8 commit; preserve earlier branches and holds.
+- Verification templates are immutable versioned preparation records, not configurable assurance policy.
+  Existing fixed profile/verifier bytes and version-1/version-2 evidence contracts remain unchanged.
+- Capture only a valid current approved v2 plan. Preserve exact source, requirement/acceptance provenance,
+  mapping reasons, profile/check identities and protected review-mode qualification.
+- Reuse requires a fresh current scope, deliberate accepted-obligation choices, current configured target,
+  same adapter, exact supported check set, fresh rationale and Policy Authority approval.
+- Template metadata and the new plan-use receipt are stored atomically with the plan. All non-rejected
+  obligations remain mandatory. No source approval, evidence, pass or counterexample resolution transfers.
+- Only the latest active template version permits a new use. Archive prevents new use/versioning but
+  never rewrites prior templates, plans, runs or evidence, or changes their established applicability.
+- Actor-bound request receipts preserve at-most-once mutations. Stale/malformed/conflicting inputs fail;
+  uncertain responses are not automatically retried. Snapshot/history corruption cannot produce a fallback.
+- Schema 7 is additive; old published binaries reject it. Protected templates enablement defaults off and
+  requires generalized assurance, the reviewed migration and grants. Worker gains no template writes.
+- All seven PostgreSQL and seven native browser suites plus cumulative/reference checks are mandatory.
+  Report exact-commit verification separately from hosted deployment, independent QE and release acceptance.
+
+## Increment 10 invariants
+- Continue from exact verified Increment 9; publish on increment10 with automatic deployment held.
+- Preserve schema 7 and published migration/profile/verifier bytes. No live operations from builds/tests.
+- Validate full current obligation membership, review history, frozen plan scope and run/plan binding.
+  Missing or inconsistent inputs fail closed; no reduced mandatory scope, guessed result or history repair.
+- Preserve healthy historical evidence after later scope changes. Staleness is distinct from corruption.
+- Bind response assignments, dialogs and mutations to the exact displayed route/record/revision/session.
+  Obsolete reads cannot change a write target; obsolete saves cannot navigate or close newer dialogs.
+- Permission audits are explicitly invoked and read-only. Recovery rehearsal is explicitly disposable,
+  loopback-only, uses real PostgreSQL backup tools and never overwrites/drops a working database.
+- Engineering reports record exact Git identity and dirty-tree state. Local/synthetic checks do not fill
+  hosted permissions/HTTPS/recovery or independent human QE/customer acceptance.
+- Run npm run check:engineering with all eight PostgreSQL suites and all eight native browser suites.
+  Source publication, hosted deployment and product scope completion remain separate recorded outcomes.

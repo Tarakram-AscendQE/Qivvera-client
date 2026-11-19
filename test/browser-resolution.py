@@ -13,7 +13,7 @@ try:
   page=browser.new_page(viewport={'width':1440,'height':1000});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(base,wait_until='networkidle')
   def login(email):
-   page.get_by_label('Email address').fill(email);page.get_by_label('Password',exact=True).fill('synthetic-browser-only-password');page.get_by_role('button',name='Open workspace',exact=True).click();expect(page.get_by_role('button',name='Sign out',exact=True)).to_be_visible()
+   page.get_by_label('Email address').fill(email);page.get_by_label('Password',exact=True).fill('synthetic-browser-only-password');page.locator('#login-form').get_by_role('button',name='Open workspace').click();expect(page.get_by_role('button',name='Sign out',exact=True)).to_be_visible()
   def reason(text='Reviewed the actual correction and its source-bound evidence.'):page.get_by_label('Reason for this action').fill(text)
   login('author@example.test');checks.append('Author signs in through native browser')
   page.goto(base+'/#/changes/'+meta['changeId']+'/revisions/'+meta['sourceRevisionId']);page.get_by_role('button',name='Resolutions',exact=True).click()

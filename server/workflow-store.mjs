@@ -16,6 +16,8 @@ export const migrationChecksum = createHash('sha256').update(legacySql + '\n' + 
 export function postgresOptions(raw, { sslMode = 'verify-full', ca, max = 3 } = {}) {
     if (typeof raw !== 'string' || !raw)
         throw new Error('DATABASE_URL_REQUIRED');
+    if (raw.trim() !== raw || /[\u0000-\u0020\u007f]/u.test(raw))
+        throw new Error('INVALID_DATABASE_URL');
     let u;
     try {
         u = new URL(raw);
@@ -23,8 +25,16 @@ export function postgresOptions(raw, { sslMode = 'verify-full', ca, max = 3 } = 
     catch {
         throw new Error('INVALID_DATABASE_URL');
     }
-    if (!['postgres:', 'postgresql:'].includes(u.protocol))
+    if (!['postgres:', 'postgresql:'].includes(u.protocol) || !u.hostname || u.hash)
         throw new Error('INVALID_DATABASE_URL');
+    // pg-connection-string lets query keys replace host, port, database and credentials.
+    // Accept only known TLS compatibility options, then remove them before passing the URL on.
+    const allowedOptions = new Set(['sslmode', 'sslcert', 'sslkey', 'sslrootcert', 'channel_binding']);
+    const seenOptions = new Set();
+    for (const [key] of u.searchParams) {
+        if (!allowedOptions.has(key) || seenOptions.has(key)) throw new Error('UNSUPPORTED_DATABASE_URL_OPTION');
+        seenOptions.add(key);
+    }
     if (!['verify-full', 'disable'].includes(sslMode))
         throw new Error('UNSUPPORTED_DATABASE_SSL_MODE');
     const local = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname);
@@ -94,7 +104,7 @@ export async function migrateDatabase(db) {
         await c.exec(legacySql);
         await c.exec(workflowSql);
         const versions = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-        if (versions.some(v => Number(v.version) > 5))
+        if (versions.some(v => Number(v.version) > 7))
             throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
         const old = versions.find(v => Number(v.version) === 2);
         if (old) {
@@ -118,5 +128,5 @@ export async function migrateDatabase(db) {
         await c.query('INSERT INTO qivvera_migrations (version,checksum,applied_at) VALUES (2,$1,$2)', [migrationChecksum, new Date().toISOString()]);
     });
 }
-export async function requireSchema(db) { return db.transaction(async (c) => { const r = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows; const v = r.find(x => Number(x.version) === 2); if (!v || r.some(x => Number(x.version) > 5) || v.checksum !== migrationChecksum)
+export async function requireSchema(db) { return db.transaction(async (c) => { const r = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows; const v = r.find(x => Number(x.version) === 2); if (!v || r.some(x => Number(x.version) > 7) || v.checksum !== migrationChecksum)
     throw new Error('WORKFLOW_MIGRATION_REQUIRED'); }, true); }

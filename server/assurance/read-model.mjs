@@ -2,7 +2,7 @@
 import {InputError} from '../workflow-input.mjs';
 import {digest,scopeOf} from './contracts.mjs';
 import {configuredSnapshot,validateReport,deriveAssessment as deriveCase} from './generalization.mjs';
-const oq="SELECT o.*, w.revision_id,w.source_version,w.review_state,h.id AS review_event_id,h.action AS review_action,h.actor AS review_actor,h.rationale AS review_reason,h.independent_actor FROM obligations o JOIN obligation_workflow w ON w.obligation_id=o.id LEFT JOIN obligation_history h ON h.obligation_id=o.id AND h.version=o.version";
+import {loadVerifiedObligations,planSnapshot,validateStoredPlan,validateStoredRun} from './integrity.mjs';
 
 const fail=(code,message,status=409)=>{throw new InputError(code,message,status);};
 export function createAssuranceReadModel(db,catalogue){
@@ -13,15 +13,16 @@ export function createAssuranceReadModel(db,catalogue){
     const revisions=(await c.query('SELECT * FROM change_revisions WHERE change_id=$1 ORDER BY revision_number DESC',[changeId])).rows;
     const revision=revisions.find(r=>r.id===revisionId);
     if(!revision)fail('REVISION_NOT_FOUND','Revision does not belong to this change.',404);
-    const obligations=(await c.query(oq+' WHERE o.change_id=$1 AND w.revision_id=$2 ORDER BY o.id',[changeId,revisionId])).rows;
+    const obligations=await loadVerifiedObligations(c,changeId,revisionId);
     const scope=scopeOf(change,revision,obligations);
     return {change,revision,obligations,scope,scopeDigest:digest(scope),isCurrent:revisions[0]?.id===revisionId};
   }
   const latestPlan=async(c,rev)=>(await c.query('SELECT * FROM assurance_plans WHERE revision_id=$1 ORDER BY version DESC LIMIT 1',[rev])).rows[0];
   const configured=snapshot=>configuredSnapshot(snapshot,catalogue);
-  function validPlan(plan,ctx){return !!plan&&plan.scope_digest===ctx.scopeDigest&&configured(JSON.parse(plan.snapshot));}
+  function validPlan(plan,ctx){if(!plan)return false;const snapshot=planSnapshot(plan);return snapshot.scopeDigest===ctx.scopeDigest&&configured(snapshot);}
   async function viewRun(c,row,ctx){
-    const snapshot=JSON.parse(row.snapshot),plan=await latestPlan(c,row.revision_id);
+    const snapshot=await validateStoredRun(c,row),plan=await latestPlan(c,row.revision_id);
+    if(plan&&plan.id!==row.plan_id)await validateStoredPlan(c,plan);
     let applicability=ctx?.isCurrent?'CURRENT':'HISTORICAL_REVISION';
     if(ctx && (snapshot.scopeDigest!==ctx.scopeDigest || plan?.id!==row.plan_id || !configured(snapshot))) applicability='STALE_INPUTS';
     const evidence=(await c.query('SELECT * FROM assurance_evidence WHERE run_id=$1',[row.id])).rows[0];
@@ -35,7 +36,13 @@ export function createAssuranceReadModel(db,catalogue){
     if(manifest){
       for(const ref of manifest.counterevidence??[]){
         const prior=(await c.query('SELECT * FROM assurance_evidence WHERE run_id=$1',[ref.runId])).rows[0];
-        let valid=false;try{valid=!!prior&&prior.digest===ref.evidenceDigest&&digest(JSON.parse(prior.manifest))===ref.evidenceDigest;}catch{}
+        let valid=false;try{
+          const priorRow=(await c.query('SELECT * FROM assurance_runs WHERE id=$1',[ref.runId])).rows[0];
+          const priorSnapshot=await validateStoredRun(c,priorRow),priorManifest=prior&&JSON.parse(prior.manifest);
+          valid=!!prior&&priorRow.status==='COMPLETED'&&prior.digest===ref.evidenceDigest&&digest(priorManifest)===ref.evidenceDigest&&
+            priorManifest.runId===priorRow.id&&priorManifest.snapshotDigest===digest(priorSnapshot);
+          if(valid)validateReport(priorSnapshot,priorManifest.report);
+        }catch{valid=false;}
         if(!valid){integrity='COUNTEREVIDENCE_UNAVAILABLE';manifest=null;break;}
       }
     }
@@ -44,5 +51,5 @@ export function createAssuranceReadModel(db,catalogue){
       disposition:row.status==='COMPLETED'&&integrity==='DIGEST_MATCH'?caseResult.disposition:null,
       case:caseResult,snapshot,evidence:manifest,evidenceDigest:evidence?.digest??null,evidenceIntegrity:integrity};
   }
-  return {context,latestPlan,configured,validPlan,viewRun};
+  return {context,latestPlan,configured,validPlan,viewRun,validatePlan:validateStoredPlan,validateRun:validateStoredRun};
 }

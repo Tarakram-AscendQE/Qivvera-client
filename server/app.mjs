@@ -5,13 +5,15 @@ import { randomUUID } from 'node:crypto';
 import { createAuth } from './auth.mjs';
 import { createWorkspaceAuth } from './workspace-auth.mjs';
 import { fields, InputError } from './errors.mjs';
+import { PRODUCT_VERSION } from './release.mjs';
+import { createSupportReader } from './support-info.mjs';
 const json = (res, status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
-async function body(req) {
+async function body(req, maxBytes = 16384) {
     if ((req.headers['content-type'] ?? '').split(';')[0].trim() !== 'application/json')
         throw new InputError('JSON_REQUIRED', 'Send JSON.', 415);
-    if (Number(req.headers['content-length'] ?? 0) > 16384) {
+    if (Number(req.headers['content-length'] ?? 0) > maxBytes) {
         req.resume?.();
-        throw new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413);
+        throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
     }
     // Some serverless adapters have already parsed the request body. Validate the same size/shape.
     if (req.body !== undefined) {
@@ -20,12 +22,12 @@ async function body(req) {
             raw = raw.toString('utf8');
         if (typeof raw !== 'string') {
             const s = JSON.stringify(raw);
-            if (Buffer.byteLength(s) > 16384)
-                throw new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413);
+            if (Buffer.byteLength(s) > maxBytes)
+                throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
             return raw;
         }
-        if (Buffer.byteLength(raw) > 16384)
-            throw new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413);
+        if (Buffer.byteLength(raw) > maxBytes)
+            throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
         try {
             return JSON.parse(raw);
         }
@@ -33,9 +35,9 @@ async function body(req) {
             throw new InputError('INVALID_JSON', 'The request is not valid JSON.');
         }
     }
-    return new Promise((accept, reject) => { let n = 0, chunks = [], oversize = false; req.on('data', chunk => { n += chunk.length; if (n > 16384) {
+    return new Promise((accept, reject) => { let n = 0, chunks = [], oversize = false; req.on('data', chunk => { n += chunk.length; if (n > maxBytes) {
         if (!oversize)
-            reject(new InputError('BODY_TOO_LARGE', 'Request exceeds 16 KB.', 413));
+            reject(new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413));
         oversize = true;
         chunks = [];
     }
@@ -57,10 +59,22 @@ export function createApplicationServer({ repository, assurance = null, resoluti
     // Legacy adapter retained only for baseline local regression tests. Hosted startup always
     // creates the workflow repository and cannot fall back to this adapter.
     const auth = workflow ? createWorkspaceAuth({ accounts: accounts ?? [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], repository, secureCookies }) : createAuth({ ownerEmail, passwordHash, secureCookies });
+    const readSupport = createSupportReader({ repository, assurance, resolution, intake, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies });
     const publicSession = s => ({ email: s.email, roles: s.roles ?? ['AUTHOR'], csrfToken: s.csrfToken, reviewMode: workflow ? repository.reviewMode : 'not-available' });
     const decorate = async change => {
         if (!change || !assurance) return change;
-        const runs = await assurance.listRuns(change.id, change.revision.id), latest = runs[0];
+        let runs;
+        try { runs = await assurance.listRuns(change.id, change.revision.id); }
+        catch (error) {
+            if (!(error instanceof InputError) || error.code !== 'ASSURANCE_INTEGRITY_FAILED') throw error;
+            // Isolate an unavailable assessment without hiding it or taking down healthy records.
+            // The strict assurance endpoints still reject the affected plan/run and cannot execute it.
+            return { ...change, disposition: null, assessmentStatus: 'ASSURANCE_UNAVAILABLE', latestAssessment: null,
+                assuranceError: { code: 'ASSURANCE_INTEGRITY_FAILED',
+                    message: 'Saved assurance inputs are missing or inconsistent. No conclusion is available for this change. Ask the workspace operator to inspect the original records.' },
+                ...(change.obligations ? { obligations: change.obligations.map(o => ({ ...o, state: 'NOT_ASSESSED', evidenceCount: 0 })) } : {}) };
+        }
+        const latest = runs[0];
         if (!latest) return change;
         const current = latest.applicability === 'CURRENT';
         const assessed = current && latest.status === 'COMPLETED' && latest.evidenceIntegrity === 'DIGEST_MATCH';
@@ -72,7 +86,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             })}: {})};
     };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['drafting.js', 'text/javascript'], ['impact.js', 'text/javascript'], ['templates.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }
@@ -101,7 +115,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                     healthy = await repository.healthy();
                 }
                 catch { }
-                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: '0.6.0', process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
+                return json(res, healthy ? 200 : 503, { service: 'qivvera-registry', version: PRODUCT_VERSION, process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false });
             }
             if (req.method === 'GET' && assets.has(path)) {
                 const [a, type] = assets.get(path);
@@ -125,6 +139,10 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 return json(res, 401, { error: 'AUTH_REQUIRED', message: 'Sign in to your workspace.', requestId });
             if (req.method === 'GET' && path === '/api/session')
                 return json(res, 200, publicSession(session));
+            if (req.method === 'GET' && path === '/api/support-info') {
+                if (url.search) throw new InputError('SUPPORT_QUERY_UNSUPPORTED', 'Support information does not accept query parameters.', 400);
+                return json(res, 200, await readSupport(session, requestId));
+            }
             if (req.method !== 'GET' && !auth.validCsrf(req, session))
                 return json(res, 403, { error: 'CSRF_REJECTED', message: 'Reload the page before submitting this request.', requestId });
             if (req.method === 'DELETE' && path === '/api/session') {
@@ -132,11 +150,75 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 return json(res, 200, { signedOut: true });
             }
             const actor = workflow ? session : session.email;
+            if (workflow && assurance?.templates) {
+                const templatePath = path.match(/^\/api\/verification-templates(?:\/([a-f0-9-]{36})(\/versions|\/archive|\/export)?)?$/);
+                if (templatePath) {
+                    const templates = assurance.templates, [, templateId, action] = templatePath;
+                    const entries = [...url.searchParams.entries()];
+                    const allowed = req.method === 'GET' ? templateId ? ['version'] : ['offset', 'limit', 'includeArchived'] : [];
+                    if (entries.some(([key, value]) => !allowed.includes(key) || !value) || new Set(entries.map(([key]) => key)).size !== entries.length)
+                        throw new InputError('TEMPLATE_QUERY_UNSUPPORTED', 'Use only the supported query fields once. Mutations do not accept query parameters.', 400);
+                    if (req.method === 'GET' && !templateId) {
+                        const values = Object.fromEntries(entries);
+                        if (['offset', 'limit'].some(key => values[key] !== undefined && !/^(0|[1-9][0-9]*)$/.test(values[key])) || values.includeArchived !== undefined && !['true', 'false'].includes(values.includeArchived))
+                            throw new InputError('TEMPLATE_QUERY_UNSUPPORTED', 'Use nonnegative whole-number pagination and true or false for includeArchived.', 400);
+                        return json(res, 200, await templates.list({ offset: Number(values.offset ?? 0), limit: Number(values.limit ?? 20), includeArchived: values.includeArchived === 'true' }));
+                    }
+                    if (req.method === 'GET' && templateId && (!action || action === '/export')) {
+                        const record = await templates.get(templateId, { versionId: url.searchParams.get('version') });
+                        if (action === '/export') res.setHeader('Content-Disposition', 'attachment; filename="qivvera-verification-template-' + templateId + '.json"');
+                        return json(res, 200, record);
+                    }
+                    if (req.method === 'POST' && !templateId) {
+                        const record = await templates.create(await body(req, 32768), session);
+                        return json(res, record.replayed ? 200 : 201, record);
+                    }
+                    if (req.method === 'POST' && action === '/versions') {
+                        const record = await templates.revise(templateId, await body(req, 32768), session);
+                        return json(res, record.replayed ? 200 : 201, record);
+                    }
+                    if (req.method === 'POST' && action === '/archive') return json(res, 200, await templates.archive(templateId, await body(req, 32768), session));
+                }
+            }
+            if (workflow && repository.impact) {
+                const impactPath = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/impact(\/export)?$/);
+                if (impactPath && req.method === 'GET') {
+                    const entries = [...url.searchParams.entries()];
+                    if (entries.length !== 1 || entries[0][0] !== 'revision' || !entries[0][1])
+                        throw new InputError('IMPACT_QUERY_UNSUPPORTED', 'Select exactly one revision. No other query parameters are supported.', 400);
+                    const report = await repository.impact.get(impactPath[1], entries[0][1]);
+                    if (impactPath[2]) res.setHeader('Content-Disposition', 'attachment; filename="qivvera-impact-' + impactPath[1] + '.json"');
+                    return json(res, 200, report);
+                }
+            }
+            if (workflow && repository.drafting) {
+                const drafting = repository.drafting;
+                let d = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/drafting$/);
+                if (d && req.method === 'GET') {
+                    for (const key of url.searchParams.keys()) if (!['revision', 'offset', 'limit'].includes(key)) throw new InputError('DRAFTING_QUERY_UNSUPPORTED', 'Use only revision and pagination parameters.');
+                    return json(res, 200, await drafting.getContext(d[1], url.searchParams.get('revision') || undefined, { offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 20) }));
+                }
+                d = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/drafting-runs$/);
+                if (d && req.method === 'POST') { const run = await drafting.generate(d[1], await body(req, 32768), session); return json(res, run.replayed ? 200 : 201, run); }
+                d = path.match(/^\/api\/drafting-runs\/([a-f0-9-]{36})\/suggestions\/([a-f0-9-]{36})\/actions$/);
+                if (d && req.method === 'POST') return json(res, 200, await drafting.act(d[1], d[2], await body(req), session));
+                d = path.match(/^\/api\/drafting-runs\/([a-f0-9-]{36})(\/export)?$/);
+                if (d && req.method === 'GET') {
+                    if (url.search) throw new InputError('DRAFTING_QUERY_UNSUPPORTED', 'Drafting records do not accept query parameters.');
+                    const run = await drafting.get(d[1]);
+                    if (d[2]) res.setHeader('Content-Disposition', 'attachment; filename="qivvera-drafting-'+d[1]+'.json"');
+                    return json(res, 200, run);
+                }
+            }
             if (workflow && assurance) {
                 let a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assurance-context$/);
                 if (req.method === 'GET' && a) return json(res,200,await assurance.getContext(a[1],url.searchParams.get('revision')));
                 a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assurance-plan$/);
-                if (req.method === 'POST' && a) return json(res,201,await assurance.approvePlan(a[1],await body(req),session));
+                if (req.method === 'POST' && a) {
+                    if (url.search) throw new InputError('ASSURANCE_PLAN_QUERY_UNSUPPORTED', 'Plan approval does not accept query parameters.', 400);
+                    const plan = await assurance.approvePlan(a[1], await body(req, 32768), session);
+                    return json(res, plan.replayed ? 200 : 201, plan);
+                }
                 a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assessments$/);
                 if (req.method === 'POST' && a) return json(res,202,await assurance.requestRun(a[1],await body(req),session));
                 if (req.method === 'GET' && a) return json(res,200,await assurance.listRuns(a[1],url.searchParams.get('revision')));
@@ -176,7 +258,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             }
 
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake }, storage: repository.driver ?? 'local-review', release: '0.6.0', revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());

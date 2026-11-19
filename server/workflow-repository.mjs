@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { openDatabase, migrateDatabase, requireSchema } from './workflow-store.mjs';
 import { InputError, fields, text, version, identifier, actorEmail, requireRole, applicationInput, changeInput, obligationInput, sourceRevision, appView, obligationView, revisionView, iso } from './workflow-input.mjs';
+import { createDraftingRepository } from './drafting/repository.mjs';
+import { createImpactReader } from './impact/reader.mjs';
+import { migrateDrafting, requireDrafting } from './drafting/migration.mjs';
 const oq = `SELECT o.*,w.revision_id,w.source_version,w.review_state,w.proposed_by,w.last_edited_by,w.imported,w.copied_from FROM obligations o JOIN obligation_workflow w ON w.obligation_id=o.id`;
 const eventView = r => ({ id: r.id, obligationId: r.obligation_id, version: Number(r.version), revisionId: r.revision_id, action: r.action, actor: r.actor, rationale: r.rationale, independentActor: !!Number(r.independent_actor), snapshot: JSON.parse(r.snapshot), createdAt: iso(r.created_at) });
 export async function openWorkflowRepository(options = {}) {
@@ -10,6 +13,10 @@ export async function openWorkflowRepository(options = {}) {
             await migrateDatabase(db);
         else
             await requireSchema(db);
+        if (options.drafting?.enabled === true) {
+            if (options.migrate) await migrateDrafting(db);
+            else await requireDrafting(db);
+        }
     }
     catch (e) {
         await db.close();
@@ -49,6 +56,7 @@ export async function openWorkflowRepository(options = {}) {
     const listActivity = async (c) => (await c.query('SELECT * FROM activity ORDER BY created_at DESC,id DESC LIMIT 100')).rows.map(r => ({ id: r.id, actor: r.actor, action: r.action, entityId: r.entity_id, detail: r.detail, createdAt: iso(r.created_at) }));
     const result = { workflow: true, isAsync: db.driver === 'postgres', driver: db.driver, reviewMode,
         close: () => db.close(), healthy: () => db.healthy(), listApplications: () => read(listApps), listChanges: () => read(listChanges), listActivity: () => read(listActivity),
+        getSchemaVersion: () => read(async (c) => { const value = (await c.query('SELECT MAX(version) AS version FROM qivvera_migrations')).rows[0]?.version; return value === null || value === undefined ? null : Number(value); }),
         getApplication: id => read(async (c) => appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0])), getChange: (id, rev) => read(c => getChange(c, id, rev)),
         async createApplication(input, actor) { requireRole(actor, 'AUTHOR'); const a = applicationInput(input), email = actorEmail(actor); try {
             return await db.transaction(async (c) => { const id = randomUUID(), now = new Date().toISOString(); await c.query('INSERT INTO applications (id,name,normalized_name,description,repository_url,created_at) VALUES ($1,$2,$3,$4,$5,$6)', [id, a.name, a.name.toLocaleLowerCase('en-US'), a.description, a.repositoryUrl, now]); await audit(c, email, 'APPLICATION_CREATED', id, `Registered ${a.name}`); return appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0]); });
@@ -153,5 +161,10 @@ export async function openWorkflowRepository(options = {}) {
             return false; await c.query('UPDATE auth_buckets SET attempt_count=attempt_count+1 WHERE bucket_key=$1', [key]); return true; }),
         cleanupSessions: () => db.transaction(async (c) => { await c.query('DELETE FROM workspace_sessions WHERE expires_at<=$1', [Date.now()]); await c.query('DELETE FROM auth_buckets WHERE reset_at<=$1', [Date.now()]); }),
     };
+    if (options.drafting?.enabled === true) result.drafting = createDraftingRepository({
+        db, config: options.drafting, helpers: { head, lockedChange, ensureHead, createOb, audit },
+    });
+    try { result.impact = createImpactReader(db, { ...options.impact, reviewMode }); }
+    catch (error) { await db.close(); throw error; }
     return result;
 }

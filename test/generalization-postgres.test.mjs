@@ -1,3 +1,4 @@
+import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Destructive tests run only against explicitly disposable loopback PostgreSQL. */
 import test from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
 import {setupMulti} from './generalization-helpers.mjs';import {setupIntake,author} from './intake-helpers.mjs';import {correctionJourney} from './multi-correction-helpers.mjs';
@@ -5,9 +6,9 @@ import {openIntakeRepository} from '../server/intake/repository.mjs';import {ope
 const url=process.env.TEST_DATABASE_URL;
 if(!url)test('GENERALIZATION POSTGRES NOT EXECUTED: disposable database required',{skip:process.env.REQUIRE_POSTGRES!=='true'},()=>{throw new Error('Mandatory generalization PostgreSQL suite did not execute.');});
 else {
- const u=new URL(url);if(!['localhost','127.0.0.1','[::1]'].includes(u.hostname)||!/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname))throw new Error('Only disposable LOOPBACK qivvera_test_* databases are allowed.');
+ requireDisposablePostgresURL(url);
  const {default:pg}=await import('pg');
- async function reset(){const p=new pg.Pool({connectionString:url});try{await p.query('DROP TABLE IF EXISTS source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');}finally{await p.end();}}
+ async function reset(){const p=new pg.Pool({connectionString:url});try{await p.query('DROP TABLE IF EXISTS drafting_suggestions,drafting_runs,source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');}finally{await p.end();}}
  for(const adapter of ['approval-v1','expense-v1'])for(const [mode,expected] of [['correct','READY'],['repeat-approval-defect','NOT_READY']])test(`POSTGRES generalization / ${adapter} / ${mode}`,async t=>{await reset();const h=await setupMulti(t,{adapter,mode,postgresURL:url});const result=await h.run();assert.equal(result.disposition,expected);assert.equal(result.evidenceIntegrity,'DIGEST_MATCH');});
  test('POSTGRES generalization / second-obligation correction preserves original evidence',async t=>{await reset();const h=await correctionJourney(t,{postgresURL:url});assert.equal(h.item.effectiveStatus,'RESOLVED');assert.equal(h.exported.originalAssessment.disposition,'NOT_READY');});
  test('POSTGRES generalization / migration 4 to 5 preserves legacy assessment and resolution',async t=>{await reset();const h=await resolutionSetup(t,{postgresURL:url}),item=await h.create(),db=await openDatabase({...h.db});try{await migrateIntake(db);await migrateIntake(db);assert.equal((await h.resolution.get(item.id)).source.evidenceDigest,h.source.evidenceDigest);const row=await db.transaction(async c=>(await c.query('SELECT checksum FROM qivvera_migrations WHERE version=5')).rows[0],true);assert.equal(row.checksum,intakeChecksum);}finally{await db.close();}});

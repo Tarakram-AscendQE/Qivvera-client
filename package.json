@@ -1,9 +1,9 @@
 {
   "name": "qivvera-foundation",
-  "version": "0.6.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
-  "description": "Qivvera reusable approval controls and reviewed GitHub source intake",
+  "description": "Qivvera independent change assurance with verified integrity and operational checks",
   "engines": {
     "node": ">=22.16.0 <23"
   },
@@ -12,12 +12,15 @@
     "build": "tsc && node scripts/sync-assets.mjs",
     "check": "node scripts/check-syntax.mjs && npm run typecheck && npm test",
     "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
-    "test:postgres": "REQUIRE_POSTGRES=true node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs test/resolution-postgres.test.mjs test/generalization-postgres.test.mjs",
+    "test:postgres": "REQUIRE_POSTGRES=true node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs test/resolution-postgres.test.mjs test/generalization-postgres.test.mjs test/drafting-postgres.test.mjs test/impact-postgres.test.mjs test/templates-postgres.test.mjs test/operations-postgres.test.mjs",
     "dev": "npm run build && node scripts/dev.mjs",
     "start": "node server/start.mjs",
     "start:registry": "node server/start.mjs",
     "migrate": "node scripts/migrate.mjs",
     "check:release": "node scripts/verify-release.mjs",
+    "check:engineering": "node scripts/verify-engineering.mjs",
+    "audit:permissions": "node scripts/audit-permissions.mjs",
+    "rehearse:recovery": "node scripts/rehearse-recovery.mjs",
     "selfcheck": "node scripts/selfcheck.mjs",
     "worker:once": "node scripts/assurance-worker.mjs --once",
     "demo:assurance": "node scripts/reference-assurance.mjs",
@@ -25,7 +28,11 @@
     "worker:run": "node scripts/assurance-worker.mjs --poll",
     "test:resolution": "node --test --test-concurrency=1 test/resolution*.test.mjs",
     "demo:resolution": "node scripts/reference-resolution.mjs",
-    "demo:generalization": "node scripts/reference-generalization.mjs"
+    "demo:generalization": "node scripts/reference-generalization.mjs",
+    "test:browser": "python3 test/run-browser-suites.py",
+    "test:drafting": "node --test --test-concurrency=1 test/drafting*.test.mjs",
+    "test:impact": "node --test --test-concurrency=1 test/impact*.test.mjs",
+    "test:templates": "node --test --test-concurrency=1 test/templates*.test.mjs"
   },
   "dependencies": {
     "pg": "8.23.1"

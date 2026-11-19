@@ -1,3 +1,4 @@
+import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Mandatory release suite; only disposable loopback PostgreSQL databases are allowed. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,12 +9,10 @@ if (!url) {
     test('POSTGRES NOT EXECUTED: supply disposable TEST_DATABASE_URL', { skip: process.env.REQUIRE_POSTGRES !== 'true' }, () => { throw new Error('Mandatory PostgreSQL suite did not execute.'); });
 }
 else {
-    const u = new URL(url);
-    if (!['localhost', '127.0.0.1', '[::1]'].includes(u.hostname) || !/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname))
-        throw new Error('Integration tests require an isolated loopback qivvera_test_* database. Never point this test at customer data.');
+    requireDisposablePostgresURL(url);
     const { default: pg } = await import('pg');
     const reset = async () => { const p = new pg.Pool({ connectionString: url }); try {
-        await p.query('DROP TABLE IF EXISTS source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');
+        await p.query('DROP TABLE IF EXISTS drafting_suggestions,drafting_runs,source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');
     }
     finally {
         await p.end();
@@ -74,6 +73,46 @@ else {
         finally {
             await two.close();
             await three.close();
+        }
+    });
+    test('POSTGRES / authenticated support works with SELECT-only storage permissions', async () => {
+        await reset();
+        const { createApplicationServer } = await import('../server/app.mjs');
+        const { createWorkspaceAuth } = await import('../server/workspace-auth.mjs');
+        const { hashPassword } = await import('../server/auth.mjs');
+        const { randomUUID } = await import('node:crypto');
+        const { once } = await import('node:events');
+        const options = { driver: 'postgres', connectionString: url, sslMode: 'disable', migrate: true };
+        const owner = await openWorkflowRepository(options), pool = new pg.Pool({ connectionString: url });
+        const suffix = randomUUID().replaceAll('-', ''), role = 'qivvera_support_' + suffix, password = randomUUID() + randomUUID();
+        const account = { email: 'support-reader@example.test', passwordHash: hashPassword(password), roles: ['VIEWER'] };
+        let limited, server, roleCreated = false;
+        try {
+            const auth = createWorkspaceAuth({ accounts: [account], repository: owner, secureCookies: false });
+            const login = await auth.login(account.email, password);
+            assert.ok(login.session);
+            await pool.query(`CREATE ROLE ${role} LOGIN PASSWORD '${password}'`); roleCreated = true;
+            await pool.query(`GRANT USAGE ON SCHEMA public TO ${role}`);
+            await pool.query(`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ${role}`);
+            const connection = new URL(url); connection.username = role; connection.password = password;
+            limited = await openWorkflowRepository({ ...options, connectionString: connection.toString(), migrate: false });
+            server = createApplicationServer({ repository: limited, accounts: [account], publicOrigin: 'http://127.0.0.1:3017', releaseRevision: 'e'.repeat(40) });
+            server.listen(0, '127.0.0.1'); await once(server, 'listening');
+            const response = await fetch(`http://127.0.0.1:${server.address().port}/api/support-info`, { headers: { Cookie: login.cookie.split(';')[0] } });
+            assert.equal(response.status, 200);
+            const snapshot = await response.json();
+            assert.equal(snapshot.workspace.storage, 'postgres');
+            assert.equal(snapshot.workspace.schemaVersion, 2);
+            assert.equal(snapshot.workspace.storageCheck, 'reachable');
+            assert.equal(snapshot.limitations.releaseStatus, 'not-evaluated');
+            assert.ok(Object.values(snapshot.actions).every(value => value === false));
+            assert.equal((await pool.query('SELECT COUNT(*) AS n FROM workspace_sessions')).rows[0].n, '1');
+            assert.equal((await pool.query('SELECT COUNT(*) AS n FROM activity')).rows[0].n, '0');
+        } finally {
+            if (server) await new Promise(resolve => server.close(resolve));
+            await limited?.close();
+            if (roleCreated) { await pool.query(`DROP OWNED BY ${role}`); await pool.query(`DROP ROLE ${role}`); }
+            await pool.end(); await owner.close();
         }
     });
     test('POSTGRES / actual integration suite executed', () => assert.ok(url));

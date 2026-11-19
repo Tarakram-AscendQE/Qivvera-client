@@ -4,6 +4,7 @@ import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
 import {createApplicationServer} from '../server/app.mjs';
 import {hashPassword} from '../server/auth.mjs';
+import {PRODUCT_VERSION} from '../server/release.mjs';
 import {resolutionSetup,author,authority,viewer,accounts,note} from './resolution-helpers.mjs';
 async function httpSetup(t){
  const h=await resolutionSetup(t);const corrected=await h.correct();const password=randomUUID()+randomUUID();
@@ -49,6 +50,6 @@ test('resolution HTTP / concurrent stale requests return explicit conflict',asyn
  assert.equal((await h.call(`/api/resolutions/${i.id}/actions`,args)).status,200);const stale=await h.call(`/api/resolutions/${i.id}/actions`,args);assert.equal(stale.status,409);assert.equal(stale.body.error,'VERSION_CONFLICT');
 });
 test('resolution HTTP / capability and directory expose no credentials',async t=>{
- const h=await httpSetup(t),a=await h.login(author.email);const w=await h.call('/api/workspace',{session:a});assert.equal(w.body.capabilities.resolutionWorkflow,true);assert.equal(w.body.release,'0.6.0');
+ const h=await httpSetup(t),a=await h.login(author.email);const w=await h.call('/api/workspace',{session:a});assert.equal(w.body.capabilities.resolutionWorkflow,true);assert.equal(w.body.release,PRODUCT_VERSION);
  const users=await h.call('/api/resolution-assignees',{session:a});assert.ok(users.body.every(u=>Object.keys(u).sort().join(',')==='email,roles'));
 });
