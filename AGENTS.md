@@ -1,7 +1,7 @@
-# Qivvera engineering rules — Increment 9 (0.10.0)
+# Qivvera engineering rules — Increment 10 (0.11.0)
 
 The founder is product owner/end user, not programmer or deployment operator. Preserve the working
-Vercel/PostgreSQL direction. Continue from published Increment 8 commit 60153c7; do not rebuild the product.
+Vercel/PostgreSQL direction. Continue from verified Increment 9 commit 1e67bd6; do not rebuild the product.
 
 Independent Change Assurance: Change → Obligations → Evidence → Gaps → scope-bound Disposition.
 Acceptance of a requirement is not evidence that software satisfies it. One bounded approval-separation
@@ -25,7 +25,7 @@ user-provided URL, universal obligation discovery, or production release certifi
 - Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
 ## Delivery
-Read docs/increment-9-contract.md and docs/increment-9-engineer.md alongside the earlier invariants.
+Read docs/increment-10-contract.md and docs/operations-verification.md alongside the earlier invariants.
 Run npm run check and all three demo commands. npm run check:release requires a disposable real local
 PostgreSQL database. Run the native browser suites with the pinned test-only tools. Native HTTPS/Vercel
 browser acceptance, clean install and recovery are separate mandatory gates.
@@ -111,3 +111,18 @@ credentials, databases, account settings or costs without the appropriate author
   requires generalized assurance, the reviewed migration and grants. Worker gains no template writes.
 - All seven PostgreSQL and seven native browser suites plus cumulative/reference checks are mandatory.
   Report exact-commit verification separately from hosted deployment, independent QE and release acceptance.
+
+## Increment 10 invariants
+- Continue from exact verified Increment 9; publish on increment10 with automatic deployment held.
+- Preserve schema 7 and published migration/profile/verifier bytes. No live operations from builds/tests.
+- Validate full current obligation membership, review history, frozen plan scope and run/plan binding.
+  Missing or inconsistent inputs fail closed; no reduced mandatory scope, guessed result or history repair.
+- Preserve healthy historical evidence after later scope changes. Staleness is distinct from corruption.
+- Bind response assignments, dialogs and mutations to the exact displayed route/record/revision/session.
+  Obsolete reads cannot change a write target; obsolete saves cannot navigate or close newer dialogs.
+- Permission audits are explicitly invoked and read-only. Recovery rehearsal is explicitly disposable,
+  loopback-only, uses real PostgreSQL backup tools and never overwrites/drops a working database.
+- Engineering reports record exact Git identity and dirty-tree state. Local/synthetic checks do not fill
+  hosted permissions/HTTPS/recovery or independent human QE/customer acceptance.
+- Run npm run check:engineering with all eight PostgreSQL suites and all eight native browser suites.
+  Source publication, hosted deployment and product scope completion remain separate recorded outcomes.

@@ -2,18 +2,19 @@
 
 **Change → Obligations → Evidence → Gaps → scope-bound Disposition**
 
-## Increment 9 · version 0.10.0
+## Increment 10 · version 0.11.0
 
-Cumulative implementation on verified Increment 8 commit `60153c7`, adding **Verification templates**.
-A Policy Authority saves a versioned template from a current approved plan, then explicitly matches
-its supported checks to accepted requirements on another current revision and approves a fresh plan.
-Templates retain their source provenance and immutable history. Every use requires fresh review and
-execution; earlier approval, evidence and passing results do not transfer.
+Cumulative implementation on verified Increment 9 commit `1e67bd6`, strengthening **assurance
+integrity, record-bound user actions and operational verification**. Damaged scope or plan/run
+records cannot silently omit obligations and produce a result. Delayed responses cannot change
+the target of a visible action. Explicit operator tools audit effective runtime permissions and
+rehearse a genuine PostgreSQL backup/restore into a new disposable database.
 
-Start with the [contract](docs/increment-9-contract.md),
-[verification record](docs/increment-9-verification.md),
-[operator handoff](docs/increment-9-engineer.md) and
-[unfilled release acceptance record](docs/increment-9-release-acceptance.md).
+Start with the [contract](docs/increment-10-contract.md),
+[Product Atlas reconciliation](docs/product-completion-status.md),
+[operational verification](docs/operations-verification.md),
+[verification record](docs/increment-10-verification.md) and
+[unfilled release acceptance record](docs/increment-10-release-acceptance.md).
 
 ## What the product supports
 
@@ -66,7 +67,8 @@ npm run demo:generalization
 ```
 
 `npm run check:release` requires a disposable, explicitly named loopback PostgreSQL database.
-All seven database suites must execute; missing execution fails the gate. Never reset working data.
+All eight database suites must execute; missing execution fails the gate. Never reset working data.
+The operations suite also requires PostgreSQL 17-compatible `pg_dump` and `pg_restore` tools.
 
 For genuine local HTTP browser journeys:
 
@@ -77,15 +79,24 @@ python3 -m venv .venv-browser
 .venv-browser/bin/python3 test/run-browser-suites.py
 ```
 
+After configuring the disposable database and pinned browser runtime, run the whole cumulative gate:
+
+```sh
+npm run check:engineering
+```
+
+This writes `review-test-results/engineering-verification.json` with the source commit, clean-tree
+status, actual gate results and retained logs. All eight native browser suites are mandatory.
+
 CI runs these browser checks alongside cumulative regression/reference tests. Hosted HTTPS,
-actual provider grants/migration, cold starts, persistence, isolated restore and independent QE
-remain separate checks. The [QE supplement](docs/increment-9-qe.md) leaves Actual Result and
-Pass/Fail blank for the executing team.
+actual provider grants/migration, cold starts, persistence, actual hosted-backup restore and
+independent human QE remain separate checks. The cumulative [QE supplement](docs/increment-9-qe.md)
+and [release record](docs/increment-10-release-acceptance.md) do not predeclare those outcomes.
 
 ## Deployment and compatibility
 
 Keep the existing Vercel/PostgreSQL/worker architecture and team-controlled deployment method.
-Increment 9 adds schema 7 and reviewed template runtime grants. The protected feature switch
+Increment 10 retains schema 7 and all published migration/profile/verifier bytes. The protected feature switch
 `QIVVERA_TEMPLATES_ENABLED` defaults off; enabling it requires assurance and generalization enabled.
 Templates share the existing assurance database and introduce no external provider or credentials.
 Earlier deployment baselines need the reviewed cumulative migration/grants sequence. Hosted startup
@@ -93,7 +104,7 @@ and builds do not migrate. Older published binaries reject schema 7; switching a
 does not reverse a database upgrade. Optional drafting AI remains separately configured and requires
 live evaluation. See the operator handoff for the isolated migration/recovery rehearsal.
 
-Automatic Git deployment for `increment9` remains held in `vercel.json`; prior flags are preserved.
+Automatic Git deployment for `increment10` remains held in `vercel.json`; prior flags are preserved.
 Source publication performs no live migration, secret provisioning, paid resource creation or
 deployment. Exact current verification/publication status belongs in the delivery record.
 Earlier increment contracts and handoffs remain in `docs/` as historical records.

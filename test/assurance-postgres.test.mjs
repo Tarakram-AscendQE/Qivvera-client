@@ -1,3 +1,4 @@
+import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** This suite is mandatory for release. No remote/customer database can be selected. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ import {openWorkflowRepository} from '../server/workflow-repository.mjs';
 const url=process.env.TEST_DATABASE_URL;
 if(!url){test('ASSURANCE POSTGRES NOT EXECUTED: isolated database required',{skip:process.env.REQUIRE_POSTGRES!=='true'},()=>{throw new Error('Mandatory assurance PostgreSQL verification did not execute.');});}
 else{
- const u=new URL(url);if(!['127.0.0.1','localhost','[::1]'].includes(u.hostname)||!/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname))throw new Error('Only disposable LOOPBACK qivvera_test_* databases are allowed.');
+ requireDisposablePostgresURL(url);
  const {default:pg}=await import('pg');
  async function reset(){const p=new pg.Pool({connectionString:url});try{await p.query('DROP TABLE IF EXISTS drafting_suggestions,drafting_runs,source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');}finally{await p.end();}}
  for(const [mode,verdict]of [['correct','READY'],['self-approval-defect','NOT_READY'],['reject-all','INDETERMINATE']])test(`POSTGRES assurance / actual target ${mode}`,async t=>{await reset();const h=await setup(t,{mode,postgresURL:url});const r=await h.run();assert.equal(r.disposition,verdict);assert.equal(r.evidenceIntegrity,'DIGEST_MATCH');});

@@ -16,6 +16,8 @@ export const migrationChecksum = createHash('sha256').update(legacySql + '\n' + 
 export function postgresOptions(raw, { sslMode = 'verify-full', ca, max = 3 } = {}) {
     if (typeof raw !== 'string' || !raw)
         throw new Error('DATABASE_URL_REQUIRED');
+    if (raw.trim() !== raw || /[\u0000-\u0020\u007f]/u.test(raw))
+        throw new Error('INVALID_DATABASE_URL');
     let u;
     try {
         u = new URL(raw);
@@ -23,8 +25,16 @@ export function postgresOptions(raw, { sslMode = 'verify-full', ca, max = 3 } = 
     catch {
         throw new Error('INVALID_DATABASE_URL');
     }
-    if (!['postgres:', 'postgresql:'].includes(u.protocol))
+    if (!['postgres:', 'postgresql:'].includes(u.protocol) || !u.hostname || u.hash)
         throw new Error('INVALID_DATABASE_URL');
+    // pg-connection-string lets query keys replace host, port, database and credentials.
+    // Accept only known TLS compatibility options, then remove them before passing the URL on.
+    const allowedOptions = new Set(['sslmode', 'sslcert', 'sslkey', 'sslrootcert', 'channel_binding']);
+    const seenOptions = new Set();
+    for (const [key] of u.searchParams) {
+        if (!allowedOptions.has(key) || seenOptions.has(key)) throw new Error('UNSUPPORTED_DATABASE_URL_OPTION');
+        seenOptions.add(key);
+    }
     if (!['verify-full', 'disable'].includes(sslMode))
         throw new Error('UNSUPPORTED_DATABASE_SSL_MODE');
     const local = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname);

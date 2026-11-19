@@ -1,7 +1,7 @@
 name: Qivvera cumulative functional and browser checks
 on:
   push:
-    branches: [main, increments, increment3, increment4, increment5, increment6, increment7, increment8, increment9]
+    branches: [main, increments, increment3, increment4, increment5, increment6, increment7, increment8, increment9, increment10]
   pull_request:
 permissions:
   contents: read
@@ -35,14 +35,11 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: node scripts/selfcheck.mjs
-      - run: npm run check:release
-      - name: Real local HTTP and separate-process reference execution
-        run: npm run demo:assurance
-      - name: Resolution reference journey
-        run: npm run demo:resolution
-      - name: Two-application and multi-obligation reference journeys
-        run: npm run demo:generalization
+      - name: Install matching PostgreSQL recovery tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          echo /usr/lib/postgresql/17/bin >> "$GITHUB_PATH"
       - name: Set up Python for browser checks
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
         with:
@@ -52,10 +49,8 @@ jobs:
           python3 -m venv .venv-browser
           .venv-browser/bin/python3 -m pip install -r test/requirements-browser.txt
           .venv-browser/bin/python3 -m playwright install --with-deps chromium
-      - name: Native browser workflows, drafting, impact and verification templates
-        run: .venv-browser/bin/python3 test/run-browser-suites.py
-      - name: Canonical assets remain in sync
-        run: git diff --exit-code -- public/
+      - name: Cumulative automated, recovery, reference and native browser verification
+        run: npm run check:engineering
       - name: Retain synthetic verification reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

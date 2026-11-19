@@ -63,7 +63,18 @@ export function createApplicationServer({ repository, assurance = null, resoluti
     const publicSession = s => ({ email: s.email, roles: s.roles ?? ['AUTHOR'], csrfToken: s.csrfToken, reviewMode: workflow ? repository.reviewMode : 'not-available' });
     const decorate = async change => {
         if (!change || !assurance) return change;
-        const runs = await assurance.listRuns(change.id, change.revision.id), latest = runs[0];
+        let runs;
+        try { runs = await assurance.listRuns(change.id, change.revision.id); }
+        catch (error) {
+            if (!(error instanceof InputError) || error.code !== 'ASSURANCE_INTEGRITY_FAILED') throw error;
+            // Isolate an unavailable assessment without hiding it or taking down healthy records.
+            // The strict assurance endpoints still reject the affected plan/run and cannot execute it.
+            return { ...change, disposition: null, assessmentStatus: 'ASSURANCE_UNAVAILABLE', latestAssessment: null,
+                assuranceError: { code: 'ASSURANCE_INTEGRITY_FAILED',
+                    message: 'Saved assurance inputs are missing or inconsistent. No conclusion is available for this change. Ask the workspace operator to inspect the original records.' },
+                ...(change.obligations ? { obligations: change.obligations.map(o => ({ ...o, state: 'NOT_ASSESSED', evidenceCount: 0 })) } : {}) };
+        }
+        const latest = runs[0];
         if (!latest) return change;
         const current = latest.applicability === 'CURRENT';
         const assessed = current && latest.status === 'COMPLETED' && latest.evidenceIntegrity === 'DIGEST_MATCH';

@@ -1,3 +1,4 @@
+import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Only explicitly disposable loopback PostgreSQL may execute these destructive tests. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,9 +15,7 @@ if (!url) test('DRAFTING POSTGRES NOT EXECUTED: disposable database required', {
     throw new Error('Mandatory drafting PostgreSQL suite did not execute.');
 });
 else {
-    const u = new URL(url);
-    if (!['localhost', '127.0.0.1', '[::1]'].includes(u.hostname) || !/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname))
-        throw new Error('Only disposable LOOPBACK qivvera_test_* databases are allowed.');
+    requireDisposablePostgresURL(url);
     const { default: pg } = await import('pg');
     const reset = async () => {
         const p = new pg.Pool({ connectionString: url });

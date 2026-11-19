@@ -1,3 +1,4 @@
+import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Read-only reporting is checked on an explicitly disposable real PostgreSQL database. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,8 +14,7 @@ if (!url) test('IMPACT POSTGRES NOT EXECUTED: disposable database required', { s
     throw new Error('Mandatory impact PostgreSQL suite did not execute.');
 });
 else {
-    const u = new URL(url);
-    if (!['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname) || !/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname)) throw new Error('Only disposable LOOPBACK qivvera_test_* databases are allowed.');
+    requireDisposablePostgresURL(url);
     const { default: pg } = await import('pg');
     const reset = async () => {
         const p = new pg.Pool({ connectionString: url });

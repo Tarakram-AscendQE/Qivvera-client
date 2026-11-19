@@ -1,3 +1,4 @@
+import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Mandatory release suite; only disposable loopback PostgreSQL databases are allowed. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,9 +9,7 @@ if (!url) {
     test('POSTGRES NOT EXECUTED: supply disposable TEST_DATABASE_URL', { skip: process.env.REQUIRE_POSTGRES !== 'true' }, () => { throw new Error('Mandatory PostgreSQL suite did not execute.'); });
 }
 else {
-    const u = new URL(url);
-    if (!['localhost', '127.0.0.1', '[::1]'].includes(u.hostname) || !/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname))
-        throw new Error('Integration tests require an isolated loopback qivvera_test_* database. Never point this test at customer data.');
+    requireDisposablePostgresURL(url);
     const { default: pg } = await import('pg');
     const reset = async () => { const p = new pg.Pool({ connectionString: url }); try {
         await p.query('DROP TABLE IF EXISTS drafting_suggestions,drafting_runs,source_previews,source_imports,source_backoff,resolution_challenges,resolution_history,resolution_items,assurance_evidence,assurance_runs,assurance_plans,obligation_history,obligation_workflow,change_revisions,workspace_sessions,auth_buckets,qivvera_migrations,activity,obligations,changes,applications CASCADE');

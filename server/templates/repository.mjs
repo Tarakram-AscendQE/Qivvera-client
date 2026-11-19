@@ -196,7 +196,9 @@ export function createTemplateRepository({ db, model, catalogue, now = Date.now,
             name: v.snapshot.name, createdBy: v.snapshot.createdBy, createdAt: v.snapshot.createdAt, digest: v.digest })) };
     }
     async function sourceForSave(c, input) {
-        const ctx = await model.context(c, input.sourceChangeId, input.sourceRevisionId, true);
+        let ctx;
+        try { ctx = await model.context(c, input.sourceChangeId, input.sourceRevisionId, true); }
+        catch (e) { if (e.code === 'ASSURANCE_INTEGRITY_FAILED') integrity(); throw e; }
         await assertScope(c, ctx);
         if (!ctx.isCurrent) fail('TEMPLATE_SOURCE_HISTORICAL', 'Save from a current revision with a current approved plan.');
         const latest = await model.latestPlan(c, input.sourceRevisionId);

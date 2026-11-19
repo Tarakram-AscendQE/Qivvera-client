@@ -1,3 +1,4 @@
+import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Destructive fixtures are restricted to an explicitly disposable loopback PostgreSQL database. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,9 +17,7 @@ if (!url) test('TEMPLATES POSTGRES NOT EXECUTED: disposable database required', 
     throw new Error('Mandatory verification templates PostgreSQL suite did not execute.');
 });
 else {
-    const u = new URL(url);
-    if (!['localhost', '127.0.0.1', '[::1]'].includes(u.hostname) || !/^\/qivvera_test_[a-z0-9_]+$/.test(u.pathname))
-        throw new Error('Only disposable LOOPBACK qivvera_test_* databases are allowed.');
+    requireDisposablePostgresURL(url);
     const { default: pg } = await import('pg');
     const reset = async () => {
         const pool = new pg.Pool({ connectionString: url });
