@@ -36,14 +36,10 @@ function ownerHash(env) {
         throw new Error('OWNER_PASSWORD_SALT_REQUIRED');
     return `scrypt:${salt}:${scryptSync(env.OWNER_PASSWORD, salt, 64).toString('hex')}`;
 }
-export function loadConfig(env = process.env) {
-    const hosted = env.VERCEL === '1' || env.NODE_ENV === 'production';
-    const port = Number(env.PORT ?? 3000);
-    if (!Number.isInteger(port) || port < 1 || port > 65535)
-        throw new Error('INVALID_PORT');
-    const rawOrigin = env.PUBLIC_ORIGIN || (env.VERCEL_URL ? `https://${env.VERCEL_URL}` : hosted ? undefined : `http://127.0.0.1:${port}`);
-    const publicOrigin = normalizeOrigin(rawOrigin, { hosted });
-    let accounts;
+/** Configured accounts are optional: sign-in uses the database account table. When present they are
+ *  validated and only seed an EMPTY local table once (see server/accounts/repository.mjs). */
+export function configuredAccounts(env = process.env) {
+    let accounts = null;
     if (env.QIVVERA_ACCOUNTS_JSON) {
         try {
             accounts = JSON.parse(env.QIVVERA_ACCOUNTS_JSON);
@@ -52,12 +48,20 @@ export function loadConfig(env = process.env) {
             throw new Error('INVALID_ACCOUNT_JSON');
         }
     }
-    else {
-        if (!env.OWNER_EMAIL)
-            throw new Error('NAMED_ACCOUNTS_REQUIRED');
+    else if (env.OWNER_EMAIL) {
         accounts = [{ email: env.OWNER_EMAIL, passwordHash: ownerHash(env), roles: ['AUTHOR', 'POLICY_AUTHORITY'] }];
     }
-    normalizeAccounts(accounts);
+    if (accounts) normalizeAccounts(accounts);
+    return accounts;
+}
+export function loadConfig(env = process.env) {
+    const hosted = env.VERCEL === '1' || env.NODE_ENV === 'production';
+    const port = Number(env.PORT ?? 3000);
+    if (!Number.isInteger(port) || port < 1 || port > 65535)
+        throw new Error('INVALID_PORT');
+    const rawOrigin = env.PUBLIC_ORIGIN || (env.VERCEL_URL ? `https://${env.VERCEL_URL}` : hosted ? undefined : `http://127.0.0.1:${port}`);
+    const publicOrigin = normalizeOrigin(rawOrigin, { hosted });
+    const accounts = configuredAccounts(env);
     const reviewMode = env.QIVVERA_REVIEW_MODE ?? 'independent';
     if (!['independent', 'founder-review'].includes(reviewMode))
         throw new Error('INVALID_REVIEW_MODE');

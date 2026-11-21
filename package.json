@@ -17,6 +17,8 @@
     "start": "node server/start.mjs",
     "start:registry": "node server/start.mjs",
     "migrate": "node scripts/migrate.mjs",
+    "accounts": "node scripts/accounts.mjs",
+    "accounts:local": "node --env-file=.env.local scripts/accounts.mjs",
     "check:release": "node scripts/verify-release.mjs",
     "check:engineering": "node scripts/verify-engineering.mjs",
     "audit:permissions": "node scripts/audit-permissions.mjs",

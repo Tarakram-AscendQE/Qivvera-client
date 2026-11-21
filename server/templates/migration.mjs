@@ -9,7 +9,7 @@ export async function migrateTemplates(db) {
     return db.transaction(async c => {
         if (db.driver === 'postgres') await c.query('SELECT pg_advisory_xact_lock(78124422)');
         const rows = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-        if (rows.some(r => Number(r.version) > 7)) throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
+        if (rows.some(r => Number(r.version) > 8)) throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
         const prior = rows.find(r => Number(r.version) === 7);
         if (prior) {
             if (prior.checksum !== templatesChecksum) throw new Error('TEMPLATES_MIGRATION_CHECKSUM_MISMATCH');
@@ -23,7 +23,7 @@ export async function requireTemplates(db) {
     await requireDrafting(db);
     return db.transaction(async c => {
         const rows = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-        if (!rows.some(r => Number(r.version) === 7 && r.checksum === templatesChecksum) || rows.some(r => Number(r.version) > 7))
+        if (!rows.some(r => Number(r.version) === 7 && r.checksum === templatesChecksum) || rows.some(r => Number(r.version) > 8))
             throw new Error('TEMPLATES_MIGRATION_REQUIRED');
     }, true);
 }

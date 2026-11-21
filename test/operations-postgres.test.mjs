@@ -12,6 +12,8 @@ import { setupMulti } from './generalization-helpers.mjs';
 import { setupDrafting, author as draftAuthor } from './drafting-helpers.mjs';
 import { openAssuranceRepository } from '../server/assurance/repository.mjs';
 import { openWorkflowRepository } from '../server/workflow-repository.mjs';
+import { openDatabase } from '../server/workflow-store.mjs';
+import { migrateAccounts } from '../server/accounts/migration.mjs';
 
 const url = process.env.TEST_DATABASE_URL;
 const revision = process.env.GITHUB_SHA ?? process.env.QIVVERA_RELEASE_SHA ?? 'd'.repeat(40);
@@ -50,6 +52,9 @@ else {
         await admin.query(`CREATE DATABASE ${quoteIdentifier(name)} TEMPLATE template0${options}`); created = true;
         source = await connectDatabase(databaseConfig(sourceURL.toString(), { sslMode: 'disable', kind: 'source' }));
         const life = { after: fn => cleanups.push(fn) }, h = await setupTemplates(life, { postgresURL: sourceURL.toString() });
+        // Cumulative schema 8: database-held accounts.
+        const accountsDb = await openDatabase({ driver: 'postgres', connectionString: sourceURL.toString(), sslMode: 'disable' });
+        try { await migrateAccounts(accountsDb); } finally { await accountsDb.close(); }
         async function role(label, login = true) {
             const name = 'qivvera_op_' + label + '_' + randomUUID().replaceAll('-', ''), password = randomUUID().replaceAll('-', '') + randomUUID().replaceAll('-', '');
             await admin.query(`CREATE ROLE ${quoteIdentifier(name)} ${login ? 'LOGIN' : 'NOLOGIN'} NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);
@@ -78,6 +83,7 @@ else {
                 GRANT UPDATE(status,result_snapshot,result_digest,failure_code,completed_at) ON drafting_runs TO ${w};
                 GRANT UPDATE(status,version,decision_snapshot,decision_digest,decision_request_digest,obligation_id) ON drafting_suggestions TO ${w};
                 GRANT UPDATE(state,state_version,archived_by,archived_at,archive_rationale,archive_request_key) ON verification_templates TO ${w};
+                GRANT UPDATE(last_login_at) ON workspace_users TO ${w};
                 GRANT DELETE ON workspace_sessions,auth_buckets,source_previews TO ${w}`);
             await source.query(`GRANT SELECT ON applications,changes,change_revisions,obligations,obligation_workflow,obligation_history,
                 qivvera_migrations,assurance_plans,assurance_runs,assurance_evidence TO ${v};

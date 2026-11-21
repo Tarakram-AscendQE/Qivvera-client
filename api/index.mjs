@@ -9,17 +9,19 @@ import {openResolutionRepository} from '../server/resolution/repository.mjs';
 import {createApplicationServer} from '../server/app.mjs';
 import {fileURLToPath} from 'node:url';
 import {loadDraftingConfig} from '../server/drafting/generator.mjs';
+import {openWorkspaceAccounts} from '../server/accounts/repository.mjs';
 let initialising;
 async function getHandler(){
  if(!initialising)initialising=(async()=>{
   const cfg=loadConfig({...process.env,NODE_ENV:'production'}),ac=loadAssuranceConfig({...process.env,NODE_ENV:'production'});
-  const repository=await openWorkflowRepository({...cfg.database,migrate:false,drafting:loadDraftingConfig(),impact:{...ac,assuranceEnabled:ac.enabled}});let assurance,resolution,intake;
-  try{if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac,migrate:false});
-   if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,accounts:cfg.accounts,reviewMode:cfg.reviewMode,migrate:false});}
+  const repository=await openWorkflowRepository({...cfg.database,migrate:false,drafting:loadDraftingConfig(),impact:{...ac,assuranceEnabled:ac.enabled}});let accounts,assurance,resolution,intake;
+  try{accounts=await openWorkspaceAccounts({...cfg,database:{...cfg.database,migrate:false}});
+   if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac,migrate:false});
+   if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,directory:accounts,reviewMode:cfg.reviewMode,migrate:false});}
  const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:false});
-   const server=createApplicationServer({repository,assurance,resolution,intake,accounts:cfg.accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../web',import.meta.url))});
+   const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../web',import.meta.url))});
    return server.listeners('request')[0];
-  }catch(e){await intake?.close();await resolution?.close();await assurance?.close();await repository.close();throw e;}
+  }catch(e){await intake?.close();await resolution?.close();await assurance?.close();await accounts?.close();await repository.close();throw e;}
  })().catch(e=>{initialising=undefined;throw e;});
  return initialising;
 }

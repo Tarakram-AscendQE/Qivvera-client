@@ -1,4 +1,4 @@
-/** Read-only audit of the cumulative schema-7 runtime privilege contract. */
+/** Read-only audit of the cumulative schema-8 runtime privilege contract. */
 import { TABLES, databaseConfig, connectDatabase, beginReadSnapshot, databaseIdentity,
     requireCurrentSchema, digestJSON, releaseIdentity, fail, OperationsError } from './common.mjs';
 
@@ -20,7 +20,10 @@ Object.assign(web, {
     source_backoff: permission(true, true, ['retry_after']),
     drafting_runs: permission(true, true, ['status', 'result_snapshot', 'result_digest', 'failure_code', 'completed_at']),
     drafting_suggestions: permission(true, true, ['status', 'version', 'decision_snapshot', 'decision_digest', 'decision_request_digest', 'obligation_id']),
-    verification_templates: permission(true, true, ['state', 'state_version', 'archived_by', 'archived_at', 'archive_rationale', 'archive_request_key'])
+    verification_templates: permission(true, true, ['state', 'state_version', 'archived_by', 'archived_at', 'archive_rationale', 'archive_request_key']),
+    // Accounts are administered by the operator; the web runtime only reads them and records sign-in time.
+    workspace_users: permission(true, false, ['last_login_at']),
+    workspace_user_roles: permission(true, false)
 });
 const workerReads = new Set(['applications', 'changes', 'change_revisions', 'obligations', 'obligation_workflow',
     'obligation_history', 'qivvera_migrations', 'assurance_plans', 'assurance_runs', 'assurance_evidence']);
@@ -162,7 +165,7 @@ export async function auditRuntimePermissions(input = {}) {
             identityDigest: digestJSON({ database: validated.webConfig.identity, web: webResult.identity.role, worker: workerResult.identity.role }),
             passed: webResult.violations.length === 0 && workerResult.violations.length === 0,
             roles: { web: roleReport(webResult), worker: roleReport(workerResult) },
-            scope: 'Current schema-7 public-table runtime profile, effective grants, reachable roles and ownership.',
+            scope: 'Current schema-8 public-table runtime profile, effective grants, reachable roles and ownership.',
             limitations: ['Role/password/provider administration is not changed or certified.',
                 'External schemas, provider policy, backups, network controls and hosted application behavior require separate acceptance.'],
             releaseAcceptance: 'not-evaluated' };

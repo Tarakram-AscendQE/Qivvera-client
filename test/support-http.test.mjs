@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { createApplicationServer } from '../server/app.mjs';
 import { hashPassword } from '../server/auth.mjs';
-import { PRODUCT_VERSION } from '../server/release.mjs';
+import { PRODUCT_VERSION, MAX_SUPPORTED_SCHEMA_VERSION } from '../server/release.mjs';
 import { openWorkflowRepository } from '../server/workflow-repository.mjs';
 import { openAssuranceRepository } from '../server/assurance/repository.mjs';
 import { openResolutionRepository } from '../server/resolution/repository.mjs';
@@ -242,11 +242,12 @@ test('support HTTP / a removed required migration is reported without applying o
 test('support HTTP / an unsupported newer schema is reported without rollback', async t => {
     const h = await fixture(t), session = await h.login();
     const d = new DatabaseSync(h.db.path); t.after(() => d.close());
-    d.prepare('INSERT INTO qivvera_migrations(version,checksum,applied_at) VALUES(?,?,?)').run(8, 'test-future-schema', new Date().toISOString());
+    const future = MAX_SUPPORTED_SCHEMA_VERSION + 1;
+    d.prepare('INSERT INTO qivvera_migrations(version,checksum,applied_at) VALUES(?,?,?)').run(future, 'test-future-schema', new Date().toISOString());
     const r = await h.call(undefined, { session });
-    assert.equal(r.body.workspace.schemaVersion, 8);
+    assert.equal(r.body.workspace.schemaVersion, future);
     assert.ok(warningCodes(r.body).includes('SCHEMA_TOO_NEW'));
-    assert.equal(d.prepare('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=8').get().n, 1);
+    assert.equal(d.prepare('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=?').get(future).n, 1);
 });
 
 test('support HTTP / missing schema observation remains unknown instead of a pass', async t => {

@@ -14,7 +14,9 @@ const writable=actor=>{actorEmail(actor);if(!actor.roles.some(r=>['AUTHOR','POLI
 const basic=r=>({id:r.id,changeId:r.change_id,sourceRunId:r.source_run_id,sourceRevisionId:r.source_revision_id,sourceObligationId:r.source_obligation_id,kind:r.kind,assignedTo:r.assigned_to,actionPlan:r.action_plan,externalReference:r.external_reference,status:r.status,version:Number(r.version),correctionRevisionId:r.correction_revision_id,correctionObligationId:r.correction_obligation_id,correctionNote:r.correction_note,correctionProposedBy:r.correction_proposed_by,correctionProposedAt:r.correction_proposed_at,correctionRunFloor:r.correction_run_floor===null?null:Number(r.correction_run_floor),linkedRunId:r.linked_run_id,verifiedBy:r.verified_by,verifiedAt:r.verified_at,verification:parse(r.verification_snapshot),createdBy:r.created_by,createdAt:r.created_at,updatedAt:r.updated_at});
 const challengeView=r=>({id:r.id,itemId:r.item_id,state:r.state,raisedBy:r.raised_by,rationale:r.rationale,createdAt:r.created_at,response:r.response,respondedBy:r.responded_by,responseReason:r.response_reason,independentActor:r.independent_actor===null?null:!!Number(r.independent_actor),respondedAt:r.responded_at});
 export async function openResolutionRepository(options={}){
-  const people=directoryOf(options.accounts??[]);
+  // Database-held accounts are read live so added/disabled people are reflected without a restart.
+  const fixedPeople=options.directory?null:directoryOf(options.accounts??[]);
+  const people=async()=>fixedPeople??directoryOf(await options.directory.list());
   const catalogue=validateCatalogue(options.targets??[],{local:options.allowLocalTargets===true});
   const db=await openDatabase(options);
   try{if(options.migrate)await migrateResolution(db);else await requireResolution(db);}catch(e){await db.close();throw e;}
@@ -22,8 +24,8 @@ export async function openResolutionRepository(options={}){
   const reviewMode=options.reviewMode??'independent';
   if(!['independent','founder-review'].includes(reviewMode)){await db.close();throw new Error('INVALID_REVIEW_MODE');}
   const read=fn=>db.transaction(fn,true);
-  function assignee(value){const email=text(value,'Assignee email',254).toLowerCase();if(!people.some(p=>p.email===email&&p.roles.some(r=>['AUTHOR','POLICY_AUTHORITY'].includes(r))))fail('ASSIGNEE_UNAVAILABLE','Choose an active configured author or policy authority.',400);return email;}
-  const assignees=()=>people.filter(p=>p.roles.some(r=>['AUTHOR','POLICY_AUTHORITY'].includes(r)));
+  async function assignee(value){const email=text(value,'Assignee email',254).toLowerCase();if(!(await people()).some(p=>p.email===email&&p.roles.some(r=>['AUTHOR','POLICY_AUTHORITY'].includes(r))))fail('ASSIGNEE_UNAVAILABLE','Choose an active configured author or policy authority.',400);return email;}
+  const assignees=async()=>(await people()).filter(p=>p.roles.some(r=>['AUTHOR','POLICY_AUTHORITY'].includes(r)));
   const challenges=async(c,id)=>(await c.query('SELECT * FROM resolution_challenges WHERE item_id=$1 ORDER BY created_at,id',[id])).rows;
   async function itemRow(c,id){const r=(await c.query('SELECT * FROM resolution_items WHERE id=$1',[identifier(id)])).rows[0];if(!r)fail('RESOLUTION_NOT_FOUND','Resolution item not found.',404);return r;}
   async function run(c,id){const r=(await c.query('SELECT * FROM assurance_runs WHERE id=$1',[id])).rows[0];if(!r)fail('RUN_NOT_FOUND','Assessment not found.',404);return views.viewRun(c,r,await views.context(c,r.change_id,r.revision_id));}
@@ -64,7 +66,7 @@ export async function openResolutionRepository(options={}){
     const sourceRun=await run(c,r.source_run_id);
     if(source.evidenceDigest && (sourceRun.evidenceIntegrity!=='DIGEST_MATCH'||sourceRun.evidenceDigest!==source.evidenceDigest))add('SOURCE_EVIDENCE_INVALID','Original evidence is missing or altered. Restore/investigate it; do not close this item.');
     if(digest(sourceRun.snapshot)!==source.assessmentSnapshotDigest)add('SOURCE_ASSESSMENT_CHANGED','The original assessment identity changed.');
-    if(!people.some(p=>p.email===r.assigned_to&&p.roles.some(role=>['AUTHOR','POLICY_AUTHORITY'].includes(role))))add('ASSIGNEE_UNAVAILABLE','Assign an active configured owner before verifying resolution.');
+    if(!(await people()).some(p=>p.email===r.assigned_to&&p.roles.some(role=>['AUTHOR','POLICY_AUTHORITY'].includes(role))))add('ASSIGNEE_UNAVAILABLE','Assign an active configured owner before verifying resolution.');
     const pending=(await challenges(c,r.id)).some(x=>x.state==='OPEN');
     if(pending)add('CHALLENGE_PENDING','A policy authority must respond to the open challenge.');
     if(!r.correction_revision_id||!r.correction_obligation_id)add('CORRECTION_REQUIRED','Propose a correction and its related requirement first.');
@@ -110,10 +112,10 @@ export async function openResolutionRepository(options={}){
     return result;
   }
   const api={
-    close:()=>db.close(),healthy:()=>db.healthy(),listAssignees:async()=>assignees(),
+    close:()=>db.close(),healthy:()=>db.healthy(),listAssignees:()=>assignees(),
     async create(runId,input,actor){
       writable(actor);identifier(runId);fields(input,['obligationId','assignedTo','actionPlan','externalReference']);
-      const obligationId=identifier(input.obligationId),email=actorEmail(actor),assigned=assignee(input.assignedTo),plan=reason(input.actionPlan),external=text(input.externalReference,'External reference',500,false);
+      const obligationId=identifier(input.obligationId),email=actorEmail(actor),assigned=await assignee(input.assignedTo),plan=reason(input.actionPlan),external=text(input.externalReference,'External reference',500,false);
       return db.transaction(async c=>{
         const initial=await run(c,runId);await c.query('SELECT id FROM changes WHERE id=$1'+db.lock,[initial.changeId]);
         const old=(await c.query('SELECT * FROM resolution_items WHERE source_run_id=$1 AND source_obligation_id=$2',[runId,obligationId])).rows[0];
@@ -153,7 +155,7 @@ export async function openResolutionRepository(options={}){
         if(r.status==='RESOLVED'&&!['REOPEN','NOTE','CHALLENGE','RESPOND_CHALLENGE'].includes(action))fail('RESOLUTION_CLOSED','Reopen the item before making another correction.');
         let patch={};
         if(action==='START'){if(r.status!=='OPEN')fail('INVALID_TRANSITION','Only an open item can be started.');patch={status:'IN_PROGRESS'};}
-        if(action==='UPDATE'){patch={assigned_to:assignee(input.assignedTo),action_plan:reason(input.actionPlan),external_reference:text(input.externalReference,'External reference',500,false)};}
+        if(action==='UPDATE'){patch={assigned_to:await assignee(input.assignedTo),action_plan:reason(input.actionPlan),external_reference:text(input.externalReference,'External reference',500,false)};}
         if(action==='PROPOSE_CORRECTION'){
           const rev=identifier(input.revisionId),o=identifier(input.obligationId);const {ctx}=await correction(c,r,rev,o);fullRevision(ctx.revision.source_revision);
           if(r.kind==='VIOLATION'&&(rev===r.source_revision_id||ctx.revision.source_revision===parse(r.source_snapshot).target.sourceRevision))fail('NEW_CORRECTED_REVISION_REQUIRED','A confirmed behavioural violation needs a new source revision, not a task-status change.');

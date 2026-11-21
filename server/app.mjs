@@ -50,7 +50,7 @@ async function body(req, maxBytes = 16384) {
         reject(new InputError('INVALID_JSON', 'The request is not valid JSON.'));
     } }); req.on('error', reject); req.on('aborted', () => reject(new InputError('REQUEST_ABORTED', 'The request was interrupted.'))); });
 }
-export function createApplicationServer({ repository, assurance = null, resolution = null, intake = null, accounts, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
+export function createApplicationServer({ repository, assurance = null, resolution = null, intake = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
     if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin)
         throw new Error('PUBLIC_ORIGIN must be an exact origin.');
     if (secureCookies && !publicOrigin.startsWith('https://'))
@@ -58,8 +58,8 @@ export function createApplicationServer({ repository, assurance = null, resoluti
     const workflow = repository.workflow === true;
     // Legacy adapter retained only for baseline local regression tests. Hosted startup always
     // creates the workflow repository and cannot fall back to this adapter.
-    const auth = workflow ? createWorkspaceAuth({ accounts: accounts ?? [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], repository, secureCookies }) : createAuth({ ownerEmail, passwordHash, secureCookies });
-    const readSupport = createSupportReader({ repository, assurance, resolution, intake, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies });
+    const auth = workflow ? createWorkspaceAuth({ directory: accountDirectory ?? undefined, accounts: accountDirectory ? undefined : accounts ?? [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], repository, secureCookies }) : createAuth({ ownerEmail, passwordHash, secureCookies });
+    const readSupport = createSupportReader({ repository, assurance, resolution, intake, accountDirectory, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies });
     const publicSession = s => ({ email: s.email, roles: s.roles ?? ['AUTHOR'], csrfToken: s.csrfToken, reviewMode: workflow ? repository.reviewMode : 'not-available' });
     const decorate = async change => {
         if (!change || !assurance) return change;

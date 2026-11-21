@@ -4,7 +4,7 @@ const allowedRoles = ['AUTHOR', 'POLICY_AUTHORITY', 'VIEWER'];
 const warning = (code, message, nextStep) => ({ code, message, nextStep });
 
 /** A bounded, read-only configuration snapshot. Never inspect business records or contact a provider. */
-export function createSupportReader({ repository, assurance, resolution, intake, accounts = [], releaseRevision, secureCookies }) {
+export function createSupportReader({ repository, assurance, resolution, intake, accounts = [], accountDirectory = null, releaseRevision, secureCookies }) {
     const workflow = repository.workflow === true;
     const capabilities = Object.freeze({
         registry: true,
@@ -19,12 +19,11 @@ export function createSupportReader({ repository, assurance, resolution, intake,
         revisionImpact: workflow && !!repository.impact,
         verificationTemplates: workflow && !!assurance?.templates,
     });
-    const requiredSchemaVersion = capabilities.verificationTemplates ? 7 : capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
+    const databaseAccounts = workflow && accountDirectory?.source === 'database';
+    const requiredSchemaVersion = databaseAccounts ? 8 : capabilities.verificationTemplates ? 7 : capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
     // Account identities are compared only here; neither identities nor counts enter the response.
-    const named = accounts.map(a => ({ email: typeof a.email === 'string' ? a.email.trim().toLowerCase() : '', roles: Array.isArray(a.roles) ? a.roles : [] }));
-    const authors = named.filter(a => a.email && a.roles.includes('AUTHOR'));
-    const authorities = named.filter(a => a.email && a.roles.includes('POLICY_AUTHORITY'));
-    const everyAuthorHasReviewer = authors.every(a => authorities.some(p => p.email !== a.email));
+    const identities = list => list.map(a => ({ email: typeof a.email === 'string' ? a.email.trim().toLowerCase() : '', roles: Array.isArray(a.roles) ? a.roles : [] }));
+    const configuredAccounts = identities(accounts);
     const revision = typeof releaseRevision === 'string' && /^[a-f0-9]{40}$/i.test(releaseRevision) ? releaseRevision.toLowerCase() : 'unrecorded';
     const storage = ['postgres', 'sqlite'].includes(repository.driver) ? repository.driver : 'unknown';
     const reviewMode = ['independent', 'founder-review'].includes(repository.reviewMode) ? repository.reviewMode : 'not-available';
@@ -40,6 +39,12 @@ export function createSupportReader({ repository, assurance, resolution, intake,
                 storageCheck = 'reachable';
             }
         } catch { /* Return a fixed diagnostic without database errors, URLs or credentials. */ }
+        // Database-held accounts are read per request so added/disabled identities are reflected immediately.
+        let named = configuredAccounts, directoryAvailable = true;
+        if (accountDirectory) { try { named = identities(await accountDirectory.list()); } catch { named = []; directoryAvailable = false; } }
+        const authors = named.filter(a => a.email && a.roles.includes('AUTHOR'));
+        const authorities = named.filter(a => a.email && a.roles.includes('POLICY_AUTHORITY'));
+        const everyAuthorHasReviewer = authors.every(a => authorities.some(p => p.email !== a.email));
         const roles = allowedRoles.filter(role => session.roles?.includes(role));
         const author = roles.includes('AUTHOR'), authority = roles.includes('POLICY_AUTHORITY');
         const warnings = [];
@@ -50,8 +55,9 @@ export function createSupportReader({ repository, assurance, resolution, intake,
         if (storage === 'sqlite') warnings.push(warning('LOCAL_REVIEW_STORAGE', 'This workspace uses local review storage.', 'The deployment owner must validate the approved PostgreSQL deployment before hosted early access.'));
         if (revision === 'unrecorded') warnings.push(warning('REVISION_UNRECORDED', 'The deployed source revision is not recorded as a full Git commit.', 'Ask the deployment owner to record the exact deployed commit in protected release configuration.'));
         if (reviewMode === 'founder-review') warnings.push(warning('FOUNDER_REVIEW_MODE', 'This workspace permits founder review and does not establish independent human approval.', 'Keep this limitation visible. Use the approved independent-review configuration when a different reviewer is required.'));
-        if (workflow && !authors.length) warnings.push(warning('AUTHOR_UNAVAILABLE', 'No configured identity can create changes or propose obligations.', 'Ask the workspace owner to provision a named Author through the protected account configuration.'));
-        if (workflow && !authorities.length) warnings.push(warning('POLICY_AUTHORITY_UNAVAILABLE', 'No configured identity can make policy review decisions.', 'Ask the workspace owner to provision a named Policy Authority through the protected account configuration.'));
+        if (!directoryAvailable) warnings.push(warning('ACCOUNT_DIRECTORY_UNAVAILABLE', 'The account directory could not be read.', 'Give this support reference to the deployment owner. Reviewer availability was not checked.'));
+        else if (workflow && !authors.length) warnings.push(warning('AUTHOR_UNAVAILABLE', 'No configured identity can create changes or propose obligations.', 'Ask the workspace owner to provision a named Author through the protected account configuration.'));
+        if (directoryAvailable && workflow && !authorities.length) warnings.push(warning('POLICY_AUTHORITY_UNAVAILABLE', 'No configured identity can make policy review decisions.', 'Ask the workspace owner to provision a named Policy Authority through the protected account configuration.'));
         else if (workflow && reviewMode === 'independent' && !everyAuthorHasReviewer) warnings.push(warning('DISTINCT_REVIEWER_UNAVAILABLE', 'At least one configured Author has no different configured Policy Authority.', 'Ask the workspace owner to provision a different reviewer. Eligibility is still checked against each record and its contributors.'));
         if (!capabilities.assessmentQueue) warnings.push(warning('ASSURANCE_DISABLED', 'Assessment execution is not configured in this workspace.', 'You can prepare changes and review obligations. Ask the deployment owner to configure the supported assessment service when needed.'));
         else {
