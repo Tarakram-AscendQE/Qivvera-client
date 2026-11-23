@@ -4,7 +4,7 @@ import {openDatabase} from '../workflow-store.mjs';
 import {fields,InputError,identifier,text,actorEmail,requireRole,obligationView} from '../workflow-input.mjs';
 import {canonical,digest} from '../assurance/contracts.mjs';
 import {migrateIntake,requireIntake} from './migration.mjs';
-import {validateRepositories,publicRepository,pullNumber,readPull} from './github.mjs';
+import {validateRepositories,publicRepository,pullNumber,readPull,listOpenPulls} from './github.mjs';
 const fail=(code,message,status=409)=>{throw new InputError(code,message,status);};
 const iso=n=>new Date(n).toISOString();
 export async function openIntakeRepository(options={}){
@@ -13,12 +13,13 @@ export async function openIntakeRepository(options={}){
  try{if(options.migrate)await migrateIntake(db);else await requireIntake(db);}catch(e){await db.close();throw e;}
  const getConfig=id=>{const c=catalogue.find(r=>r.id===id);if(!c)fail('REPOSITORY_NOT_CONFIGURED','Select an operator-authorized repository.',400);return c;};
  const record=r=>{if(!r)fail('SOURCE_IMPORT_NOT_FOUND','Source import is unavailable.',404);let source;try{source=JSON.parse(r.snapshot);}catch{fail('SOURCE_INTEGRITY_FAILED','Saved source metadata is invalid.');}if(digest(source)!==r.snapshot_digest)fail('SOURCE_INTEGRITY_FAILED','Saved source metadata failed integrity validation.');return {id:r.id,applicationId:r.application_id,changeId:r.change_id,revisionId:r.revision_id,source,sourceDigest:r.snapshot_digest,importedBy:r.imported_by,importedAt:r.imported_at};};
- async function fetchSource(config,number){
+ async function withBackoff(config,read){
   const wait=await db.transaction(async c=>(await c.query('SELECT retry_after FROM source_backoff WHERE repository_key=$1',[config.id])).rows[0],true);
   if(wait&&Number(wait.retry_after)>now())fail('GITHUB_RATE_LIMITED','Provider cooldown is active. Retry later.',429);
-  try{return await readPull(config,number,{secretEnv:options.secretEnv??process.env,...(options.fetchFn?{fetchFn:options.fetchFn}:{})});}
+  try{return await read({secretEnv:options.secretEnv??process.env,...(options.fetchFn?{fetchFn:options.fetchFn}:{})});}
   catch(e){if(e.code==='GITHUB_RATE_LIMITED')await db.transaction(c=>c.query('INSERT INTO source_backoff(repository_key,retry_after) VALUES($1,$2) ON CONFLICT(repository_key) DO UPDATE SET retry_after=$2',[config.id,now()+e.retryMs]));throw e;}
  }
+ const fetchSource=(config,number)=>withBackoff(config,o=>readPull(config,number,o));
  async function previewRow(c,id,email){const row=(await c.query('SELECT * FROM source_previews WHERE id=$1',[id])).rows[0];if(!row||row.actor!==email)fail('PREVIEW_NOT_FOUND','Preview not found for this identity.',404);return row;}
  function fresh(row,config){if(Number(row.expires_at)<=now())fail('PREVIEW_EXPIRED','Preview expired. Fetch current source metadata.');if(row.configuration_digest!==digest(config))fail('REPOSITORY_CONFIGURATION_CHANGED','Repository authorization changed. Preview again.');const s=JSON.parse(row.snapshot);if(digest(s)!==row.snapshot_digest)fail('PREVIEW_INTEGRITY_FAILED','The saved preview is invalid.');return s;}
  const audit=(c,email,action,id,note)=>c.query('INSERT INTO activity(id,actor,action,entity_id,detail,created_at) VALUES($1,$2,$3,$4,$5,$6)',[randomUUID(),email,action,id,note,iso(now())]);
@@ -77,6 +78,23 @@ export async function openIntakeRepository(options={}){
     await audit(c,email,'GITHUB_SOURCE_IMPORTED',targetChange,`Imported ${source.repository}#${source.pullNumber} at ${source.headSha}; context only, not assurance.`);
     return {...record((await c.query('SELECT * FROM source_imports WHERE id=$1',[importId])).rows[0]),replayed:false};
    });
+  },
+  /** Read-only open pull-request listing for every operator-configured repository of one application.
+   *  Any signed-in role may view it. Listing imports nothing and creates no change, requirement or result. */
+  async listPulls(applicationId,actor){
+   actorEmail(actor);identifier(applicationId);
+   await db.transaction(async c=>{if(!(await c.query('SELECT id FROM applications WHERE id=$1',[applicationId])).rows[0])fail('APPLICATION_NOT_FOUND','Application not found.',404);},true);
+   const results=[];
+   for(const config of catalogue.filter(r=>r.applicationId===applicationId)){
+    const repository=publicRepository(config);
+    try{
+     const pulls=await withBackoff(config,o=>listOpenPulls(config,o));
+     const imports=pulls.length?await db.transaction(async c=>(await c.query(`SELECT change_id,pull_number,head_sha,imported_at FROM source_imports WHERE application_id=$1 AND repository_id=$2 AND pull_number IN (${pulls.map((_,i)=>'$'+(i+3)).join(',')}) ORDER BY imported_at,id`,[applicationId,config.repositoryId,...pulls.map(p=>p.number)])).rows,true):[];
+     results.push({repository,pulls:pulls.map(p=>{const linked=imports.filter(r=>Number(r.pull_number)===p.number);const last=linked.at(-1);
+      return {...p,imported:last?{changeId:last.change_id,headSha:last.head_sha,currentHead:last.head_sha===p.headSha}:null};})});
+    }catch(e){if(!(e instanceof InputError))throw e;results.push({repository,pulls:[],error:{code:e.code,message:e.message}});}
+   }
+   return {applicationId,repositories:results,notice:'Open pull requests are listed for context only. Nothing is imported until an Author previews and imports one.'};
   },
   async list(changeId){identifier(changeId);return db.transaction(async c=>{
    if(!(await c.query('SELECT id FROM changes WHERE id=$1',[changeId])).rows[0])fail('CHANGE_NOT_FOUND','Change not found.',404);

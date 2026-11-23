@@ -236,6 +236,8 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 if(req.method==='GET'&&path==='/api/source-repositories')return json(res,200,await intake.listRepositories());
                 if(req.method==='POST'&&path==='/api/source-previews')return json(res,201,await intake.preview(await body(req),session));
                 if(req.method==='POST'&&path==='/api/source-imports'){const result=await intake.importPreview(await body(req),session);return json(res,result.replayed?200:201,result);}
+                const pullsPath=path.match(/^\/api\/applications\/([a-f0-9-]{36})\/pull-requests$/);
+                if(req.method==='GET'&&pullsPath){if(url.search)throw new InputError('PULL_LIST_QUERY_UNSUPPORTED','Pull-request listing does not accept query parameters.',400);return json(res,200,await intake.listPulls(pullsPath[1],session));}
                 const sourcePath=path.match(/^\/api\/changes\/([a-f0-9-]{36})\/source-imports$/);
                 if(req.method==='GET'&&sourcePath)return json(res,200,await intake.list(sourcePath[1]));
             }
