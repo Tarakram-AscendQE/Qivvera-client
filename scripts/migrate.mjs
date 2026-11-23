@@ -2,6 +2,7 @@ import {migrateIntake} from '../server/intake/migration.mjs';
 import {migrateDrafting} from '../server/drafting/migration.mjs';
 import {migrateTemplates} from '../server/templates/migration.mjs';
 import {migrateAccounts} from '../server/accounts/migration.mjs';
+import {migrateWebhooks} from '../server/intake/webhook-migration.mjs';
 import { migrateResolution } from '../server/resolution/migration.mjs';
 import { migrateAssurance } from '../server/assurance/migration.mjs';
 import { openDatabase, migrateDatabase } from '../server/workflow-store.mjs';
@@ -19,7 +20,8 @@ try {
     await migrateDrafting(db);
     await migrateTemplates(db);
     await migrateAccounts(db);
-    console.log('Schema 8 is current. Existing evidence, resolution history, source receipts, drafting records and accounts retained.');
+    await migrateWebhooks(db);
+    console.log('Schema 9 is current. Existing evidence, resolution history, source receipts, drafting records, accounts and webhook receipts retained.');
 }
 catch {
     console.error('MIGRATION_FAILED: no secrets logged. Ask the database owner to inspect the failure.');

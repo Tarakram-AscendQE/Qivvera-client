@@ -7,6 +7,7 @@ import { createWorkspaceAuth } from './workspace-auth.mjs';
 import { fields, InputError } from './errors.mjs';
 import { PRODUCT_VERSION } from './release.mjs';
 import { createSupportReader } from './support-info.mjs';
+import { deliveryHeaders, WEBHOOK_MAX_BYTES } from './intake/webhook.mjs';
 const json = (res, status, data) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(data)); };
 async function body(req, maxBytes = 16384) {
     if ((req.headers['content-type'] ?? '').split(';')[0].trim() !== 'application/json')
@@ -49,6 +50,25 @@ async function body(req, maxBytes = 16384) {
     catch {
         reject(new InputError('INVALID_JSON', 'The request is not valid JSON.'));
     } }); req.on('error', reject); req.on('aborted', () => reject(new InputError('REQUEST_ABORTED', 'The request was interrupted.'))); });
+}
+/** Exact request bytes for signature verification. Fails closed when an adapter has already parsed them. */
+async function rawBody(req, maxBytes) {
+    if ((req.headers['content-type'] ?? '').split(';')[0].trim() !== 'application/json')
+        throw new InputError('JSON_REQUIRED', 'Send JSON.', 415);
+    if (Number(req.headers['content-length'] ?? 0) > maxBytes) {
+        req.resume?.();
+        throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
+    }
+    if (req.readable && !req.readableEnded) {
+        // Keep draining after the limit so the response can still be written on the same connection.
+        const chunks = []; let size = 0;
+        for await (const chunk of req) { size += chunk.length; if (size <= maxBytes) chunks.push(chunk); }
+        if (size > maxBytes) throw new InputError('BODY_TOO_LARGE', `Request exceeds ${maxBytes / 1024} KB.`, 413);
+        return Buffer.concat(chunks);
+    }
+    const pre = req.rawBody;
+    if (Buffer.isBuffer(pre) && pre.length <= maxBytes) return pre;
+    throw new InputError('RAW_BODY_UNAVAILABLE', 'The webhook body could not be verified.', 400);
 }
 export function createApplicationServer({ repository, assurance = null, resolution = null, intake = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
     if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin)
@@ -122,6 +142,24 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 res.writeHead(200, { 'Content-Type': type });
                 res.end(a);
                 return;
+            }
+            // GitHub deliveries carry no session or Origin: they are authenticated only by the HMAC signature.
+            if (path === '/api/github/webhook') {
+                if (!intake?.webhookEnabled)
+                    return json(res, 404, { error: 'NOT_FOUND', message: 'GitHub webhooks are not enabled.', requestId });
+                if (req.method !== 'POST')
+                    return json(res, 405, { error: 'METHOD_NOT_ALLOWED', message: 'Use POST.', requestId });
+                const raw = await rawBody(req, WEBHOOK_MAX_BYTES);
+                if (!intake.verifyWebhook(raw, req.headers['x-hub-signature-256']))
+                    return json(res, 401, { error: 'INVALID_SIGNATURE', message: 'The webhook signature is not valid.', requestId });
+                const delivery = deliveryHeaders(req.headers);
+                if (!delivery)
+                    return json(res, 400, { error: 'INVALID_DELIVERY', message: 'GitHub delivery and event headers are required.', requestId });
+                let payload;
+                try { payload = JSON.parse(raw.toString('utf8')); }
+                catch { return json(res, 400, { error: 'INVALID_JSON', message: 'The request is not valid JSON.', requestId }); }
+                const r = await intake.receiveWebhook({ ...delivery, payload });
+                return json(res, r.duplicate || delivery.event === 'ping' ? 200 : 202, { received: true, outcome: r.outcome, ...(r.reason ? { reason: r.reason } : {}), requestId });
             }
             if (req.method !== 'GET' && req.headers.origin !== publicOrigin)
                 return json(res, 403, { error: 'ORIGIN_REJECTED', message: 'This request did not originate from the configured workspace.', requestId });
@@ -236,6 +274,8 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 if(req.method==='GET'&&path==='/api/source-repositories')return json(res,200,await intake.listRepositories());
                 if(req.method==='POST'&&path==='/api/source-previews')return json(res,201,await intake.preview(await body(req),session));
                 if(req.method==='POST'&&path==='/api/source-imports'){const result=await intake.importPreview(await body(req),session);return json(res,result.replayed?200:201,result);}
+                const eventsPath=path.match(/^\/api\/applications\/([a-f0-9-]{36})\/source-events$/);
+                if(req.method==='GET'&&eventsPath){if(url.search)throw new InputError('SOURCE_EVENTS_QUERY_UNSUPPORTED','Source activity does not accept query parameters.',400);if(!intake.webhookEnabled)return json(res,404,{error:'NOT_FOUND',message:'GitHub webhooks are not enabled.',requestId});return json(res,200,await intake.listSourceEvents(eventsPath[1],session));}
                 const pullsPath=path.match(/^\/api\/applications\/([a-f0-9-]{36})\/pull-requests$/);
                 if(req.method==='GET'&&pullsPath){if(url.search)throw new InputError('PULL_LIST_QUERY_UNSUPPORTED','Pull-request listing does not accept query parameters.',400);return json(res,200,await intake.listPulls(pullsPath[1],session));}
                 const sourcePath=path.match(/^\/api\/changes\/([a-f0-9-]{36})\/source-imports$/);
@@ -260,7 +300,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             }
 
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, githubWebhooks: !!intake?.webhookEnabled, obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());

@@ -13,7 +13,7 @@ import { setupDrafting, author as draftAuthor } from './drafting-helpers.mjs';
 import { openAssuranceRepository } from '../server/assurance/repository.mjs';
 import { openWorkflowRepository } from '../server/workflow-repository.mjs';
 import { openDatabase } from '../server/workflow-store.mjs';
-import { migrateAccounts } from '../server/accounts/migration.mjs';
+import { migrateWebhooks } from '../server/intake/webhook-migration.mjs';
 
 const url = process.env.TEST_DATABASE_URL;
 const revision = process.env.GITHUB_SHA ?? process.env.QIVVERA_RELEASE_SHA ?? 'd'.repeat(40);
@@ -52,9 +52,9 @@ else {
         await admin.query(`CREATE DATABASE ${quoteIdentifier(name)} TEMPLATE template0${options}`); created = true;
         source = await connectDatabase(databaseConfig(sourceURL.toString(), { sslMode: 'disable', kind: 'source' }));
         const life = { after: fn => cleanups.push(fn) }, h = await setupTemplates(life, { postgresURL: sourceURL.toString() });
-        // Cumulative schema 8: database-held accounts.
+        // Cumulative schema 9: database-held accounts (8) and GitHub webhook receipts (9).
         const accountsDb = await openDatabase({ driver: 'postgres', connectionString: sourceURL.toString(), sslMode: 'disable' });
-        try { await migrateAccounts(accountsDb); } finally { await accountsDb.close(); }
+        try { await migrateWebhooks(accountsDb); } finally { await accountsDb.close(); }
         async function role(label, login = true) {
             const name = 'qivvera_op_' + label + '_' + randomUUID().replaceAll('-', ''), password = randomUUID().replaceAll('-', '') + randomUUID().replaceAll('-', '');
             await admin.query(`CREATE ROLE ${quoteIdentifier(name)} ${login ? 'LOGIN' : 'NOLOGIN'} NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${password}'`);
@@ -68,7 +68,8 @@ else {
             await source.query(`GRANT INSERT ON applications,changes,change_revisions,obligations,obligation_workflow,obligation_history,activity,
                 workspace_sessions,auth_buckets,assurance_plans,assurance_runs,resolution_items,resolution_history,resolution_challenges,
                 source_previews,source_imports,source_backoff,drafting_runs,drafting_suggestions,verification_templates,
-                verification_template_versions,verification_template_mutations,verification_template_uses TO ${w}`);
+                verification_template_versions,verification_template_mutations,verification_template_uses,
+                github_webhook_deliveries,source_events TO ${w}`);
             await source.query(`GRANT UPDATE(id) ON changes TO ${w};
                 GRANT UPDATE(statement,source_reference,criticality,version,updated_at) ON obligations TO ${w};
                 GRANT UPDATE(source_version,review_state,last_edited_by,proposed_by,imported) ON obligation_workflow TO ${w};

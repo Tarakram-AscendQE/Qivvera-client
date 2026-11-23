@@ -1,6 +1,7 @@
 /** GitHub REST pull metadata reader. No code execution, repository writes or result publication. */
 import {InputError,fields,identifier,text} from '../workflow-input.mjs';
 import {digest} from '../assurance/contracts.mjs';
+import {webhookSecret} from './webhook.mjs';
 export const API_VERSION='2026-03-10';
 const fail=(code,message,status=400)=>{throw new InputError(code,message,status);};
 const fullSHA=s=>typeof s==='string'&&/^[a-f0-9]{40}$/.test(s);
@@ -22,7 +23,10 @@ export const publicRepository=({tokenEnv,...r})=>r;
 export function loadIntakeConfig(env=process.env){
  const enabled=env.QIVVERA_GITHUB_INTAKE_ENABLED==='true';let raw=[];
  if(enabled){try{raw=JSON.parse(env.QIVVERA_GITHUB_REPOSITORIES_JSON??'[]');}catch{throw new Error('INVALID_GITHUB_CATALOGUE_JSON');}}
- return {enabled,repositories:validateRepositories(raw)};
+ // Webhook receipt is enabled by its shared secret and is bound to the same operator-configured repositories.
+ const secret=webhookSecret(env.QIVVERA_GITHUB_WEBHOOK_SECRET);
+ if(secret&&!enabled)throw new Error('GITHUB_WEBHOOK_REQUIRES_INTAKE');
+ return {enabled,repositories:validateRepositories(raw),webhook:{enabled:!!secret,secret}};
 }
 export function normalizePull(raw,config,number){
  if(!raw||raw.number!==number||raw.base?.repo?.id!==config.repositoryId||raw.base?.repo?.full_name?.toLowerCase()!==`${config.owner}/${config.repo}`.toLowerCase())fail('GITHUB_REPOSITORY_MISMATCH','The provider returned a different repository or pull request.',502);

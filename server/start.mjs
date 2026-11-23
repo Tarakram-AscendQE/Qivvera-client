@@ -17,7 +17,8 @@ try{
  accounts=await openWorkspaceAccounts(cfg);
  if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac});
  if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,directory:accounts,reviewMode:cfg.reviewMode});}
- const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:false});
+ // Local review storage applies the intake/webhook migrations; hosted storage only verifies them.
+ const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:cfg.database.migrate===true});
  const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:cfg.hosted,releaseRevision:cfg.releaseRevision,webRoot:resolve('web')});
  server.listen(cfg.port,cfg.host,()=>console.log(`Qivvera ${PRODUCT_VERSION} started. Assessment requests use a separate worker.`));
  let closing=false;

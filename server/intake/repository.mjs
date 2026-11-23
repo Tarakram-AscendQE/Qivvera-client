@@ -5,12 +5,17 @@ import {fields,InputError,identifier,text,actorEmail,requireRole,obligationView}
 import {canonical,digest} from '../assurance/contracts.mjs';
 import {migrateIntake,requireIntake} from './migration.mjs';
 import {validateRepositories,publicRepository,pullNumber,readPull,listOpenPulls} from './github.mjs';
+import {validSignature,pullRequestEvent} from './webhook.mjs';
+import {migrateWebhooks,requireWebhooks} from './webhook-migration.mjs';
 const fail=(code,message,status=409)=>{throw new InputError(code,message,status);};
 const iso=n=>new Date(n).toISOString();
 export async function openIntakeRepository(options={}){
  const catalogue=validateRepositories(options.repositories??[]),now=options.now??Date.now;
  const db=await openDatabase(options);
- try{if(options.migrate)await migrateIntake(db);else await requireIntake(db);}catch(e){await db.close();throw e;}
+ const webhook=options.webhook?.enabled===true?options.webhook:null;
+ if(webhook&&typeof webhook.secret!=='string'){await db.close();throw new Error('GITHUB_WEBHOOK_SECRET_REQUIRED');}
+ try{if(options.migrate)await migrateIntake(db);else await requireIntake(db);
+  if(webhook){if(options.migrate)await migrateWebhooks(db);else await requireWebhooks(db);}}catch(e){await db.close();throw e;}
  const getConfig=id=>{const c=catalogue.find(r=>r.id===id);if(!c)fail('REPOSITORY_NOT_CONFIGURED','Select an operator-authorized repository.',400);return c;};
  const record=r=>{if(!r)fail('SOURCE_IMPORT_NOT_FOUND','Source import is unavailable.',404);let source;try{source=JSON.parse(r.snapshot);}catch{fail('SOURCE_INTEGRITY_FAILED','Saved source metadata is invalid.');}if(digest(source)!==r.snapshot_digest)fail('SOURCE_INTEGRITY_FAILED','Saved source metadata failed integrity validation.');return {id:r.id,applicationId:r.application_id,changeId:r.change_id,revisionId:r.revision_id,source,sourceDigest:r.snapshot_digest,importedBy:r.imported_by,importedAt:r.imported_at};};
  async function withBackoff(config,read){
@@ -25,6 +30,51 @@ export async function openIntakeRepository(options={}){
  const audit=(c,email,action,id,note)=>c.query('INSERT INTO activity(id,actor,action,entity_id,detail,created_at) VALUES($1,$2,$3,$4,$5,$6)',[randomUUID(),email,action,id,note,iso(now())]);
  return {
   close:()=>db.close(),healthy:()=>db.healthy(),listRepositories:async()=>catalogue.map(publicRepository),
+  webhookEnabled:!!webhook,
+  /** Constant-time signature check; the shared secret never leaves this repository. */
+  verifyWebhook:(raw,signature)=>!!webhook&&validSignature(raw,signature,webhook.secret),
+  /** Stores one verified delivery exactly once. Records pull-request activity for configured bindings only.
+   *  Receipt never imports, creates a change/revision/requirement, calls GitHub or produces an assessment. */
+  async receiveWebhook({deliveryId,event,payload}){
+   if(!webhook)fail('GITHUB_WEBHOOK_DISABLED','GitHub webhooks are not enabled.',404);
+   let result=event==='ping'?{outcome:'IGNORED',reason:'PING'}:event!=='pull_request'?{outcome:'IGNORED',reason:'UNSUPPORTED_EVENT'}:pullRequestEvent(payload,catalogue);
+   const action=typeof payload?.action==='string'?payload.action.slice(0,64):null,repositoryId=Number.isSafeInteger(payload?.repository?.id)?payload.repository.id:null;
+   return db.transaction(async c=>{
+    let bindings=[];
+    if(result.outcome==='RECORDED'){
+     for(const b of result.bindings)if((await c.query('SELECT id FROM applications WHERE id=$1',[b.applicationId])).rows[0])bindings.push(b);
+     if(!bindings.length)result={outcome:'IGNORED',reason:'APPLICATION_NOT_FOUND'};
+    }
+    const time=iso(now());
+    const fresh=(await c.query('INSERT INTO github_webhook_deliveries(delivery_id,event,action,repository_id,outcome,reason,received_at) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(delivery_id) DO NOTHING RETURNING delivery_id',
+     [deliveryId,event,action,repositoryId,result.outcome,result.outcome==='RECORDED'?'RECORDED':result.reason,time])).rows;
+    if(!fresh.length)return {duplicate:true,outcome:'DUPLICATE',recorded:0};
+    for(const b of bindings){
+     const e=result.event;
+     await c.query('INSERT INTO source_events(id,delivery_id,application_id,repository_key,repository_id,repository,pull_number,action,head_sha,base_ref,head_ref,title,draft,sender,received_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)',
+      [randomUUID(),deliveryId,b.applicationId,b.id,e.repositoryId,e.repository,e.pullNumber,e.action,e.headSha,e.baseRef,e.headRef,e.title,e.draft?1:0,e.sender,time]);
+     await audit(c,'github-webhook','GITHUB_PR_EVENT_RECORDED',b.applicationId,`${e.repository}#${e.pullNumber} ${e.action} at ${e.headSha}; source context only, not imported.`);
+    }
+    return {duplicate:false,outcome:result.outcome,reason:result.outcome==='RECORDED'?undefined:result.reason,recorded:bindings.length};
+   });
+  },
+  /** Latest webhook activity per pull request for one application, with its import state. Read-only; any signed-in role. */
+  async listSourceEvents(applicationId,actor){
+   actorEmail(actor);identifier(applicationId);
+   return db.transaction(async c=>{
+    if(!(await c.query('SELECT id FROM applications WHERE id=$1',[applicationId])).rows[0])fail('APPLICATION_NOT_FOUND','Application not found.',404);
+    const rows=(await c.query('SELECT * FROM source_events WHERE application_id=$1 ORDER BY received_at DESC,id DESC LIMIT 200',[applicationId])).rows;
+    const latest=new Map();
+    for(const r of rows){const key=`${r.repository_key}#${r.pull_number}`;if(!latest.has(key))latest.set(key,{row:r,deliveries:0});latest.get(key).deliveries++;}
+    const pulls=[];
+    for(const {row:r,deliveries} of [...latest.values()].slice(0,30)){
+     const imp=(await c.query('SELECT change_id,head_sha FROM source_imports WHERE application_id=$1 AND repository_id=$2 AND pull_number=$3 ORDER BY imported_at DESC,id DESC LIMIT 1',[applicationId,r.repository_id,r.pull_number])).rows[0];
+     pulls.push({repositoryKey:r.repository_key,repository:r.repository,pullNumber:Number(r.pull_number),action:r.action,headSha:r.head_sha,baseRef:r.base_ref,headRef:r.head_ref,title:r.title,draft:!!Number(r.draft),sender:r.sender,receivedAt:r.received_at,deliveries,
+      url:`https://github.com/${r.repository}/pull/${Number(r.pull_number)}`,imported:imp?{changeId:imp.change_id,headSha:imp.head_sha,currentHead:imp.head_sha===r.head_sha}:null});
+    }
+    return {applicationId,pulls,notice:'Pull-request activity received from GitHub. Nothing is imported until an Author previews and imports it.'};
+   },true);
+  },
   async preview(input,actor){
    requireRole(actor,'AUTHOR');fields(input,['repositoryKey','pullNumber']);const config=getConfig(input.repositoryKey),number=pullNumber(input.pullNumber),email=actorEmail(actor);
    await db.transaction(async c=>{if(!(await c.query('SELECT id FROM applications WHERE id=$1',[config.applicationId])).rows[0])fail('APPLICATION_NOT_FOUND','The configured application is unavailable.',404);},true);

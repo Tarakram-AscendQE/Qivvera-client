@@ -14,13 +14,14 @@ export function createSupportReader({ repository, assurance, resolution, intake,
         multiObligation: workflow && !!assurance && assurance.generalizationEnabled === true,
         resolution: workflow && !!resolution,
         githubIntake: workflow && !!intake,
+        githubWebhooks: workflow && intake?.webhookEnabled === true,
         obligationDrafting: workflow && !!repository.drafting,
         aiDrafting: workflow && repository.drafting?.methods?.openai === true,
         revisionImpact: workflow && !!repository.impact,
         verificationTemplates: workflow && !!assurance?.templates,
     });
     const databaseAccounts = workflow && accountDirectory?.source === 'database';
-    const requiredSchemaVersion = databaseAccounts ? 8 : capabilities.verificationTemplates ? 7 : capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
+    const requiredSchemaVersion = capabilities.githubWebhooks ? 9 : databaseAccounts ? 8 : capabilities.verificationTemplates ? 7 : capabilities.obligationDrafting ? 6 : capabilities.githubIntake || capabilities.multiObligation ? 5 : capabilities.resolution ? 4 : capabilities.assessmentQueue ? 3 : workflow ? 2 : null;
     // Account identities are compared only here; neither identities nor counts enter the response.
     const identities = list => list.map(a => ({ email: typeof a.email === 'string' ? a.email.trim().toLowerCase() : '', roles: Array.isArray(a.roles) ? a.roles : [] }));
     const configuredAccounts = identities(accounts);
