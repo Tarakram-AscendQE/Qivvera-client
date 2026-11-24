@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { downloadJson } from '../download';
 import { isSessionEnded, text, type LegacyApi } from '../legacy-bridge';
 import { Detail } from './GuidePage';
 import {
@@ -9,13 +10,7 @@ import {
 export const SUPPORT_FILE_NAME = 'Qivvera-support-details.json';
 
 function downloadReport(report: SupportReport): void {
-  const blob = new Blob([JSON.stringify(report, null, 2) + '\n'], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = SUPPORT_FILE_NAME;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadJson(SUPPORT_FILE_NAME, JSON.stringify(report, null, 2) + '\n');
 }
 
 function storageCheckText(value: unknown): string {

@@ -1,3 +1,4 @@
+import { downloadJson } from '../download';
 import type { LegacyApi, LegacyShell, LegacyState } from '../legacy-bridge';
 import { createScreenHost } from '../screen-host';
 import { createVisits } from '../visits';
@@ -46,12 +47,7 @@ export function createImpactUI({ S, api, shell, route }: ImpactBridge): ImpactUI
         if (active()) void route();
       },
       download() {
-        if (!active()) return;
-        const blob = new Blob([serialized], { type: 'application/json' }), url = URL.createObjectURL(blob), link = document.createElement('a');
-        link.href = url;
-        link.download = `Qivvera-impact-revision-${String(report.selectedRevision.number)}.json`;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (active()) downloadJson(`Qivvera-impact-revision-${String(report.selectedRevision.number)}.json`, serialized);
       }
     };
     host.show(<ImpactPage report={report} founderReview={S.session.reviewMode === 'founder-review'} actions={actions} />, 'changes', 'Impact & next checks');

@@ -1,3 +1,4 @@
+import { downloadJson } from '../download';
 import type { LegacyApi, LegacyShell, LegacyState } from '../legacy-bridge';
 import { createScreenHost } from '../screen-host';
 import { createVisits, type ActiveCheck } from '../visits';
@@ -95,12 +96,7 @@ export function createTemplatesUI({ S, api, shell, can, route, refresh }: Templa
     if (!active()) return;
     const report = inspect(value, templateId, versionId);
     const download = () => {
-      if (!active()) return;
-      const blob = new Blob([JSON.stringify(report, null, 2) + '\n'], { type: 'application/json' }), url = URL.createObjectURL(blob), link = document.createElement('a');
-      link.href = url;
-      link.download = `Qivvera-template-${report.family.id}-v${report.version.number}.json`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (active()) downloadJson(`Qivvera-template-${report.family.id}-v${report.version.number}.json`, JSON.stringify(report, null, 2) + '\n');
     };
     host.show(<DetailView report={report} templateId={templateId} canPolicy={can('POLICY_AUTHORITY')} founderReview={founderReview()} changes={S.workspace?.changes ?? []} api={api} actions={actionsFor(active)} download={download} />, 'verification-templates', 'Template version');
   }
