@@ -1,12 +1,11 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LegacyApi, LegacyShell } from '../legacy-bridge';
+import { fakeShell } from '../test-utils';
+import type { LegacyApi } from '../legacy-bridge';
 import { createDraftingUI, type DraftingUI } from './drafting-module';
 import { problem, sizeProblem, sourceSize } from './labels';
 
-const shell = vi.fn<LegacyShell>((content, active = '', label = '') => {
-  document.body.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`;
-});
+const shell = fakeShell();
 
 const change = { id: 'chg-1', title: 'Approvals', sourceRevision: 'abc', revision: { id: 'rev-1', number: 2 } };
 const context = { changeId: 'chg-1', revisionId: 'rev-1', isCurrentRevision: true, methods: { openai: true }, runs: [], total: 0, offset: 0, limit: 10 };

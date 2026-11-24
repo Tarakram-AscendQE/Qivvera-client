@@ -1,12 +1,10 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LegacyApi, LegacySession, LegacyShell, LegacyState } from '../legacy-bridge';
+import { fakeShell, deferred } from '../test-utils';
+import type { LegacyApi, LegacySession, LegacyState } from '../legacy-bridge';
 import { createGuideUI, type GuideUI } from './guide-module';
 
-/** A stand-in for the legacy shell: it replaces the page like the real one does. */
-const shell = vi.fn<LegacyShell>((content, active = '', label = '') => {
-  document.body.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`;
-});
+const shell = fakeShell();
 
 const author: LegacySession = { email: 'author@example.test', roles: ['AUTHOR', 'POLICY_AUTHORITY'] };
 
@@ -20,12 +18,6 @@ function supportInfo(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (error: unknown) => void;
-  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
-  return { promise, resolve, reject };
-}
 
 let state: { session: LegacySession | null };
 let ui: GuideUI;

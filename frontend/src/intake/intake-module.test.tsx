@@ -1,11 +1,10 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LegacyApi, LegacyOpenForm, LegacySession, LegacyShell, LegacyState } from '../legacy-bridge';
+import { fakeShell, deferred } from '../test-utils';
+import type { LegacyApi, LegacyOpenForm, LegacySession, LegacyState } from '../legacy-bridge';
 import { createIntakeUI, type IntakeUI } from './intake-module';
 
-const shell = vi.fn<LegacyShell>((content, active = '', label = '') => {
-  document.body.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`;
-});
+const shell = fakeShell();
 const h = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const field = (id: string, label: string) => `<div class="form-field"><label for="${id}">${label}</label><textarea id="${id}" name="${id}"></textarea></div>`;
 
@@ -22,11 +21,6 @@ const preview = {
   source: { repository: 'acme/approvals', pullNumber: 12, draft: false, title: '<img src=x onerror=alert(1)>', importedTitle: 'Imported', headSha: 'a', baseSha: 'b', headRepository: 'fork/approvals', body: 'y'.repeat(4001) }
 };
 
-function deferred<T>() {
-  let resolve!: (value: T) => void, reject!: (error: unknown) => void;
-  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
-  return { promise, resolve, reject };
-}
 
 let state: { session: LegacySession | null; workspace: typeof workspace };
 let ui: IntakeUI;

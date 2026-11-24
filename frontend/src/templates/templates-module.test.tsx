@@ -1,11 +1,10 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LegacyApi, LegacyShell } from '../legacy-bridge';
+import { fakeShell } from '../test-utils';
+import type { LegacyApi } from '../legacy-bridge';
 import { createTemplatesUI, type TemplatesUI } from './templates-module';
 
-const shell = vi.fn<LegacyShell>((content, active = '', label = '') => {
-  document.body.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`;
-});
+const shell = fakeShell();
 
 const T = 'aaaaaaaa-0000-4000-8000-000000000001', V = 'bbbbbbbb-0000-4000-8000-000000000002', C = 'cccccccc-0000-4000-8000-000000000001', R = 'dddddddd-0000-4000-8000-000000000001';
 const entry = (id: string) => ({ check: { id, title: id, rule: 'Rule ' + id, version: '1' }, mappingRationale: 'why', requirement: { statement: 'Req ' + id, criticality: 'HIGH', version: 1 } });

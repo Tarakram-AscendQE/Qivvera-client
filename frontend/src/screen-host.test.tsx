@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { LegacyShell } from './legacy-bridge';
+import { fakeShell } from './test-utils';
 import { createScreenHost } from './screen-host';
 
-const shell = vi.fn<LegacyShell>(content => { document.body.innerHTML = `<main>${content}</main>`; });
+const shell = fakeShell();
 
 function Broken(): never {
   throw new Error('Invalid time value');

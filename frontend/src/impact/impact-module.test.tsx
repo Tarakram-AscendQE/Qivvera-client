@@ -1,12 +1,11 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LegacyApi, LegacyShell } from '../legacy-bridge';
+import { fakeShell, deferred } from '../test-utils';
+import type { LegacyApi } from '../legacy-bridge';
 import { createImpactUI, type ImpactUI } from './impact-module';
 import { display, parseImpactReport, reviewLabel, roleLabel } from './report';
 
-const shell = vi.fn<LegacyShell>((content, active = '', label = '') => {
-  document.body.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`;
-});
+const shell = fakeShell();
 
 function report(over: Record<string, unknown> = {}) {
   return {
@@ -18,11 +17,6 @@ function report(over: Record<string, unknown> = {}) {
   };
 }
 
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>(res => { resolve = res; });
-  return { promise, resolve };
-}
 
 // The legacy shell replaces S.session on sign-in and sign-out; screens only read it.
 let S: { session: { email: string; roles?: string[] } | null; tab?: string };
