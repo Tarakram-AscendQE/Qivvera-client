@@ -30,7 +30,7 @@ workspace; "New application" / "New change" open the same legacy dialogs; recent
 - [x] Task 3 (changes + activity)
 
 ### Checkpoint B
-- [ ] All gates green; commit per task
+- [x] All gates green; commit per task (Tasks 1–3 in db7ea27)
 
 ## Phase C — Change page (data still loaded by the legacy router)
 
@@ -98,4 +98,4 @@ only; README/AGENTS layout updated; offline component checks updated or retired 
 
 ### Final checkpoint
 - [x] code-review-and-quality review of the full frontend diff (one test gap found and fixed: startup 401)
-- [ ] All gates green; report to user (what changed, what was verified, what was not)
+- [x] All gates green; report to user (what changed, what was verified, what was not)
