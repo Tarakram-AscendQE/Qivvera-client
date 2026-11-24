@@ -6,7 +6,10 @@ import type { LegacyShell } from './legacy-bridge';
 const CONTAINER_ATTRIBUTE = 'data-react-screen';
 
 export interface ScreenHost {
-  /** Draws the legacy frame and renders the screen inside it before returning. */
+  /**
+   * Draws the legacy frame and renders the screen inside it before returning. An error while
+   * rendering is thrown to the caller, so the legacy router shows its error page, as before.
+   */
   show(screen: ReactNode, active: string, label: string): void;
   /** Removes the screen. The legacy shell calls this before it replaces the page or ends a session. */
   unmount(): void;
@@ -33,8 +36,20 @@ export function createScreenHost(shell: LegacyShell): ScreenHost {
     shell(`<div ${CONTAINER_ATTRIBUTE}></div>`, active, label);
     const container = document.querySelector(`[${CONTAINER_ATTRIBUTE}]`);
     if (!container) throw new Error('The page frame did not provide a place for this screen. Reload the page.');
-    const next = createRoot(container);
+    let rendering = true;
+    const failures: unknown[] = [];
+    const next = createRoot(container, {
+      onUncaughtError(error) {
+        if (rendering) failures.push(error);
+        else reportError(error);
+      }
+    });
     flushSync(() => next.render(<StrictMode>{screen}</StrictMode>));
+    rendering = false;
+    if (failures.length) {
+      next.unmount();
+      throw failures[0];
+    }
     root = next;
   }
 
