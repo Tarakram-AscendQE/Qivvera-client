@@ -1,12 +1,12 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fakeShell, deferred } from '../test-utils';
-import type { LegacyApi, LegacyOpenForm, LegacySession, LegacyState } from '../legacy-bridge';
+import { deferred, fakeWorkspaceServices } from '../test-utils';
+import type { LegacyApi, LegacySession, LegacyShell, LegacyState } from '../legacy-bridge';
 import { createIntakeUI, type IntakeUI } from './intake-module';
 
-const shell = fakeShell();
-const h = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-const field = (id: string, label: string) => `<div class="form-field"><label for="${id}">${label}</label><textarea id="${id}" name="${id}"></textarea></div>`;
+/** Like the real shell, this replaces only #root, so the separate <dialog> survives page redraws. */
+const shell = vi.fn<LegacyShell>((content, active = '', label = '') => { document.querySelector('#root')!.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`; });
+const modal = () => document.querySelector<HTMLDialogElement>('#modal')!;
 
 const repositories = [{ id: 'repo-1', owner: 'acme', repo: 'approvals', applicationId: 'app-1' }];
 const workspace = {
@@ -25,8 +25,8 @@ const preview = {
 let state: { session: LegacySession | null; workspace: typeof workspace };
 let ui: IntakeUI;
 let api: ReturnType<typeof vi.fn<LegacyApi>>;
-let openForm: ReturnType<typeof vi.fn<LegacyOpenForm>>;
 let toast: ReturnType<typeof vi.fn<(text: string) => void>>;
+let generation = 0;
 
 function setup(previewAnswer: () => Promise<unknown>, repos: unknown = repositories) {
   api = vi.fn<LegacyApi>(async path => {
@@ -35,9 +35,10 @@ function setup(previewAnswer: () => Promise<unknown>, repos: unknown = repositor
     if (path === '/api/source-imports') return { changeId: 'chg-new' };
     throw new Error('unexpected ' + path);
   });
-  openForm = vi.fn<LegacyOpenForm>();
   toast = vi.fn();
-  ui = createIntakeUI({ S: state as LegacyState, api, h, shell, field, openForm, toast, can: role => (state.session?.roles ?? []).includes(role) });
+  // As the real closeDialog() does: unmount the React dialog before emptying the dialog element.
+  const closeDialog = () => { generation++; ui.unmountDialog(); if (modal().open) modal().close(); modal().replaceChildren(); };
+  ui = createIntakeUI({ ...fakeWorkspaceServices(), S: state as LegacyState, api, shell, toast, closeDialog, dialogGeneration: () => generation, can: role => (state.session?.roles ?? []).includes(role) });
 }
 
 async function previewPull(number = '12') {
@@ -47,10 +48,11 @@ async function previewPull(number = '12') {
 
 beforeEach(() => {
   state = { session: { email: 'author@example.test', roles: ['AUTHOR'] }, workspace };
+  document.body.innerHTML = '<div id="root"></div><dialog id="modal"></dialog>';
   shell.mockClear();
   location.hash = '#/intake';
 });
-afterEach(() => ui?.unmount());
+afterEach(() => { ui?.unmountDialog(); ui?.unmount(); });
 
 describe('GitHub intake', () => {
   it('shows the preview form to an Author with a configured repository', async () => {
@@ -144,21 +146,34 @@ describe('GitHub intake', () => {
     await ui.show();
     await previewPull();
     fireEvent.click(await screen.findByRole('button', { name: 'Import reviewed context' }));
-    expect(openForm).toHaveBeenCalledTimes(1);
-    const [title, , content, saveLabel, submit] = openForm.mock.calls[0]!;
-    expect([title, saveLabel]).toEqual(['Import reviewed source', 'Import source']);
-    expect(content).toContain('<option value="chg-1">New revision of: Stop &lt;b&gt;self&lt;/b&gt; approval</option>');
-    expect(content).not.toContain('chg-2');
+    const dialog = within(modal());
+    expect(modal().open).toBe(true);
+    expect(dialog.getByRole('heading', { name: 'Import reviewed source' })).toBeTruthy();
+    expect(dialog.getByRole('option', { name: 'New revision of: Stop <b>self</b> approval' })).toBeTruthy();
+    expect(dialog.queryByRole('option', { name: 'New revision of: Elsewhere' })).toBeNull();
     expect(api.mock.calls.some(([path]) => path === '/api/source-imports')).toBe(false);
 
-    await expect(submit({ changeId: 'chg-1', reason: 'Belongs to this change', copyObligations: 'on' })).resolves.toBe('#/changes/chg-new');
-    expect(api).toHaveBeenLastCalledWith('/api/source-imports', { method: 'POST', data: { previewId: 'prev-1', changeId: 'chg-1', expectedRevisionId: 'rev-1', copyObligations: true, reason: 'Belongs to this change' } });
+    fireEvent.change(dialog.getByLabelText('Destination'), { target: { value: 'chg-1' } });
+    fireEvent.change(dialog.getByLabelText('Why does this source belong here? *'), { target: { value: 'Belongs to this change' } });
+    fireEvent.click(dialog.getByRole('checkbox'));
+    fireEvent.submit(modal().querySelector('form')!);
+    await waitFor(() => expect(location.hash).toBe('#/changes/chg-new'));
+    expect(api).toHaveBeenCalledWith('/api/source-imports', { method: 'POST', data: { previewId: 'prev-1', changeId: 'chg-1', expectedRevisionId: 'rev-1', copyObligations: true, reason: 'Belongs to this change' } });
     expect(toast).toHaveBeenCalledWith('Source context saved. No assurance result was created.');
+  });
 
+  it('copies nothing into a new change and says nothing once the intake visit has ended', async () => {
+    setup(async () => preview);
+    await ui.show();
+    await previewPull();
+    fireEvent.click(await screen.findByRole('button', { name: 'Import reviewed context' }));
+    const dialog = within(modal());
+    fireEvent.change(dialog.getByLabelText('Why does this source belong here? *'), { target: { value: 'A new change instead' } });
+    fireEvent.click(dialog.getByRole('checkbox'));
     ui.invalidate();
-    toast.mockClear();
-    await submit({ changeId: '', reason: 'A new change instead', copyObligations: 'on' });
-    expect(api).toHaveBeenLastCalledWith('/api/source-imports', { method: 'POST', data: { previewId: 'prev-1', changeId: null, expectedRevisionId: null, copyObligations: false, reason: 'A new change instead' } });
-    expect(toast).not.toHaveBeenCalled();
+    fireEvent.submit(modal().querySelector('form')!);
+    await waitFor(() => expect(api).toHaveBeenLastCalledWith('/api/source-imports', { method: 'POST', data: { previewId: 'prev-1', changeId: null, expectedRevisionId: null, copyObligations: false, reason: 'A new change instead' } }));
+    await waitFor(() => expect(location.hash).toBe('#/changes/chg-new'));
+    expect(toast).not.toHaveBeenCalledWith('Source context saved. No assurance result was created.');
   });
 });

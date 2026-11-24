@@ -1,15 +1,15 @@
 let intakeUI;
-async function ensureIntakeUI(){if(!intakeUI){const m=await import('./intake.js');intakeUI=m.createIntakeUI({S,api,h,shell,can,openForm,field,toast});}return intakeUI;}
+async function ensureIntakeUI(){if(!intakeUI){const m=await import('./intake.js');intakeUI=m.createIntakeUI({S,api,shell,can,toast,refresh,route,closeDialog,viewContext,dialogGeneration:()=>dialogGeneration});}return intakeUI;}
 let workspaceUI;
 async function ensureWorkspaceUI(){if(!workspaceUI){const m=await import('./workspace.js');workspaceUI=m.createWorkspaceUI({S,shell,can,api,refresh,toast,route,closeDialog,viewContext,nextDialog:()=>++dialogGeneration,dialogGeneration:()=>dialogGeneration,resolutionEnabled:()=>!!resolutionUI});}return workspaceUI;}
 let guideUI;
 async function ensureGuideUI(){if(!guideUI){const m=await import('./guide.js');guideUI=m.createGuideUI({S,api,h,shell});}return guideUI;}
 let draftingUI;
-async function ensureDraftingUI(){if(!draftingUI){const m=await import('./drafting.js');draftingUI=m.createDraftingUI({S,api,h,badge,date,shell,can,route,refresh});}return draftingUI;}
+async function ensureDraftingUI(){if(!draftingUI){const m=await import('./drafting.js');draftingUI=m.createDraftingUI({S,api,h,shell,can,route,refresh});}return draftingUI;}
 let impactUI;
-async function ensureImpactUI(){if(!impactUI){const m=await import('./impact.js');impactUI=m.createImpactUI({S,api,h,badge,date,shell,route});}return impactUI;}
+async function ensureImpactUI(){if(!impactUI){const m=await import('./impact.js');impactUI=m.createImpactUI({S,api,h,shell,route});}return impactUI;}
 let templatesUI;
-async function ensureTemplatesUI(){if(!templatesUI){const m=await import('./templates.js');templatesUI=m.createTemplatesUI({S,api,h,badge,date,shell,can,route,refresh});}return templatesUI;}
+async function ensureTemplatesUI(){if(!templatesUI){const m=await import('./templates.js');templatesUI=m.createTemplatesUI({S,api,h,shell,can,route,refresh});}return templatesUI;}
 const root=document.querySelector('#root'),modal=document.querySelector('#modal'),toastEl=document.querySelector('#toast');
 let resolutionUI;
 async function ensureResolutionUI(){if(!resolutionUI){const module=await import('./resolution.js');resolutionUI=module.createResolutionUI({S,api,can,shell,route,toast,refresh,closeDialog,viewContext,dialogGeneration:()=>dialogGeneration});resolutionUI.setChangeRenderer(changePage);}return resolutionUI;}
@@ -19,8 +19,6 @@ const logoSvg="<svg class=\"wordmark\" viewBox=\"0 0 1400 240\" role=\"img\" ari
 const can=role=>(S.session?.roles??[]).includes(role);
 const h=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon=(name)=>{const paths={overview:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',applications:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h4"/>',changes:'<path d="M6 3v12a5 5 0 0 0 5 5h7M6 7h12M15 4l3 3-3 3"/><circle cx="6" cy="3" r="1"/>',activity:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/>'};return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name]??paths.overview}</svg>`;};
-const date=value=>new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
-const badge=(text,kind='')=>`<span class="pill ${kind}">${h(text)}</span>`;
 function toast(text){toastEl.textContent=text;clearTimeout(toast.timer);toast.timer=setTimeout(()=>toastEl.textContent='',5000);}
 /** React screens (frontend/src) render inside the page; remove them before the page is replaced. */
 function unmountScreens(){for(const ui of [guideUI,intakeUI,draftingUI,impactUI,templatesUI,resolutionUI,workspaceUI])ui?.unmount?.();}
@@ -139,34 +137,6 @@ async function route(){
  }catch(e){if(e.staleSession||generation!==routeGeneration)return;if(e.status===401){clearSessionView();return login('Your session ended. Please sign in again.');}errorPage(e.message);}
 }
 
-function field(id,label,type='text',value='',hint='',required=false){return `<div class="form-field"><label for="${id}">${label}${required?' *':''}</label>${type==='textarea'?`<textarea id="${id}" name="${id}" ${required?'required':''}>${h(value)}</textarea>`:`<input id="${id}" name="${id}" type="${type}" value="${h(value)}" ${required?'required':''}>`}${hint?`<small>${hint}</small>`:''}</div>`;}
-function openForm(title,description,content,saveLabel,submit){
- const active=viewContext();closeDialog();
- modal.innerHTML=`<div class="modal-head"><div><h2 id="modal-title">${title}</h2></div><button class="close" data-close aria-label="Close dialog">×</button></div><div class="modal-body"><p class="small muted">${description}</p><form><div class="form-error" role="alert"></div>${content}<div class="form-actions"><button class="button" type="button" data-close>Cancel</button><button class="button primary" type="submit">${saveLabel}</button></div></form></div>`;
- modal.showModal();modal.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',closeDialog));
- const form=modal.querySelector('form'),present=()=>active()&&modal.open&&modal.querySelector('form')===form;
- let saving=false;
- form.addEventListener('submit',async event=>{
-  event.preventDefault();if(!present()||saving||!form.reportValidity())return;
-  const data=Object.fromEntries(new FormData(form)),button=form.querySelector('[type=submit]');
-  const controls=[...form.elements],disabled=controls.map(control=>control.disabled);
-  let saved=false;
-  saving=true;controls.forEach(control=>control.disabled=true);button.textContent='Saving…';form.querySelector('.form-error').textContent='';
-  try{
-   const next=await submit(data);saved=true;if(!present())return;
-   closeDialog();await refresh();if(!active())return;
-   toast('Saved to your workspace.');
-   if(typeof next==='string'&&next!==location.hash)location.hash=next;else await route();
-  }catch(error){
-   if(!active()||error.sessionExpired||error.staleSession)return;
-   if(saved){toast('Your action was saved, but the workspace could not be refreshed. Reload the view to inspect the saved record.');return;}
-   if(!present())return;
-   form.querySelector('.form-error').textContent=error.status===409?error.message+' Close this dialog and reload the view before trying again.':error.message;
-  }finally{
-   saving=false;controls.forEach((control,index)=>control.disabled=disabled[index]);button.textContent=saveLabel;
-  }
- });
-}
 root.addEventListener('click',async e=>{const b=e.target.closest('[data-action],[data-resolution]');if(!b||renderedGeneration!==routeGeneration&&b.dataset.action!=='logout')return;const active=viewContext();try{if(b.dataset.resolution){await resolutionUI?.handle(b);return;}switch(b.dataset.action){case 'configure-plan':(await ensureWorkspaceUI()).openPlan();break;case 'run-assurance':(await ensureWorkspaceUI()).openRequestAssessment();break;case 'refresh-assurance':await route();break;case 'open-assessment':await (await ensureWorkspaceUI()).showAssessment(b.dataset.id);break;case 'cancel-assessment':await api(`/api/assessments/${b.dataset.id}/cancel`,{method:'POST',data:{}});if(active())await route();break;case 'logout':clearTimeout(pollTimer);await api('/api/session',{method:'DELETE'});clearSessionView();login();break;case 'new-application':(await ensureWorkspaceUI()).openNewApplication();break;case 'new-change':(await ensureWorkspaceUI()).openNewChange(b.dataset.app);break;case 'new-revision':(await ensureWorkspaceUI()).openNewRevision();break;case 'review-submit':(await ensureWorkspaceUI()).openReview(b.dataset.id,'SUBMIT');break;case 'review-withdraw':(await ensureWorkspaceUI()).openReview(b.dataset.id,'WITHDRAW');break;case 'review-decision':(await ensureWorkspaceUI()).openReview(b.dataset.id,'DECISION');break;case 'obligation-history':await (await ensureWorkspaceUI()).showObligationHistory(b.dataset.id);break;case 'new-obligation':(await ensureWorkspaceUI()).openObligation();break;case 'edit-obligation':(await ensureWorkspaceUI()).openObligation(b.dataset.id);break;case 'tab':S.tab=b.dataset.tab;await changePage();break;case 'retry':if(S.session){await refresh();if(active())await route();}else await bootstrap();break;}}catch(err){if((active()||b.dataset.action==='logout')&&!err.sessionExpired&&!err.staleSession)toast(err.message);}});
 modal.addEventListener('click',async e=>{const b=e.target.closest('[data-resolution]');if(!b)return;try{await resolutionUI?.handle(b);}catch(err){if(!err.sessionExpired&&!err.staleSession)toast(err.message);}});
 modal.addEventListener('cancel',()=>{++dialogGeneration;});

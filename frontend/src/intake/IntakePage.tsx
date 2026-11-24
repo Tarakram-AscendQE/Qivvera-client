@@ -1,17 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
 import { useRef, useState, type FormEvent } from 'react';
 import { field } from '../json';
-import { isSessionEnded, text, type LegacyApi, type LegacyCan, type LegacyEscape, type LegacyField, type LegacyOpenForm, type LegacyState, type LegacyToast } from '../legacy-bridge';
+import { Field, FormDialog } from '../dialogs/FormDialog';
+import { openFormDialog, type DialogServices } from '../dialogs/open-form';
+import { isSessionEnded, text, type LegacyApi, type LegacyCan, type LegacyState } from '../legacy-bridge';
 import type { ActiveCheck } from '../visits';
 
-export interface IntakeBridge {
+/** The import dialog uses the shared React dialog; DialogServices carries closeDialog, refresh, toast and route. */
+export interface IntakeBridge extends DialogServices {
   readonly S: LegacyState;
   readonly api: LegacyApi;
-  readonly h: LegacyEscape;
   readonly can: LegacyCan;
-  readonly openForm: LegacyOpenForm;
-  readonly field: LegacyField;
-  readonly toast: LegacyToast;
 }
 
 const TRUNCATION_NOTE = '\n[Preview truncated; full supported description retained in the source receipt.]';
@@ -64,16 +63,20 @@ export function IntakePage({ bridge, repositories, active }: { bridge: IntakeBri
 
   function openImport(current: unknown) {
     if (!active()) return;
-    const { h, openForm, field: legacyField, toast } = bridge;
     const changes = (S.workspace?.changes ?? []).filter(change => change.applicationId === field(current, 'applicationId'));
-    // The shared dialog is still part of the legacy shell; its content is escaped legacy HTML.
-    const content = `<div class="form-field"><label for="changeId">Destination</label><select name="changeId" id="changeId"><option value="">Create a new change</option>${changes.map(change => `<option value="${h(change.id)}">New revision of: ${h(change.title)}</option>`).join('')}</select></div>${legacyField('reason', 'Why does this source belong here?', 'textarea', '', 'At least 10 characters; a human import rationale, not an auto-accepted PR instruction.', true)}<label class="acknowledge"><input type="checkbox" name="copyObligations"> Copy prior candidates when adding to an existing change</label>`;
-    openForm('Import reviewed source', 'Choose a new change or an explicit existing change. A copied obligation becomes a candidate and receives no inherited evidence.', content, 'Import source', async data => {
-      const change = changes.find(candidate => candidate.id === data['changeId']);
-      const result = await api('/api/source-imports', { method: 'POST', data: { previewId: field(current, 'id'), changeId: change?.id ?? null, expectedRevisionId: change?.revision?.id ?? null, copyObligations: !!change && data['copyObligations'] === 'on', reason: data['reason'] } });
-      if (active()) toast('Source context saved. No assurance result was created.');
-      return `#/changes/${text(field(result, 'changeId'))}`;
-    });
+    openFormDialog(bridge, env => (
+      <FormDialog env={env} title="Import reviewed source" description="Choose a new change or an explicit existing change. A copied obligation becomes a candidate and receives no inherited evidence." saveLabel="Import source"
+        submit={async data => {
+          const change = changes.find(candidate => candidate.id === data['changeId']);
+          const result = await api('/api/source-imports', { method: 'POST', data: { previewId: field(current, 'id'), changeId: change?.id ?? null, expectedRevisionId: change?.revision?.id ?? null, copyObligations: !!change && data['copyObligations'] === 'on', reason: data['reason'] } });
+          if (active()) bridge.toast('Source context saved. No assurance result was created.');
+          return `#/changes/${text(field(result, 'changeId'))}`;
+        }}>
+        <div className="form-field"><label htmlFor="changeId">Destination</label><select name="changeId" id="changeId"><option value="">Create a new change</option>{changes.map(change => <option value={change.id} key={change.id}>New revision of: {text(change.title)}</option>)}</select></div>
+        <Field id="reason" label="Why does this source belong here?" type="textarea" hint="At least 10 characters; a human import rationale, not an auto-accepted PR instruction." required />
+        <label className="acknowledge"><input type="checkbox" name="copyObligations" /> Copy prior candidates when adding to an existing change</label>
+      </FormDialog>
+    ));
   }
 
   return (

@@ -69,7 +69,7 @@ including late-answer and dialog-after-navigation guards.
 **Acceptance:** one React form-dialog component reproduces openForm (visit-bound, controls locked while saving,
 409 text, refresh then navigate, "saved but not refreshed" toast); every dialog uses it; legacy openForm removed.
 **Size:** M. **Depends on:** Phase C.
-- [x] Task 8 (dialog host + FormDialog; pulled forward with Task 5)
+- [x] Task 8 (dialog host + FormDialog; intake import dialog moved last; legacy openForm/field removed; intake parity 11 cases)
 
 ### Task 9: Sign-in, session bootstrap and the api client in TypeScript
 **Acceptance:** sign-in page and password toggle match; api() semantics identical (CSRF, stale-session
