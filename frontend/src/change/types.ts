@@ -1,3 +1,4 @@
+import type { ResolutionTabState } from '../resolution/parts';
 import type { WorkspaceSummary } from '../workspace/rows';
 
 /** The change record the legacy router loads into S.change. Server values are shown only as text. */
@@ -48,6 +49,6 @@ export interface ChangeView {
   readonly assuranceError: string | null;
   readonly sources: readonly SourceReceipt[];
   readonly sourceError: string | null;
-  /** Until resolution moves to React, its change-tab HTML comes from resolution.js (escaped there). */
-  readonly resolutionHtml: string;
+  /** The Resolutions tab's records, or null when resolution is not enabled on this deployment. */
+  readonly resolution: ResolutionTabState | null;
 }

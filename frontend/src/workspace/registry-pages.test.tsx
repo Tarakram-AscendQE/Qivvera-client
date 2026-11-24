@@ -12,7 +12,7 @@ function setup(roles: string[], workspace: Record<string, unknown>) {
   ui = createWorkspaceUI({ ...fakeWorkspaceServices(), S: { session: { email: 'u@example.test', roles }, workspace } as never, shell, can: role => roles.includes(role) });
 }
 
-beforeEach(() => shell.mockClear());
+beforeEach(() => { shell.mockClear(); });
 afterEach(() => ui?.unmount());
 
 describe('application registry', () => {

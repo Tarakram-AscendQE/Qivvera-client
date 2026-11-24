@@ -12,13 +12,13 @@ let services: ReturnType<typeof fakeWorkspaceServices>;
 let active = true;
 let S: Record<string, unknown>;
 
-function setup(api: (path: string, options?: { data?: unknown }) => Promise<unknown>, obligations = [{ id: 'o1', statement: 'Accepted one', reviewStatus: 'ACCEPTED' }], resolutionButtons?: (r: unknown) => string | null) {
+function setup(api: (path: string, options?: { data?: unknown }) => Promise<unknown>, obligations = [{ id: 'o1', statement: 'Accepted one', reviewStatus: 'ACCEPTED' }], resolutionEnabled = false) {
   document.body.innerHTML = '<dialog id="modal"></dialog>';
   services = fakeWorkspaceServices();
   services.api.mockImplementation(api as never);
   services.closeDialog.mockImplementation(() => { ui.unmountDialog(); const modal = document.querySelector<HTMLDialogElement>('#modal')!; if (modal.open) modal.close(); modal.replaceChildren(); });
-  S = { session: { email: 'pa@example.test', roles: ['POLICY_AUTHORITY'] }, tab: 'overview', workspace: { applications: [], capabilities: {} }, change: { id: 'chg-1', title: 'T', sourceRevision: 'abc', revision: { id: 'r1', number: 1 }, obligations }, assuranceContext: context };
-  ui = createWorkspaceUI({ ...services, viewContext: () => () => active, S: S as never, shell, can: () => true, ...(resolutionButtons ? { resolutionButtons } : {}) });
+  S = { session: { email: 'pa@example.test', roles: ['POLICY_AUTHORITY'] }, tab: 'overview', workspace: { applications: [], capabilities: { resolutionWorkflow: true } }, change: { id: 'chg-1', title: 'T', sourceRevision: 'abc', revision: { id: 'r1', number: 1 }, obligations }, assuranceContext: context };
+  ui = createWorkspaceUI({ ...services, viewContext: () => () => active, S: S as never, shell, can: () => true, resolutionEnabled: () => resolutionEnabled });
 }
 const modal = () => document.querySelector<HTMLDialogElement>('#modal')!;
 
@@ -48,12 +48,12 @@ describe('assurance dialogs', () => {
   });
 
   it('shows the assessment case with server text as text and resolution actions when enabled', async () => {
-    setup(async () => record, undefined, () => '<button class="button" data-resolution="track">Track finding</button>');
+    setup(async () => record, undefined, true);
     await ui.showAssessment('run-1');
     expect(within(modal()).getByRole('heading', { name: 'NOT READY' })).toBeTruthy();
     expect(within(modal()).getByRole('heading', { name: '<img src=x onerror=alert(1)>' })).toBeTruthy();
     expect(modal().querySelector('img')).toBeNull();
-    expect(within(modal()).getByRole('button', { name: 'Track finding' })).toBeTruthy();
+    expect(within(modal()).getByRole('button', { name: 'Track resolution: <img src=x onerror=alert(1)>' }).dataset['resolution']).toBe('create');
     expect(modal().querySelectorAll('pre')[1]!.textContent).toBe('{\n  "status": 200\n}');
     expect(screen.getByRole('link', { name: 'Export case JSON' }).getAttribute('href')).toBe('/api/assessments/run-1/export');
   });

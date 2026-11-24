@@ -58,7 +58,7 @@ assessment-case dialog match; polling behaviour unchanged.
 **Acceptance:** inbox, item view, change-page panel, source buttons and every resolution action match,
 including late-answer and dialog-after-navigation guards.
 **Size:** M. **Depends on:** Tasks 5–6.
-- [ ] Task 7
+- [x] Task 7 (inbox, item, change tab, source buttons and actions; parity 19 cases)
 
 ### Checkpoint C
 - [ ] All gates green; the legacy shell now only routes, signs in, frames and opens dialogs

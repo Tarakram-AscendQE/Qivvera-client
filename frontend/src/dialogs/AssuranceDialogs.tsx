@@ -2,6 +2,7 @@ import { Badge } from '../format';
 import { text, type LegacyApi } from '../legacy-bridge';
 import type { ChangeObligation, ChangeRecord } from '../change/types';
 import { findingReason, spaced } from '../change/labels';
+import { SourceButtons, type RunForResolution } from '../resolution/parts';
 import { resultKind } from '../workspace/rows';
 import { Field, FormDialog, type DialogEnvironment } from './FormDialog';
 
@@ -74,7 +75,7 @@ function observations(caseRecord: AssessmentCase): readonly Observation[] {
 }
 
 /** The scope-bound assurance case: findings, unresolved contrary evidence, observations and the boundary. */
-export function AssessmentCaseDialog({ record, close, resolutionButtonsHtml }: { record: AssessmentCase; close: () => void; resolutionButtonsHtml: string | null }) {
+export function AssessmentCaseDialog({ record, close, resolution }: { record: AssessmentCase; close: () => void; resolution: { readonly canTrack: boolean } | null }) {
   const s = record.snapshot, items = observations(record), counter = record.evidence?.counterevidence;
   return (
     <>
@@ -83,7 +84,7 @@ export function AssessmentCaseDialog({ record, close, resolutionButtonsHtml }: {
         <div className="chip-row"><Badge text={record.applicability} /><Badge text={record.evidenceIntegrity} /></div><p>{findingReason(record.case?.reason ?? record.failureCode ?? 'The worker has not produced a complete accepted result.')}</p><div className="notice"><span>Readiness applies only to the frozen declared scope. Not universal safety, compliance, or an attested software supply chain.</span></div>
         <h3>Obligations and gaps</h3>{(record.case?.findings ?? []).map((finding, index) => <article className="run-card" key={index}><Badge text={finding.state} kind={resultKind(finding.state)} /><h4>{text(finding.statement)}</h4><p className="small">{findingReason(finding.reason)}</p></article>)}
         {counter?.length ? <><h3>Unresolved contrary evidence</h3><div className="notice warning">A later passing execution cannot erase an earlier valid counterexample for these inputs.</div>{counter.map((item, index) => <p className="small" key={index}>Run {text(item.runId)} · {findingReason(item.reason)}<br /><span className="mono">{text(item.evidenceDigest)}</span></p>)}</> : null}
-        {resolutionButtonsHtml !== null ? <div className="actions resolution-source" dangerouslySetInnerHTML={{ __html: resolutionButtonsHtml }} /> : null}
+        {resolution ? <div className="actions resolution-source"><SourceButtons run={record as unknown as RunForResolution} enabled={resolution.canTrack} /></div> : null}
         <h3>Expected versus observed</h3>{items.length ? items.map((item, index) => <details className="observation" key={index}><summary>{text(item.step)}</summary><div className="observation-grid"><div><span className="field-label">Expected</span><pre>{text(JSON.stringify(item.expected, null, 2))}</pre></div><div><span className="field-label">Observed</span><pre>{text(JSON.stringify(item.observed, null, 2))}</pre></div></div></details>) : <p>No observations available.</p>}
         <h3>Assurance boundary</h3><dl className="boundary"><dt>Source revision</dt><dd>{text(s.target.sourceRevision)}</dd><dt>Artifact digest</dt><dd>{text(s.target.artifactDigest)}</dd><dt>Environment digest</dt><dd>{text(s.target.environmentDigest)}</dd><dt>Instance</dt><dd>{text(s.target.instanceId)}</dd><dt>Scope digest</dt><dd>{text(s.scopeDigest)}</dd><dt>Profile</dt><dd>{text(s.profile.id)} / {text(s.profile.version)}</dd><dt>Verifier digest</dt><dd>{text(s.verifier?.digest ?? (s.mappings ?? []).map(m => String(m.checkId) + ': ' + String(m.verifier.digest)).join('; '))}</dd><dt>Worker</dt><dd>{text(record.workerId ?? 'Not yet claimed')}</dd><dt>Evidence cutoff</dt><dd>{text(record.finishedAt ?? 'Not completed')}</dd><dt>Excluded areas</dt><dd>{s.profile.exclusions.map(text).join('; ')}</dd><dt>Binding limitation</dt><dd>{text(s.profile.independence.binding)}</dd><dt>Integrity limitation</dt><dd>{text(s.profile.independence.evidence)}</dd></dl><a className="button" href={`/api/assessments/${record.id}/export`}>Export case JSON</a>
       </div>

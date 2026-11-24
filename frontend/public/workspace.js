@@ -1,1 +1,1 @@
-export{t as createWorkspaceUI}from"./shared.js";
+export{n as createWorkspaceUI}from"./shared.js";

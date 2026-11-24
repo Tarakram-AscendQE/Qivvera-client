@@ -16,7 +16,7 @@ function show(roles: string[], workspace: unknown) {
   ui.showOverview();
 }
 
-beforeEach(() => shell.mockClear());
+beforeEach(() => { shell.mockClear(); });
 afterEach(() => ui?.unmount());
 
 describe('workspace overview', () => {

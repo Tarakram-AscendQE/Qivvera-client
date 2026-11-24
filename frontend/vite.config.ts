@@ -34,7 +34,8 @@ export default defineConfig({
         impact: here('src/impact/impact-module.tsx'),
         drafting: here('src/drafting/drafting-module.tsx'),
         templates: here('src/templates/templates-module.tsx'),
-        workspace: here('src/workspace/workspace-module.tsx')
+        workspace: here('src/workspace/workspace-module.tsx'),
+        resolution: here('src/resolution/resolution-module.tsx')
       },
       // Keep the factory exports (createGuideUI, ...) that the legacy shell imports.
       preserveEntrySignatures: 'exports-only',

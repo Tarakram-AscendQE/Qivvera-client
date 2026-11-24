@@ -13,16 +13,16 @@ const change = (over: Record<string, unknown> = {}) => ({
 const plan = { current: true, version: 1, snapshot: { profile: { title: 'p' }, target: { name: 't', sourceRevision: 's' }, mappings: [] } };
 
 let ui: WorkspaceUI;
-function show(state: Record<string, unknown>, roles: string[], resolutionHtml = '') {
+function show(state: Record<string, unknown>, roles: string[], resolutionEnabled = false) {
   const S = {
     session: { email: me, roles, reviewMode: 'independent' }, tab: 'obligations', runs: [], assuranceContext: null, assuranceError: null, sources: [], sourceError: null,
     workspace: { applications: [{ id: 'a1', name: 'VendorPay' }], changes: [], activity: [], capabilities: {} }, change: change(), ...state
   };
   ui = createWorkspaceUI({ ...fakeWorkspaceServices(), S: S as never, shell, can: role => roles.includes(role) });
-  ui.showChange(resolutionHtml);
+  ui.showChange(resolutionEnabled);
 }
 
-beforeEach(() => shell.mockClear());
+beforeEach(() => { shell.mockClear(); });
 afterEach(() => ui?.unmount());
 
 describe('change page', () => {
@@ -66,12 +66,12 @@ describe('change page', () => {
     expect(screen.getByRole('button', { name: 'Reload assessment details' }).dataset['action']).toBe('refresh-assurance');
   });
 
-  it('shows requirement text only as text and embeds the resolution tab supplied by the shell', () => {
+  it('shows requirement text only as text and renders the resolution tab when the workflow is on', () => {
     show({ change: change({ obligations: [obligation('a', 'DRAFT', { statement: '<img src=x onerror=alert(1)>' })] }) }, ['VIEWER']);
     expect(screen.getByRole('heading', { name: '<img src=x onerror=alert(1)>' })).toBeTruthy();
     expect(document.querySelector('img')).toBeNull();
     ui.unmount();
-    show({ tab: 'resolutions' }, ['VIEWER'], '<section class="panel"><h2>Findings to resolve</h2></section>');
+    show({ tab: 'resolutions', resolutions: { items: [], total: 0, offset: 0, limit: 50, hasMore: false } }, ['VIEWER'], true);
     expect(screen.getByRole('heading', { name: 'Findings to resolve' })).toBeTruthy();
   });
 });

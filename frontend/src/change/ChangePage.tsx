@@ -1,4 +1,5 @@
 import { text } from '../legacy-bridge';
+import { ResolutionChangeTab } from '../resolution/parts';
 import { shortRevision } from '../workspace/rows';
 import { AssuranceTab, EvidenceTab } from './AssuranceTabs';
 import { AssessmentBanner, NextStep, RunButton } from './Guidance';
@@ -13,8 +14,7 @@ function TabBody({ view }: { view: ChangeView }) {
     case 'evidence': return <EvidenceTab view={view} />;
     case 'revisions': return <RevisionsTab view={view} />;
     case 'history': return <HistoryTab view={view} />;
-    // resolution.js still renders this tab (already escaped there) until resolution moves to React.
-    case 'resolutions': return <div data-legacy-html="" dangerouslySetInnerHTML={{ __html: view.resolutionHtml }} />;
+    case 'resolutions': return view.resolution ? <ResolutionChangeTab state={view.resolution} /> : <div className="notice">Resolution is not enabled on this deployment.</div>;
     default: return null;
   }
 }

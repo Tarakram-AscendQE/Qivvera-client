@@ -1,8 +1,10 @@
 import { ChangePage } from '../change/ChangePage';
 import type { ChangeView } from '../change/types';
+import type { ResolutionPage } from '../resolution/parts';
 import type { ReactNode } from 'react';
 import { AssessmentCaseDialog, MultiPlanDialog, RequestAssessmentDialog, SinglePlanDialog, type AssessmentCase, type PlanCheck, type PlanContext } from '../dialogs/AssuranceDialogs';
 import { dialogHost } from '../dialogs/dialog-host';
+import { openFormDialog } from '../dialogs/open-form';
 import type { DialogEnvironment } from '../dialogs/FormDialog';
 import { HistoryDialog, NewApplicationDialog, NewChangeDialog, NewRevisionDialog, ObligationDialog, ReviewDialog, type HistoryEvent, type ReviewAction } from '../dialogs/RecordDialogs';
 import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState, LegacyToast } from '../legacy-bridge';
@@ -27,8 +29,8 @@ export interface WorkspaceBridge {
   /** Starts a new dialog generation (a dialog that loads first claims its place before reading). */
   readonly nextDialog: () => number;
   readonly dialogGeneration: () => number;
-  /** Until resolution moves to React: its buttons for an assessment case, or null when resolution is off. */
-  readonly resolutionButtons?: (record: unknown) => string | null;
+  /** True when the resolution workflow is loaded for this session. */
+  readonly resolutionEnabled?: () => boolean;
 }
 
 export interface WorkspaceUI {
@@ -38,8 +40,8 @@ export interface WorkspaceUI {
   showApplication(id: string): void;
   showChanges(): void;
   showActivity(): void;
-  /** Draws S.change on the selected tab. Until resolution moves, the shell passes that tab's HTML from resolution.js. */
-  showChange(resolutionHtml: string): void;
+  /** Draws S.change on the selected tab; the Resolutions tab needs the resolution workflow to be enabled. */
+  showChange(resolutionEnabled: boolean): void;
   openNewApplication(): void;
   openNewChange(applicationId?: string): void;
   openNewRevision(): void;
@@ -69,16 +71,9 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
   const roles = (): Roles => ({ author: can('AUTHOR'), authority: can('POLICY_AUTHORITY') });
   const state = S as LegacyState & { change: ChangeView['change']; session: { email: unknown }; tab?: string };
 
-  /** The legacy openForm() sequence: bind to the visible view, close any open dialog, then open this one. */
-  function openForm(render: (env: DialogEnvironment) => ReactNode, active: ActiveCheck = bridge.viewContext()): void {
-    bridge.closeDialog();
-    const generation = bridge.dialogGeneration();
-    const modal = document.querySelector<HTMLDialogElement>('#modal');
-    dialogHost.show(render({
-      active, present: () => active() && !!modal?.open && bridge.dialogGeneration() === generation,
-      close: bridge.closeDialog, refresh: bridge.refresh, toast: bridge.toast, route: bridge.route
-    }));
-  }
+  const openForm = (render: (env: DialogEnvironment) => ReactNode, active?: ActiveCheck) => openFormDialog(bridge, render, active);
+  /** Resolution items can be tracked when the workflow is on and the person is an Author or Policy Authority. */
+  const canTrack = () => !!(S.workspace as { capabilities?: Record<string, unknown> } | null)?.capabilities?.['resolutionWorkflow'] && (can('AUTHOR') || can('POLICY_AUTHORITY'));
   const obligation = (id: string) => state.change.obligations.find(candidate => candidate.id === id);
 
   return {
@@ -99,12 +94,13 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
     showActivity() {
       host.show(<ActivityPage workspace={workspace()} />, 'activity', 'Activity');
     },
-    showChange(resolutionHtml) {
-      const shellState = S as unknown as { change: ChangeView['change']; session: ChangeView['session']; tab: string; runs: ChangeView['runs']; assuranceContext: ChangeView['context']; assuranceError: string | null; sources?: ChangeView['sources'] | null; sourceError?: string | null };
+    showChange(resolutionEnabled) {
+      const shellState = S as unknown as { change: ChangeView['change']; session: ChangeView['session']; tab: string; runs: ChangeView['runs']; assuranceContext: ChangeView['context']; assuranceError: string | null; sources?: ChangeView['sources'] | null; sourceError?: string | null; resolutions?: ResolutionPage | null; resolutionError?: string | null };
       const view: ChangeView = {
         change: state.change, workspace: workspace() as ChangeView['workspace'], session: shellState.session, roles: roles(), tab: shellState.tab,
         runs: shellState.runs, context: shellState.assuranceContext, assuranceError: shellState.assuranceError,
-        sources: shellState.sources ?? [], sourceError: shellState.sourceError ?? null, resolutionHtml
+        sources: shellState.sources ?? [], sourceError: shellState.sourceError ?? null,
+        resolution: resolutionEnabled ? { resolutions: shellState.resolutions ?? null, resolutionError: shellState.resolutionError ?? null, runs: shellState.runs as never, canTrack: canTrack() } : null
       };
       host.show(<ChangePage view={view} />, 'changes', String(shellState.change.title));
     },
@@ -153,7 +149,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
       const active = bridge.viewContext(), dialog = bridge.nextDialog();
       const record = await api(`/api/assessments/${id}`) as AssessmentCase;
       if (!active() || dialog !== bridge.dialogGeneration()) return;
-      dialogHost.show(<AssessmentCaseDialog record={record} close={bridge.closeDialog} resolutionButtonsHtml={bridge.resolutionButtons ? bridge.resolutionButtons(record) : null} />);
+      dialogHost.show(<AssessmentCaseDialog record={record} close={bridge.closeDialog} resolution={bridge.resolutionEnabled?.() ? { canTrack: canTrack() } : null} />);
     },
     unmountDialog: dialogHost.unmount,
     unmount: host.unmount
