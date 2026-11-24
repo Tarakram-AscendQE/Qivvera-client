@@ -1,3 +1,5 @@
+import { lookup } from '../json';
+
 /** The impact report contract (schema qivvera.impact/1). Server values are displayed only as text. */
 
 export interface ImpactRevision {
@@ -126,9 +128,6 @@ export function parseImpactReport(value: unknown, changeId: string, revisionId: 
   }
   return report as unknown as ImpactReport;
 }
-
-const lookup = (table: Readonly<Record<string, string>>, value: unknown): string | undefined =>
-  typeof value === 'string' && Object.hasOwn(table, value) ? table[value] : undefined;
 
 const FIELD_LABELS: Readonly<Record<string, string>> = {
   statement: 'Requirement statement', sourceReference: 'Source reference', sourceVersion: 'Source version',

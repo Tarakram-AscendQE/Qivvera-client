@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
-import { field, list } from '../json';
+import { field, list, lookup } from '../json';
 import type { LegacyApi, Role } from '../legacy-bridge';
 
 export const SUPPORT_SCHEMA = 'qivvera.support-info/1';
@@ -91,11 +91,11 @@ const ROLE_NAMES: Readonly<Record<string, string>> = { AUTHOR: 'Author', POLICY_
 const REVIEW_MODES: Readonly<Record<string, string>> = { independent: 'Independent review', 'founder-review': 'Founder review — same-person decisions permitted', 'not-available': 'Not available' };
 
 export function roleName(role: unknown): string {
-  return typeof role === 'string' && Object.hasOwn(ROLE_NAMES, role) ? ROLE_NAMES[role]! : 'Unknown role';
+  return lookup(ROLE_NAMES, role) ?? 'Unknown role';
 }
 
 export function reviewModeName(mode: unknown): string {
-  return typeof mode === 'string' && Object.hasOwn(REVIEW_MODES, mode) ? REVIEW_MODES[mode]! : 'Not available';
+  return lookup(REVIEW_MODES, mode) ?? 'Not available';
 }
 
 export const enabledText = (value: boolean): string => (value ? 'Enabled' : 'Not enabled');

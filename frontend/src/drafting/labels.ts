@@ -1,7 +1,6 @@
-/** Drafting prepares human-reviewed candidates. Source and model text are always data. */
+import { lookup } from '../json';
 
-const lookup = (table: Readonly<Record<string, string>>, value: unknown): string | undefined =>
-  typeof value === 'string' && Object.hasOwn(table, value) ? table[value] : undefined;
+/** Drafting prepares human-reviewed candidates. Source and model text are always data. */
 
 export const methodLabel = (method: unknown): string => (method === 'openai' ? 'AI suggestions · OpenAI' : 'Explicit clauses · rule-based');
 
