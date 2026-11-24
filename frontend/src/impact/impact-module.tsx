@@ -1,17 +1,15 @@
 import { downloadJson } from '../download';
-import type { LegacyApi, LegacyShell, LegacyState } from '../legacy-bridge';
+import type { LegacyApi, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
 import { createScreenHost } from '../screen-host';
 import { createVisits } from '../visits';
 import { ImpactLoading, ImpactPage } from './ImpactPage';
 import { parseImpactReport, type ChangeTab } from './report';
 
 export interface ImpactBridge {
-  /** The legacy state; `tab` chooses which change tab opens next. */
-  readonly S: LegacyState & { tab?: string; session: (LegacyState['session'] & { reviewMode?: string }) | null };
+  readonly S: LegacyState;
   readonly api: LegacyApi;
   readonly shell: LegacyShell;
-  /** The legacy router: re-reads and redraws the current route. */
-  readonly route: () => Promise<void>;
+  readonly route: LegacyRoute;
 }
 
 export interface ImpactUI {

@@ -1,18 +1,15 @@
-import type { LegacyApi, LegacyShell, LegacyState } from '../legacy-bridge';
+import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
 import { createScreenHost } from '../screen-host';
 import { createVisits } from '../visits';
 import { createNoticeStore, RunView, SourceView, type DraftChange, type DraftContext, type DraftingView, type DraftRun, type NoticeStore } from './DraftingPages';
 
 export interface DraftingBridge {
-  /** The legacy state; `tab` chooses which change tab opens next. */
-  readonly S: LegacyState & { tab?: string };
+  readonly S: LegacyState;
   readonly api: LegacyApi;
   readonly shell: LegacyShell;
-  readonly can: (role: string) => boolean;
-  /** The legacy router: re-reads and redraws the current route. */
-  readonly route: () => Promise<void>;
-  /** Re-reads the workspace summary (counts in the navigation and overview). */
-  readonly refresh: () => Promise<void>;
+  readonly can: LegacyCan;
+  readonly route: LegacyRoute;
+  readonly refresh: LegacyRefresh;
 }
 
 export interface DraftingUI {

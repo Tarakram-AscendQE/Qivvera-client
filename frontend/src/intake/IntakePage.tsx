@@ -1,14 +1,14 @@
 import { useMutation } from '@tanstack/react-query';
 import { useRef, useState, type FormEvent } from 'react';
 import { field } from '../json';
-import { isSessionEnded, text, type LegacyApi, type LegacyEscape, type LegacyField, type LegacyOpenForm, type LegacyState, type LegacyToast } from '../legacy-bridge';
+import { isSessionEnded, text, type LegacyApi, type LegacyCan, type LegacyEscape, type LegacyField, type LegacyOpenForm, type LegacyState, type LegacyToast } from '../legacy-bridge';
 import type { ActiveCheck } from '../visits';
 
 export interface IntakeBridge {
   readonly S: LegacyState;
   readonly api: LegacyApi;
   readonly h: LegacyEscape;
-  readonly can: (role: string) => boolean;
+  readonly can: LegacyCan;
   readonly openForm: LegacyOpenForm;
   readonly field: LegacyField;
   readonly toast: LegacyToast;

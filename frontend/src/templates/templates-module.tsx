@@ -1,18 +1,17 @@
 import { downloadJson } from '../download';
-import type { LegacyApi, LegacyShell, LegacyState } from '../legacy-bridge';
+import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
 import { createScreenHost } from '../screen-host';
 import { createVisits, type ActiveCheck } from '../visits';
 import { DetailView, ListView, PlanView, SaveView, type Destination, type TemplateList, type TemplateReport } from './TemplatePages';
 import type { TemplateActions } from './shared';
 
 export interface TemplatesBridge {
-  /** The legacy state; `tab` chooses which change tab opens next. */
-  readonly S: LegacyState & { tab?: string; session: (LegacyState['session'] & { reviewMode?: string }) | null };
+  readonly S: LegacyState;
   readonly api: LegacyApi;
   readonly shell: LegacyShell;
-  readonly can: (role: string) => boolean;
-  readonly route: () => Promise<void>;
-  readonly refresh: () => Promise<void>;
+  readonly can: LegacyCan;
+  readonly route: LegacyRoute;
+  readonly refresh: LegacyRefresh;
 }
 
 export interface TemplatesUI {

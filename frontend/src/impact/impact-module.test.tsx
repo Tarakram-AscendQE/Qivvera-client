@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LegacyApi, LegacyShell } from '../legacy-bridge';
-import { createImpactUI, type ImpactBridge, type ImpactUI } from './impact-module';
+import { createImpactUI, type ImpactUI } from './impact-module';
 import { display, parseImpactReport, reviewLabel, roleLabel } from './report';
 
 const shell = vi.fn<LegacyShell>((content, active = '', label = '') => {
@@ -24,7 +24,8 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-let S: ImpactBridge['S'];
+// The legacy shell replaces S.session on sign-in and sign-out; screens only read it.
+let S: { session: { email: string; roles?: string[] } | null; tab?: string };
 let ui: ImpactUI;
 let route: ReturnType<typeof vi.fn<() => Promise<void>>>;
 

@@ -9,6 +9,7 @@ export type Role = 'AUTHOR' | 'POLICY_AUTHORITY' | 'VIEWER';
 export interface LegacySession {
   readonly email: string;
   readonly roles?: readonly string[];
+  readonly reviewMode?: string;
 }
 
 export interface LegacyApplication {
@@ -32,6 +33,8 @@ export interface LegacyWorkspace {
 export interface LegacyState {
   readonly session: LegacySession | null;
   readonly workspace?: LegacyWorkspace | null;
+  /** Which change tab opens next; screens set it when a link opens a change. */
+  tab?: string;
 }
 
 /** The legacy h(): escapes text for inclusion in legacy HTML strings (only for legacy dialogs). */
@@ -51,6 +54,15 @@ export type LegacyOpenForm = (
 ) => void;
 
 export type LegacyToast = (text: string) => void;
+
+/** The legacy can(): true when the signed-in session holds the role. */
+export type LegacyCan = (role: string) => boolean;
+
+/** The legacy route(): re-reads and redraws the current route. */
+export type LegacyRoute = () => Promise<void>;
+
+/** The legacy refresh(): re-reads the workspace summary (counts in the navigation and overview). */
+export type LegacyRefresh = () => Promise<void>;
 
 export interface ApiOptions {
   readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
