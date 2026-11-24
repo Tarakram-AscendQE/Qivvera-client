@@ -1,1 +1,1 @@
-export{t as createTemplatesUI}from"./shared.js";
+export{n as createTemplatesUI}from"./shared.js";

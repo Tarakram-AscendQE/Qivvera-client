@@ -33,7 +33,8 @@ export default defineConfig({
         intake: here('src/intake/intake-module.tsx'),
         impact: here('src/impact/impact-module.tsx'),
         drafting: here('src/drafting/drafting-module.tsx'),
-        templates: here('src/templates/templates-module.tsx')
+        templates: here('src/templates/templates-module.tsx'),
+        workspace: here('src/workspace/workspace-module.tsx')
       },
       // Keep the factory exports (createGuideUI, ...) that the legacy shell imports.
       preserveEntrySignatures: 'exports-only',

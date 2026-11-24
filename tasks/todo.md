@@ -17,38 +17,40 @@ database); all 8 native browser suites pass on Node 22; one local commit per ver
 workspace; "New application" / "New change" open the same legacy dialogs; recent changes and activity rows match.
 **Files:** `frontend/src/workspace/overview*.tsx`, `frontend/legacy/app.js` (call the React module), vite input.
 **Size:** M. **Depends on:** none.
-- [ ] Task 1
+- [x] Task 1 (overview; parity 16 cases)
 
 ### Task 2: Applications list and application detail
 **Acceptance:** list, detail and "not found" error match; register/new-change actions open the same dialogs.
 **Size:** S. **Depends on:** Task 1 (shared workspace module).
-- [ ] Task 2
+- [x] Task 2 (applications + detail)
 
 ### Task 3: Changes list and Activity
 **Acceptance:** both pages match; export link unchanged; role-gated "New change" button state matches.
 **Size:** S. **Depends on:** Task 1.
-- [ ] Task 3
+- [x] Task 3 (changes + activity)
 
 ### Checkpoint B
 - [ ] All gates green; commit per task
 
 ## Phase C — Change page (data still loaded by the legacy router)
 
-### Task 4: Change page frame and read-only tabs
-**Acceptance:** heading, historical notice, "What to do next", assessment banner, tab bar, and the Overview
-(incl. imported source receipts), Revisions, History and Evidence tabs match for current/historical revisions.
-**Size:** M. **Depends on:** Phase B.
+### Task 4: The change page renders in React
+**Acceptance:** the whole change page matches for every tab (overview incl. imported source receipts,
+obligations, assurance, evidence, revisions, history), current and historical revisions, founder-review mode,
+every "What to do next" branch, every assessment-banner state and the run-button state. Buttons keep their
+data-action hooks (dialogs stay legacy until Tasks 5–6). The resolution tab embeds resolution.js's HTML until Task 7.
+**Size:** M (render only). **Depends on:** Phase B.
 - [ ] Task 4
 
-### Task 5: Obligations tab and obligation dialogs
-**Acceptance:** obligation cards, review states and own-contribution rules match; propose / revise / submit /
-decision dialogs send identical payloads; review history dialog matches and ignores late answers.
-**Size:** M. **Depends on:** Task 4.
+### Task 5: Obligation dialogs
+**Acceptance:** propose / revise / submit / withdraw / decision dialogs send identical payloads and keep the
+same own-contribution rules; review-history dialog matches and ignores late answers.
+**Size:** M. **Depends on:** Task 4 and the dialog component (Task 8 may be pulled forward).
 - [ ] Task 5
 
-### Task 6: Assurance tab, plan dialogs, assessment request and assessment case
-**Acceptance:** plan, template receipt, runs, run button state, plan dialogs (one/two checks), request dialog
-(one key per request) and the assessment-case dialog match; polling behaviour unchanged.
+### Task 6: Assurance dialogs and the assessment case
+**Acceptance:** plan dialogs (one/two checks), request dialog (one key per request), cancel, and the
+assessment-case dialog match; polling behaviour unchanged.
 **Size:** M. **Depends on:** Task 4.
 - [ ] Task 6
 
@@ -85,6 +87,7 @@ pages and capability checks); route generation, toast and polling semantics pres
 - [ ] All gates green twice in a row; no legacy JavaScript is loaded
 
 ## Phase E — Retire the legacy layer
+(Remove scripts/check-legacy-names.mjs from `npm run check` when no legacy JavaScript remains.)
 ### Task 11: Remove the bridge and legacy copies; update docs
 **Acceptance:** `frontend/legacy` holds only static assets (or is removed); sync-assets copies index.html/CSS/logo
 only; README/AGENTS layout updated; offline component checks updated or retired with a note.
