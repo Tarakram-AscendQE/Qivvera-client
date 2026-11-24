@@ -4,13 +4,13 @@ from playwright.sync_api import sync_playwright,expect
 work=Path(__file__).resolve().parents[1];out=Path(os.environ.get('QIVVERA_TEST_OUTPUT',str(work/'review-test-results')));out.mkdir(parents=True,exist_ok=True)
 fixture_path=out/'ui-fixtures.json'
 subprocess.run(['node','test/ui-fixtures.mjs'],cwd=work,env={**os.environ,'FIXTURE_OUTPUT':str(fixture_path)},check=True,capture_output=True)
-f=json.loads(fixture_path.read_text());html=(work/'frontend/src/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
+f=json.loads(fixture_path.read_text());html=(work/'frontend/legacy/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
 checks=[]
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_EXECUTABLE','/usr/bin/chromium'),headless=True)
  page=b.new_page(viewport={'width':1440,'height':1000});errs=[];page.on('pageerror',lambda e:errs.append(str(e)))
  page.set_content(html)
- page.add_style_tag(content=(work/'frontend/src/app.css').read_text()+'\n'+(work/'frontend/src/workflow.css').read_text())
+ page.add_style_tag(content=(work/'frontend/legacy/app.css').read_text()+'\n'+(work/'frontend/legacy/workflow.css').read_text())
  # This is an explicit offline API fixture, not a proxy around blocked browser networking.
  page.evaluate('''f=>{window.testFixture=f;window.mockRevision='accepted';window.mockRole='reviewer';window.fetch=async(url,options={})=>{
  const f=window.testFixture;let data,status=200;
@@ -21,7 +21,7 @@ with sync_playwright() as p:
  else {data={error:'NOT_MOCKED',message:'Only component read states are available.'};status=404;}
  return {ok:status===200,status,json:async()=>JSON.parse(JSON.stringify(data))};};}''',f)
  page.evaluate("id=>{location.hash='#/changes/'+id;}",f['c']['id'])
- page.add_script_tag(type='module',content=(work/'frontend/src/app.js').read_text())
+ page.add_script_tag(type='module',content=(work/'frontend/legacy/app.js').read_text())
  expect(page.get_by_role('heading',name='Supplier bank changes: controlled approval')).to_be_visible()
  expect(page.get_by_text('Requirement accepted',exact=True)).to_be_visible()
  expect(page.get_by_text('Clarification requested',exact=True)).to_be_visible()

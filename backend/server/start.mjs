@@ -18,7 +18,7 @@ try{
  if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac});
  if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,directory:accounts,reviewMode:cfg.reviewMode});}
  const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:false});
- const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:cfg.hosted,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../../frontend/src',import.meta.url))});
+ const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:cfg.hosted,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../../frontend/public',import.meta.url))});
  server.listen(cfg.port,cfg.host,()=>console.log(`Qivvera ${PRODUCT_VERSION} started. Assessment requests use a separate worker.`));
  let closing=false;
  for(const sig of ['SIGTERM','SIGINT'])process.on(sig,()=>{

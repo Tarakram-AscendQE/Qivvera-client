@@ -19,7 +19,7 @@ async function getHandler(){
    if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac,migrate:false});
    if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,directory:accounts,reviewMode:cfg.reviewMode,migrate:false});}
  const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:false});
-   const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../frontend/src',import.meta.url))});
+   const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../frontend/public',import.meta.url))});
    return server.listeners('request')[0];
   }catch(e){await intake?.close();await resolution?.close();await assurance?.close();await accounts?.close();await repository.close();throw e;}
  })().catch(e=>{initialising=undefined;throw e;});

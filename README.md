@@ -57,8 +57,9 @@ end user; the deployment owner provisions accounts, protected configuration, tar
 
 ```text
 frontend/
-  src/          Browser UI source (HTML, JS, CSS) served by the Node server
-  public/       Generated copy of src/ (npm run build); Vercel static output. Do not edit by hand.
+  src/          React 19 + TypeScript screens (Vite, TanStack Query; Vitest + Testing Library tests)
+  legacy/       Hand-written screens and the page shell, being replaced one screen at a time
+  public/       Build output served by the Node server and Vercel. Generated; do not edit by hand.
 backend/
   server/       HTTP application, repositories, assurance/resolution/drafting/impact/templates modules
   verifiers/    Fixed verifier bundles run by the separate assurance worker
@@ -74,11 +75,25 @@ fixtures/       Synthetic reference target applications used by tests and demos
 docs/           Contracts, operations and historical increment records
 ```
 
+### Frontend migration
+
+The UI is moving to React + TypeScript one screen at a time (strangler pattern). The legacy shell in
+`frontend/legacy/app.js` still owns routing, sign-in, the session and the page frame. A migrated
+screen is built by Vite as a fixed-name module with the same factory the legacy shell already
+imports, so the shell keeps working unchanged. Guide and Support (`guide.js`) are the first
+migrated screens. The legacy `shell()` unmounts a React screen before it replaces the page.
+
+To migrate the next screen: rebuild it under `frontend/src/`, add its entry to `rolldownOptions.input`
+in `frontend/vite.config.ts`, remove its file from `scripts/sync-assets.mjs` and `frontend/legacy/`,
+and run the native browser suites. The build is plain static JavaScript, so the strict
+Content-Security-Policy is unchanged. Each entry currently bundles its own copy of React. Before a
+second entry lands, add a shared chunk name to the server's fixed asset list in `backend/server/app.mjs`.
+
 `backend/server/`, `backend/verifiers/` and `backend/migrations/` must stay sibling directories.
 Published verifier digests include the relative path strings `../../verifiers/…`, so moving one of
 them without the others changes the recorded verifier identity. Historical increment records in
 `docs/` predate this layout and refer to `server/`, `web/`, `public/`, `verifiers/`, `migrations/`,
-`ops/`, `config/` and `src/core/` at the repository root.
+`ops/`, `config/` and `src/core/` at the repository root. `web/` is now `frontend/legacy/`.
 
 ## Engineering checks
 
@@ -87,7 +102,7 @@ Use Node 22.16 or later within Node 22 and the locked dependencies:
 ```sh
 npm ci --ignore-scripts
 npm run selfcheck
-npm run check
+npm run check            # syntax, strict TypeScript, Vite build, Vitest frontend tests, node:test suites
 npm run demo:assurance
 npm run demo:resolution
 npm run demo:generalization

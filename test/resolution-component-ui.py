@@ -4,7 +4,7 @@ import os,json,re
 from playwright.sync_api import sync_playwright,expect
 work=Path(__file__).resolve().parents[1];out=Path(os.environ.get('QIVVERA_TEST_OUTPUT',str(work/'review-test-results')));out.mkdir(parents=True,exist_ok=True)
 fixtures={name:json.loads((out/f'resolution-ui-{name}.json').read_text()) for name in ['awaiting','review','verified','stale']}
-html=(work/'frontend/src/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
+html=(work/'frontend/legacy/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
 checks=[];errors=[]
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_EXECUTABLE','/usr/bin/chromium'),headless=True)
@@ -23,10 +23,10 @@ with sync_playwright() as p:
  else if(path.startsWith('/api/changes/'))value=f.change;
  else {status=404;value={message:'Offline component fixture route not defined.'};}
  return {ok:status===200,status,json:async()=>JSON.parse(JSON.stringify(value))};};}''',fixtures)
- page.add_script_tag(type='module',content=(work/'frontend/src/resolution.js').read_text()+'\nwindow.ResolutionComponent={createResolutionUI};')
+ page.add_script_tag(type='module',content=(work/'frontend/legacy/resolution.js').read_text()+'\nwindow.ResolutionComponent={createResolutionUI};')
  page.wait_for_function('!!window.ResolutionComponent')
  # Only module transport is supplied locally for this offline rendering. API responses are declared fixtures.
- js=(work/'frontend/src/app.js').read_text().replace("await import('./resolution.js')","window.ResolutionComponent")
+ js=(work/'frontend/legacy/app.js').read_text().replace("await import('./resolution.js')","window.ResolutionComponent")
  page.evaluate("id=>location.hash='#/resolutions/'+id",fixtures['review']['item']['id']);page.add_script_tag(type='module',content=js)
  expect(page.get_by_role('heading',name='Resolution review checks',exact=True)).to_be_visible();checks.append('Dedicated resolution view loads actual captured comparison')
  expect(page.get_by_role('heading',name='Original finding',exact=True)).to_be_visible();expect(page.get_by_role('heading',name='Correction reassessment',exact=True)).to_be_visible();checks.append('Original and correction assessments remain distinct')
