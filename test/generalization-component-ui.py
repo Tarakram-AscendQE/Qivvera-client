@@ -9,7 +9,7 @@ try:
  with sync_playwright() as p:
   browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_EXECUTABLE','/usr/bin/chromium'),headless=True)
   page=browser.new_page(viewport={'width':1440,'height':1000});page.on('pageerror',lambda e:errors.append(str(e)))
-  page.set_content(html);page.add_style_tag(content='\n'.join((work/'web'/f).read_text() for f in ['app.css','workflow.css','assurance.css','resolution.css']))
+  page.set_content(html);page.add_style_tag(content='\n'.join((work/'frontend'/'legacy'/f).read_text() for f in ['app.css','workflow.css','assurance.css','resolution.css']))
   page.evaluate('''f=>{window.fixture=f;window.simulatedWrites=[];window.fetch=async(path,opts={})=>{let data,code=200;if(opts.method&&opts.method!=='GET')simulatedWrites.push(path);
    if(path==='/api/session')data=f.session;else if(path==='/api/workspace')data=f.workspace;else if(path==='/api/source-repositories')data=f.repositories;else if(path==='/api/source-previews')data=f.preview;
    else if(path.endsWith('/source-imports'))data=[];else if(path.includes('assurance-context'))data=f.context;else if(path.includes('/assessments?'))data=f.runs;else if(path.startsWith('/api/assessments/'))data=f.runs[0];else if(path.startsWith('/api/changes/'))data=f.change;else{code=404;data={message:'Unconfigured offline component route'};}
@@ -32,7 +32,7 @@ try:
   # Reload component state via the real API-session loader without a network navigation.
   page.evaluate("()=>location.hash='#/changes'")
   # S is lexical in app.js: refresh permissions through a new document rather than invent DOM permissions.
-  page.set_content(html);page.add_style_tag(content='\n'.join((work/'web'/f).read_text() for f in ['app.css','workflow.css','assurance.css','resolution.css']))
+  page.set_content(html);page.add_style_tag(content='\n'.join((work/'frontend'/'legacy'/f).read_text() for f in ['app.css','workflow.css','assurance.css','resolution.css']))
   page.evaluate("()=>location.hash='#/intake'");page.add_script_tag(type='module',content=js)
   expect(page.get_by_role('heading',name='Import a GitHub change',exact=True)).to_be_visible();checks.append('Author can open intake')
   page.get_by_label('Open pull-request number').fill('12');page.get_by_role('button',name='Preview source metadata',exact=True).click();expect(page.get_by_role('heading',name='Review before importing',exact=True)).to_be_visible();checks.append('Preview shows reviewed metadata before any import')

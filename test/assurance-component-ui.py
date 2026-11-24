@@ -10,7 +10,7 @@ with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_EXECUTABLE','/usr/bin/chromium'),headless=True)
  page=browser.new_page(viewport={'width':1440,'height':1050});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
  page.set_content(html)
- page.add_style_tag(content='\n'.join((work/'web'/n).read_text() for n in ['app.css','workflow.css','assurance.css']))
+ page.add_style_tag(content='\n'.join((work/'frontend'/'legacy'/n).read_text() for n in ['app.css','workflow.css','assurance.css']))
  page.evaluate('''fixtures=>{window.data=fixtures;window.caseMode='bad';window.fetch=async(path,options={})=>{
  const f=data[caseMode];let value,status=200;
  if(path==='/api/session')value=f.session;
