@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
+import { field, list } from '../json';
 import type { LegacyApi, Role } from '../legacy-bridge';
 
 export const SUPPORT_SCHEMA = 'qivvera.support-info/1';
@@ -31,15 +32,6 @@ export interface SupportReport {
   actions: Record<ActionKey, boolean>;
   warnings: { code: unknown; message: unknown; nextStep: unknown }[];
   limitations: { workerStatus: 'not-observed'; githubConnection: 'not-probed'; aiProviderConnection: 'not-probed'; releaseStatus: 'not-evaluated'; notice: string };
-}
-
-/** Reads one field of a JSON object; anything that is not an object has no fields. */
-function field(source: unknown, key: string): unknown {
-  return typeof source === 'object' && source !== null ? (source as Record<string, unknown>)[key] : undefined;
-}
-
-function list(value: unknown): readonly unknown[] {
-  return Array.isArray(value) ? value : [];
 }
 
 function pickBooleans<K extends string>(source: unknown, keys: readonly K[]): Record<K, boolean> {

@@ -87,7 +87,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             })}: {})};
     };
     const assets = new Map();
-    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['drafting.js', 'text/javascript'], ['impact.js', 'text/javascript'], ['templates.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
+    for (const [name, type] of [['index.html', 'text/html'], ['app.js', 'text/javascript'], ['guide.js', 'text/javascript'], ['shared.js', 'text/javascript'], ['drafting.js', 'text/javascript'], ['impact.js', 'text/javascript'], ['templates.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'], ['assurance.css', 'text/css'], ['intake.js', 'text/javascript'], ['resolution.js', 'text/javascript'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']]) {
         try {
             assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
         }

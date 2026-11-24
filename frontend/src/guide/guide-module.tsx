@@ -9,8 +9,8 @@ import { supportQueryOptions } from './support-report';
 export interface GuideUI {
   showGuide(): void;
   showSupport(): Promise<void>;
-  /** Unmounts the current screen; the legacy shell calls it before replacing the page. */
-  invalidate(): void;
+  /** Removes the screen; the legacy shell calls it before it replaces the page or ends a session. */
+  unmount(): void;
 }
 
 /**
@@ -38,5 +38,5 @@ export function createGuideUI({ S, api, shell }: LegacyBridge): GuideUI {
     host.show(<QueryClientProvider client={client}><SupportPage api={api} /></QueryClientProvider>, 'support', 'Support');
   }
 
-  return { showGuide, showSupport, invalidate: host.unmount };
+  return { showGuide, showSupport, unmount: host.unmount };
 }

@@ -40,7 +40,7 @@ beforeEach(() => {
   state = { session: author };
   shell.mockClear();
 });
-afterEach(() => ui?.invalidate());
+afterEach(() => ui?.unmount());
 
 describe('Guide', () => {
   it('is in the page when showGuide returns, like the legacy string screens', () => {
@@ -64,11 +64,11 @@ describe('Guide', () => {
     expect(shell).not.toHaveBeenCalled();
   });
 
-  it('is removed when the legacy shell invalidates it', () => {
+  it('is removed when the legacy shell unmounts it', () => {
     setup(async () => ({}));
     location.hash = '#/guide';
     ui.showGuide();
-    ui.invalidate();
+    ui.unmount();
     expect(document.querySelector('[data-react-screen]')?.childNodes.length).toBe(0);
   });
 });
