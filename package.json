@@ -10,7 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc -p frontend/tsconfig.json && tsc -p frontend/tsconfig.node.json",
     "build": "tsc && vite build --config frontend/vite.config.ts --logLevel warn && node scripts/sync-assets.mjs",
-    "check": "node scripts/check-syntax.mjs && npm run typecheck && npm test",
+    "check": "node scripts/check-syntax.mjs && node scripts/check-legacy-names.mjs && npm run typecheck && npm test",
     "test": "npm run build && npm run test:frontend && node --test --test-concurrency=1 test/*.test.mjs",
     "test:frontend": "vitest run --config frontend/vite.config.ts",
     "test:postgres": "REQUIRE_POSTGRES=true node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs test/resolution-postgres.test.mjs test/generalization-postgres.test.mjs test/drafting-postgres.test.mjs test/impact-postgres.test.mjs test/templates-postgres.test.mjs test/operations-postgres.test.mjs",
