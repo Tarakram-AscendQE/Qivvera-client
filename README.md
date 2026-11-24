@@ -78,16 +78,25 @@ docs/           Contracts, operations and historical increment records
 ### Frontend migration
 
 The UI is moving to React + TypeScript one screen at a time (strangler pattern). The legacy shell in
-`frontend/legacy/app.js` still owns routing, sign-in, the session and the page frame. A migrated
-screen is built by Vite as a fixed-name module with the same factory the legacy shell already
-imports, so the shell keeps working unchanged. Guide and Support (`guide.js`) are the first
-migrated screens. The legacy `shell()` unmounts a React screen before it replaces the page.
+`frontend/legacy/app.js` still owns routing, sign-in, the session, the page frame and its dialogs.
+Each migrated screen is built by Vite as a fixed-name module (`guide.js`, `intake.js`, ...) that
+re-exports the same factory the shell already imports, so the shell's loading code is unchanged.
+All React code loads once from `shared.js`, the only name added to the Node server's fixed asset list.
 
-To migrate the next screen: rebuild it under `frontend/src/`, add its entry to `rolldownOptions.input`
-in `frontend/vite.config.ts`, remove its file from `scripts/sync-assets.mjs` and `frontend/legacy/`,
-and run the native browser suites. The build is plain static JavaScript, so the strict
-Content-Security-Policy is unchanged. Each entry currently bundles its own copy of React. Before a
-second entry lands, add a shared chunk name to the server's fixed asset list in `backend/server/app.mjs`.
+| Screen | Status |
+|---|---|
+| Guide and Support, GitHub intake, revision impact, source drafting, verification templates | React (`frontend/src/`) |
+| App shell (sign-in, overview, applications, changes, change detail, dialogs, assessments, activity) and resolution | Legacy, next: moves with React Router and React Aria dialogs |
+
+Migrated screens keep the legacy rules: results are bound to the visit, route and session that
+requested them (`frontend/src/visits.ts`); saves keep one request ID per unchanged submission and are
+never retried automatically; server text is rendered only as text. A rendering error reaches the
+legacy router's error page. The legacy `shell()` unmounts React screens before it replaces the page.
+
+To migrate a screen: rebuild it under `frontend/src/`, add its entry to `rolldownOptions.input` in
+`frontend/vite.config.ts`, remove its file from `scripts/sync-assets.mjs` and `frontend/legacy/`,
+add Vitest tests, then run `npm run check` and the native browser suites. The build is plain static
+JavaScript, so the strict Content-Security-Policy is unchanged.
 
 `backend/server/`, `backend/verifiers/` and `backend/migrations/` must stay sibling directories.
 Published verifier digests include the relative path strings `../../verifiers/…`, so moving one of
