@@ -14,3 +14,13 @@ export function deferred<T>() {
   const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
   return { promise, resolve, reject };
 }
+
+/** The legacy shell services a workspace screen receives, as inert defaults that a test can override. */
+export function fakeWorkspaceServices() {
+  let generation = 0;
+  return {
+    api: vi.fn(async () => ({})), refresh: vi.fn(async () => {}), toast: vi.fn(), route: vi.fn(async () => {}),
+    closeDialog: vi.fn(() => { generation++; document.querySelector<HTMLDialogElement>('#modal')?.replaceChildren(); }),
+    viewContext: () => () => true, nextDialog: () => ++generation, dialogGeneration: () => generation
+  };
+}

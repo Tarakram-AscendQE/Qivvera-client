@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fakeShell } from '../test-utils';
+import { fakeShell, fakeWorkspaceServices } from '../test-utils';
 import { createWorkspaceUI, type WorkspaceUI } from '../workspace/workspace-module';
 
 const shell = fakeShell();
@@ -18,7 +18,7 @@ function show(state: Record<string, unknown>, roles: string[], resolutionHtml = 
     session: { email: me, roles, reviewMode: 'independent' }, tab: 'obligations', runs: [], assuranceContext: null, assuranceError: null, sources: [], sourceError: null,
     workspace: { applications: [{ id: 'a1', name: 'VendorPay' }], changes: [], activity: [], capabilities: {} }, change: change(), ...state
   };
-  ui = createWorkspaceUI({ S: S as never, shell, can: role => roles.includes(role) });
+  ui = createWorkspaceUI({ ...fakeWorkspaceServices(), S: S as never, shell, can: role => roles.includes(role) });
   ui.showChange(resolutionHtml);
 }
 

@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { fakeShell } from '../test-utils';
+import { fakeShell, fakeWorkspaceServices } from '../test-utils';
 import { createWorkspaceUI, type WorkspaceUI } from './workspace-module';
 
 const shell = fakeShell();
@@ -9,7 +9,7 @@ const changes = [{ id: 'c1', title: 'Mine', applicationId: 'a1' }, { id: 'c2', t
 
 let ui: WorkspaceUI;
 function setup(roles: string[], workspace: Record<string, unknown>) {
-  ui = createWorkspaceUI({ S: { session: { email: 'u@example.test', roles }, workspace } as never, shell, can: role => roles.includes(role) });
+  ui = createWorkspaceUI({ ...fakeWorkspaceServices(), S: { session: { email: 'u@example.test', roles }, workspace } as never, shell, can: role => roles.includes(role) });
 }
 
 beforeEach(() => shell.mockClear());

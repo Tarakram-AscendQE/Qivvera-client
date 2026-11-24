@@ -46,7 +46,7 @@ data-action hooks (dialogs stay legacy until Tasks 5–6). The resolution tab em
 **Acceptance:** propose / revise / submit / withdraw / decision dialogs send identical payloads and keep the
 same own-contribution rules; review-history dialog matches and ignores late answers.
 **Size:** M. **Depends on:** Task 4 and the dialog component (Task 8 may be pulled forward).
-- [ ] Task 5
+- [x] Task 5 (record dialogs; parity 12 cases)
 
 ### Task 6: Assurance dialogs and the assessment case
 **Acceptance:** plan dialogs (one/two checks), request dialog (one key per request), cancel, and the
@@ -69,7 +69,7 @@ including late-answer and dialog-after-navigation guards.
 **Acceptance:** one React form-dialog component reproduces openForm (visit-bound, controls locked while saving,
 409 text, refresh then navigate, "saved but not refreshed" toast); every dialog uses it; legacy openForm removed.
 **Size:** M. **Depends on:** Phase C.
-- [ ] Task 8
+- [x] Task 8 (dialog host + FormDialog; pulled forward with Task 5)
 
 ### Task 9: Sign-in, session bootstrap and the api client in TypeScript
 **Acceptance:** sign-in page and password toggle match; api() semantics identical (CSRF, stale-session
