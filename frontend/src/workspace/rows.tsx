@@ -14,7 +14,7 @@ export interface WorkspaceChange {
   readonly latestAssessment?: { readonly applicability?: unknown } | null;
   readonly obligationCount?: number;
 }
-export interface WorkspaceActivity { readonly action: unknown; readonly detail?: unknown; readonly createdAt: unknown; readonly actor?: unknown }
+export interface WorkspaceActivity { readonly action: unknown; readonly detail?: unknown; readonly createdAt: unknown; readonly actor?: unknown; readonly entityId?: unknown }
 export interface WorkspaceSummary {
   readonly applications: readonly { readonly id: string; readonly name?: unknown; readonly repositoryUrl?: unknown; readonly createdAt?: unknown }[];
   readonly changes: readonly WorkspaceChange[];

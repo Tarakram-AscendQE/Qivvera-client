@@ -40,7 +40,7 @@ obligations, assurance, evidence, revisions, history), current and historical re
 every "What to do next" branch, every assessment-banner state and the run-button state. Buttons keep their
 data-action hooks (dialogs stay legacy until Tasks 5–6). The resolution tab embeds resolution.js's HTML until Task 7.
 **Size:** M (render only). **Depends on:** Phase B.
-- [ ] Task 4
+- [x] Task 4 (change page; parity 640 cases)
 
 ### Task 5: Obligation dialogs
 **Acceptance:** propose / revise / submit / withdraw / decision dialogs send identical payloads and keep the
