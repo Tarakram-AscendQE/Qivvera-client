@@ -11,10 +11,46 @@ export interface LegacySession {
   readonly roles?: readonly string[];
 }
 
+export interface LegacyApplication {
+  readonly id: string;
+  readonly name?: string;
+}
+
+export interface LegacyChange {
+  readonly id: string;
+  readonly title?: string;
+  readonly applicationId?: string;
+  readonly revision?: { readonly id?: string };
+}
+
+export interface LegacyWorkspace {
+  readonly applications: readonly LegacyApplication[];
+  readonly changes: readonly LegacyChange[];
+}
+
 /** The legacy app's mutable state object. Only the fields React screens read are declared. */
 export interface LegacyState {
   readonly session: LegacySession | null;
+  readonly workspace?: LegacyWorkspace | null;
 }
+
+/** The legacy h(): escapes text for inclusion in legacy HTML strings (only for legacy dialogs). */
+export type LegacyEscape = (value: unknown) => string;
+
+/** The legacy field(): HTML for one labelled form field in a legacy dialog. Label and hint are trusted. */
+export type LegacyField = (id: string, label: string, type?: string, value?: string, hint?: string, required?: boolean) => string;
+
+/**
+ * The legacy openForm(): opens the shared dialog with trusted HTML content. On submit it passes the
+ * form fields to `submit`, refreshes the workspace, and navigates to the hash `submit` returns.
+ * It is bound to the visible view and never repeats an uncertain save.
+ */
+export type LegacyOpenForm = (
+  title: string, description: string, contentHtml: string, saveLabel: string,
+  submit: (data: Record<string, string>) => Promise<string | undefined>
+) => void;
+
+export type LegacyToast = (text: string) => void;
 
 export interface ApiOptions {
   readonly method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';

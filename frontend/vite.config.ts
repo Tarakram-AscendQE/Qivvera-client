@@ -29,7 +29,8 @@ export default defineConfig({
     rolldownOptions: {
       // One entry per migrated screen, named after the legacy module it replaces.
       input: {
-        guide: here('src/guide/guide-module.tsx')
+        guide: here('src/guide/guide-module.tsx'),
+        intake: here('src/intake/intake-module.tsx')
       },
       // Keep the factory exports (createGuideUI, ...) that the legacy shell imports.
       preserveEntrySignatures: 'exports-only',
