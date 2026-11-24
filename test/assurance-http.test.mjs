@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {hashPassword} from '../backend/server/auth.mjs';
 import {setup,author,authority,viewer} from './assurance-helpers.mjs';
 import {workOnce} from '../backend/server/assurance/worker.mjs';

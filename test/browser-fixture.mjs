@@ -1,6 +1,6 @@
 // Disposable UI fixture. Never used by a deployment entrypoint.
 import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
-import { createApplicationServer } from '../backend/server/app.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
 const path = process.env.TEST_SQLITE_PATH;
 if (!path || !path.startsWith('/tmp/qivvera-'))
     throw new Error('Disposable fixture path required');

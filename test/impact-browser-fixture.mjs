@@ -1,7 +1,7 @@
 /** Disposable native-browser harness with genuine worker evidence and delayed genuine replies. */
 import { setup, author, authority, viewer } from './assurance-helpers.mjs';
 import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
-import { createApplicationServer } from '../backend/server/app.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
 
 const password = process.env.IMPACT_TEST_PASSWORD;

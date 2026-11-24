@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
-import { createApplicationServer } from '../backend/server/app.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
 const password = 'synthetic-http-workflow-password', passwordHash = hashPassword(password), origin = 'http://127.0.0.1';
 const accounts = [{ email: 'author@example.test', roles: ['AUTHOR'], passwordHash }, { email: 'authority@example.test', roles: ['POLICY_AUTHORITY'], passwordHash }, { email: 'viewer@example.test', roles: ['VIEWER'], passwordHash }];

@@ -1,6 +1,6 @@
 /** Disposable real template workflow; only response delivery is fault-injected. */
 import { setupTemplates, author, authority, viewer } from './templates-helpers.mjs';
-import { createApplicationServer } from '../backend/server/app.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
 
 const password=process.env.TEMPLATES_TEST_PASSWORD;

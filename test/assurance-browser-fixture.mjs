@@ -1,6 +1,6 @@
 /** Test harness only. Loopback and disposable state; never a deployment entrypoint. */
 import {setup,author,authority} from './assurance-helpers.mjs';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {hashPassword} from '../backend/server/auth.mjs';
 import {workOnce} from '../backend/server/assurance/worker.mjs';
 const cleanup=[];

@@ -77,7 +77,7 @@ else {
     });
     test('POSTGRES / authenticated support works with SELECT-only storage permissions', async () => {
         await reset();
-        const { createApplicationServer } = await import('../backend/server/app.mjs');
+        const { createApplicationServer } = await import('../dist/api/server.js');
         const { createWorkspaceAuth } = await import('../backend/server/workspace-auth.mjs');
         const { hashPassword } = await import('../backend/server/auth.mjs');
         const { randomUUID } = await import('node:crypto');

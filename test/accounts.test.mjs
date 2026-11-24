@@ -11,7 +11,7 @@ import { openAccountRepository, openWorkspaceAccounts, accountSql, hashAccountPa
 import { migrateAccounts, requireAccounts, accountsChecksum } from '../backend/server/accounts/migration.mjs';
 import { openResolutionRepository } from '../backend/server/resolution/repository.mjs';
 import { createWorkspaceAuth, staticAccountDirectory } from '../backend/server/workspace-auth.mjs';
-import { createApplicationServer } from '../backend/server/app.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
 
 const password = 'correct-horse-battery-2026', operator = 'operator:test';

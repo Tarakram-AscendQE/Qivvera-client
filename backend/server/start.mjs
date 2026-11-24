@@ -6,7 +6,7 @@ import {loadAssuranceConfig} from './assurance/config.mjs';
 import {openWorkflowRepository} from './workflow-repository.mjs';
 import {openAssuranceRepository} from './assurance/repository.mjs';
 import {openResolutionRepository} from './resolution/repository.mjs';
-import {createApplicationServer} from './app.mjs';
+import {createApplicationServer} from '../../dist/api/server.js';
 import {PRODUCT_VERSION} from './release.mjs';
 import {loadDraftingConfig} from './drafting/generator.mjs';
 import {openWorkspaceAccounts} from './accounts/repository.mjs';

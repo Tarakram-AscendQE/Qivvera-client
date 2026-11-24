@@ -1,6 +1,6 @@
 /** Disposable native-browser fixture. No production account or data is used. */
 import {resolutionSetup,author,authority,accounts,note} from './resolution-helpers.mjs';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {hashPassword} from '../backend/server/auth.mjs';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';

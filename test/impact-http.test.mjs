@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { setup, author, authority, viewer } from './assurance-helpers.mjs';
 import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
 import { openDatabase } from '../backend/server/workflow-store.mjs';
-import { createApplicationServer } from '../backend/server/app.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
 
 async function fixture(t, { assurance = true, mode = 'correct', clock } = {}) {

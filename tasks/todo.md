@@ -16,7 +16,7 @@ the SQLite file-upgrade test in `test/workflow.test.mjs` are gone; the server al
 `common/` (security, session, body, validate, respond, errors, services) and `endpoints/system|session`;
 `createApplicationServer()` builds the Express app; health, assets and session routes served by Express,
 everything else by the old router as fallback; parity harness identical; all checks green.
-- [ ] Task 2
+- [x] Task 2 (parity harness: 35 responses identical; 6 routing tests; 660 backend tests pass)
 
 ### Task 3: Workspace, applications, changes, obligations, revisions, support info
 - [ ] Task 3

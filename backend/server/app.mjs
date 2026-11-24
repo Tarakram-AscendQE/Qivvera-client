@@ -1,4 +1,3 @@
-import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,7 +49,8 @@ async function body(req, maxBytes = 16384) {
         reject(new InputError('INVALID_JSON', 'The request is not valid JSON.'));
     } }); req.on('error', reject); req.on('aborted', () => reject(new InputError('REQUEST_ABORTED', 'The request was interrupted.'))); });
 }
-export function createApplicationServer({ repository, assurance = null, resolution = null, intake = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = fileURLToPath(new URL('../../frontend/public', import.meta.url)), releaseRevision = 'unrecorded' }) {
+/** The old request router. Only a fallback while endpoints move to backend/api (Express); then removed. */
+export function createLegacyRequestHandler({ repository, assurance = null, resolution = null, intake = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = fileURLToPath(new URL('../../frontend/public', import.meta.url)), releaseRevision = 'unrecorded' }) {
     if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin)
         throw new Error('PUBLIC_ORIGIN must be an exact origin.');
     if (secureCookies && !publicOrigin.startsWith('https://'))
@@ -94,7 +94,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 throw new Error('REQUIRED_ASSET_MISSING');
         }
     }
-    return http.createServer({ requestTimeout: 15000, headersTimeout: 10000, maxHeaderSize: 16384 }, async (req, res) => {
+    return async (req, res) => {
         const requestId = randomUUID();
         res.setHeader('Cache-Control', 'no-store');
         res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -305,5 +305,5 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             console.error(JSON.stringify({ event: 'request_failed', requestId }));
             return json(res, 500, { error: 'INTERNAL_ERROR', message: 'The request could not be confirmed. Reload saved records before retrying.', requestId });
         }
-    });
+    };
 }

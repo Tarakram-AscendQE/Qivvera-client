@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {hashPassword} from '../backend/server/auth.mjs';
 import {PRODUCT_VERSION} from '../backend/server/release.mjs';
 import {resolutionSetup,author,authority,viewer,accounts,note} from './resolution-helpers.mjs';

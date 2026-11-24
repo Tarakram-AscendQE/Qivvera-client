@@ -6,7 +6,7 @@ import { openWorkflowRepository } from '../backend/server/workflow-repository.mj
 import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
 import { openResolutionRepository } from '../backend/server/resolution/repository.mjs';
 import { openIntakeRepository } from '../backend/server/intake/repository.mjs';
-import { createApplicationServer } from '../backend/server/app.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
 
 const password = process.env.FIRST_RELEASE_TEST_PASSWORD;

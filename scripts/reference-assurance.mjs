@@ -10,7 +10,7 @@ import {randomUUID,randomBytes} from 'node:crypto';
 import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
 import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
 import {hashPassword} from '../backend/server/auth.mjs';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 const out=resolve(process.env.QIVVERA_TEST_OUTPUT??'review-test-results');mkdirSync(out,{recursive:true});
 const results=[];
 for(const mode of ['correct','self-approval-defect','reject-all']){

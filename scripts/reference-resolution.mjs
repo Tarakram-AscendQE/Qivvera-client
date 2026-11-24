@@ -7,7 +7,7 @@ import {randomUUID,randomBytes} from 'node:crypto';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {resolutionSetup,author,authority,accounts,note} from '../test/resolution-helpers.mjs';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {hashPassword} from '../backend/server/auth.mjs';
 const out=resolve(process.env.QIVVERA_TEST_OUTPUT??'review-test-results');mkdirSync(out,{recursive:true});
 const cleanup=[];let server;const checks=[];

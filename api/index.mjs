@@ -6,7 +6,7 @@ import {loadAssuranceConfig} from '../backend/server/assurance/config.mjs';
 import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
 import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
 import {openResolutionRepository} from '../backend/server/resolution/repository.mjs';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {fileURLToPath} from 'node:url';
 import {loadDraftingConfig} from '../backend/server/drafting/generator.mjs';
 import {openWorkspaceAccounts} from '../backend/server/accounts/repository.mjs';

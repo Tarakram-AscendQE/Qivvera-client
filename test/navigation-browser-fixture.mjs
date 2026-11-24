@@ -5,7 +5,7 @@
 import {randomBytes,randomUUID} from 'node:crypto';
 import {resolutionSetup,author,accounts,note} from './resolution-helpers.mjs';
 import {openIntakeRepository} from '../backend/server/intake/repository.mjs';
-import {createApplicationServer} from '../backend/server/app.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {hashPassword} from '../backend/server/auth.mjs';
 
 const password=process.env.NAVIGATION_TEST_PASSWORD;
