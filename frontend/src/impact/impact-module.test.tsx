@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeShell, deferred } from '../test-utils';
-import type { LegacyApi } from '../legacy-bridge';
+import type { Api } from '../shell-contract';
 import { createImpactUI, type ImpactUI } from './impact-module';
 import { display, parseImpactReport, reviewLabel, roleLabel } from './report';
 
@@ -18,14 +18,14 @@ function report(over: Record<string, unknown> = {}) {
 }
 
 
-// The legacy shell replaces S.session on sign-in and sign-out; screens only read it.
+// The shell replaces S.session on sign-in and sign-out; screens only read it.
 let S: { session: { email: string; roles?: string[] } | null; tab?: string };
 let ui: ImpactUI;
 let route: ReturnType<typeof vi.fn<() => Promise<void>>>;
 
 function setup(answer: () => Promise<unknown>) {
   route = vi.fn(async () => {});
-  ui = createImpactUI({ S, api: vi.fn<LegacyApi>(answer), shell, route });
+  ui = createImpactUI({ S, api: vi.fn<Api>(answer), shell, route });
 }
 
 beforeEach(() => {
@@ -101,7 +101,7 @@ describe('impact screen', () => {
     click.mockRestore();
   });
 
-  it('rejects a report for a different revision so the legacy router shows its error page', async () => {
+  it('rejects a report for a different revision so the router shows its error page', async () => {
     setup(async () => report({ selectedRevision: { id: 'rev-1', number: 1 } }));
     await expect(ui.show('chg-1', 'rev-2')).rejects.toThrow('does not match the selected revision');
   });

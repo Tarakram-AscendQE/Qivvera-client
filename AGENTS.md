@@ -128,10 +128,11 @@ credentials, databases, account settings or costs without the appropriate author
   Source publication, hosted deployment and product scope completion remain separate recorded outcomes.
 
 ## Repository layout
-- Frontend: React + TypeScript screens in frontend/src replace hand-written screens in frontend/legacy one
-  at a time (agreed stack: React 19, Vite, TanStack Query, React Router, React Aria, Vitest). Both build
-  into frontend/public, which the Node server and Vercel serve. Keep the legacy factory contract, the
-  strict CSP and query retry off; prove each screen with the native browser suites before deleting
-  its legacy file. Backend code is under backend/. api/index.mjs stays at the root for Vercel.
+- Frontend: React 19 + TypeScript in frontend/src (Vite, TanStack Query, Vitest), built into one
+  frontend/public/app.js that the Node server and Vercel serve; static files live in frontend/static.
+  Routing is a typed hash route table (frontend/src/app/routes.ts); React Router is deferred until the
+  screen modules become route loaders. Keep the strict CSP, query retry off, visit/session/dialog
+  binding of results, and prove UI changes with the native browser suites. Backend code is under
+  backend/. api/index.mjs stays at the root for Vercel.
 - Keep backend/server, backend/verifiers and backend/migrations as siblings: verifier digests include
   the relative path strings, so moving one without the others changes published verifier identity.

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeShell } from '../test-utils';
-import type { LegacyApi } from '../legacy-bridge';
+import type { Api } from '../shell-contract';
 import { createTemplatesUI, type TemplatesUI } from './templates-module';
 
 const shell = fakeShell();
@@ -19,11 +19,11 @@ const context = { isCurrent: true, scopeDigest: 'scope', scope: { changeId: C, r
 
 let S: { session: { email: string; roles: string[] } | null; tab?: string; workspace: { applications: never[]; changes: { id: string; title: string }[] } };
 let ui: TemplatesUI;
-let api: ReturnType<typeof vi.fn<LegacyApi>>;
+let api: ReturnType<typeof vi.fn<Api>>;
 let route: ReturnType<typeof vi.fn<() => Promise<void>>>;
 
 function setup(get: (path: string) => unknown, post: (path: string, data: unknown) => Promise<unknown> = async () => ({})) {
-  api = vi.fn<LegacyApi>(async (path, options) => (options?.method === 'POST' ? post(path, options.data) : get(path)));
+  api = vi.fn<Api>(async (path, options) => (options?.method === 'POST' ? post(path, options.data) : get(path)));
   route = vi.fn(async () => {});
   ui = createTemplatesUI({ S, api, shell, route, refresh: vi.fn(async () => {}), can: role => (S.session?.roles ?? []).includes(role) });
 }

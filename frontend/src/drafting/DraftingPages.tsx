@@ -1,7 +1,7 @@
 import { useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { Badge, formatDate } from '../format';
 import { field } from '../json';
-import { isSessionEnded, text, type LegacyApi } from '../legacy-bridge';
+import { isSessionEnded, text, type Api } from '../shell-contract';
 import { changeLink } from '../links';
 import type { ActiveCheck } from '../visits';
 import {
@@ -44,10 +44,10 @@ export interface DraftingView {
   readonly active: ActiveCheck;
   readonly canAuthor: boolean;
   readonly email: unknown;
-  readonly api: LegacyApi;
-  /** Links back to the change open its Obligations tab (legacy S.tab), only while current. */
+  readonly api: Api;
+  /** Links back to the change open its Obligations tab (S.tab), only while current. */
   openObligations(): void;
-  /** Re-reads the route (legacy route()), only while current. */
+  /** Re-reads the route (the shell's route()), only while current. */
   reload(): void;
 }
 
@@ -182,9 +182,9 @@ function Suggestion({ item, index, actionable, view, saving, errors, decide }: {
 }
 
 export interface RunActions {
-  /** Draws the run again from a saved record (a new screen, as the legacy view did). Returns its notice store, or null if the visit ended. */
+  /** Draws the run again from a saved record (a new screen). Returns its notice store, or null if the visit ended. */
   redraw(run: unknown, message: string): NoticeStore | null;
-  /** Re-reads the workspace summary (legacy refresh()). */
+  /** Re-reads the workspace summary (the shell's refresh()). */
   refreshWorkspace(): Promise<void>;
 }
 

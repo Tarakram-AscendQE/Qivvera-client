@@ -1,5 +1,5 @@
 import { Badge } from '../format';
-import { text, type LegacyApi } from '../legacy-bridge';
+import { text, type Api } from '../shell-contract';
 import type { ChangeObligation, ChangeRecord } from '../change/types';
 import { findingReason, spaced } from '../change/labels';
 import { SourceButtons, type RunForResolution } from '../resolution/parts';
@@ -14,7 +14,7 @@ export interface PlanContext {
   readonly scope: { readonly changeId: string; readonly revisionId: string };
 }
 
-interface Common { readonly env: DialogEnvironment; readonly api: LegacyApi }
+interface Common { readonly env: DialogEnvironment; readonly api: Api }
 
 /** One supported check (version 1 profile): an authority decision about coverage, not a test result. */
 export function SinglePlanDialog({ env, api, change, context, accepted }: Common & { change: ChangeRecord; context: PlanContext; accepted: readonly ChangeObligation[] }) {
@@ -67,7 +67,7 @@ export interface AssessmentCase {
   };
 }
 
-/** Two-check evidence lists each observation with its check and obligation, as the legacy case view did. */
+/** Two-check evidence lists each observation with its check and obligation. */
 function observations(caseRecord: AssessmentCase): readonly Observation[] {
   const report = caseRecord.evidence?.report;
   if (report?.reports) return report.reports.flatMap(entry => entry.report.observations.map(o => ({ ...o, step: String(entry.checkId) + ' · ' + String(entry.obligationId).slice(0, 8) + ' · ' + String(o.step) })));

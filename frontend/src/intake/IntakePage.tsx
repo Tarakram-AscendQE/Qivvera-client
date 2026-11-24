@@ -3,14 +3,14 @@ import { useRef, useState, type FormEvent } from 'react';
 import { field } from '../json';
 import { Field, FormDialog } from '../dialogs/FormDialog';
 import { openFormDialog, type DialogServices } from '../dialogs/open-form';
-import { isSessionEnded, text, type LegacyApi, type LegacyCan, type LegacyState } from '../legacy-bridge';
+import { isSessionEnded, text, type Api, type Can, type ShellState } from '../shell-contract';
 import type { ActiveCheck } from '../visits';
 
 /** The import dialog uses the shared React dialog; DialogServices carries closeDialog, refresh, toast and route. */
 export interface IntakeBridge extends DialogServices {
-  readonly S: LegacyState;
-  readonly api: LegacyApi;
-  readonly can: LegacyCan;
+  readonly S: ShellState;
+  readonly api: Api;
+  readonly can: Can;
 }
 
 const TRUNCATION_NOTE = '\n[Preview truncated; full supported description retained in the source receipt.]';

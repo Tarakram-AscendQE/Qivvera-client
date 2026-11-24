@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import { field, list, lookup } from '../json';
-import type { LegacyApi, Role } from '../legacy-bridge';
+import type { Api, Role } from '../shell-contract';
 
 export const SUPPORT_SCHEMA = 'qivvera.support-info/1';
 
@@ -80,7 +80,7 @@ export function toSupportReport(info: SupportInfo): SupportReport {
   };
 }
 
-export function supportQueryOptions(api: LegacyApi) {
+export function supportQueryOptions(api: Api) {
   return queryOptions({
     queryKey: ['support-info'],
     queryFn: async () => parseSupportInfo(await api('/api/support-info'))

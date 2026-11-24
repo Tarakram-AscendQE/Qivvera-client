@@ -1,8 +1,8 @@
 import { Badge, formatDate } from '../format';
 import { lookup } from '../json';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 
-/** The workspace summary the legacy shell keeps in S.workspace. Server values are shown only as text. */
+/** The workspace summary the shell keeps in S.workspace. Server values are shown only as text. */
 export interface WorkspaceChange {
   readonly id: string;
   readonly title?: unknown;

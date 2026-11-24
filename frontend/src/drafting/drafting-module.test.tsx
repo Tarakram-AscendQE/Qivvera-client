@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeShell } from '../test-utils';
-import type { LegacyApi } from '../legacy-bridge';
+import type { Api } from '../shell-contract';
 import { createDraftingUI, type DraftingUI } from './drafting-module';
 import { problem, sizeProblem, sourceSize } from './labels';
 
@@ -14,11 +14,11 @@ const run = { id: 'run-1', changeId: 'chg-1', revisionId: 'rev-1', status: 'COMP
 
 let S: { session: { email: string; roles: string[] } | null; tab?: string };
 let ui: DraftingUI;
-let api: ReturnType<typeof vi.fn<LegacyApi>>;
+let api: ReturnType<typeof vi.fn<Api>>;
 let refresh: ReturnType<typeof vi.fn<() => Promise<void>>>;
 
 function setup(post: (path: string, data: unknown) => Promise<unknown>) {
-  api = vi.fn<LegacyApi>(async (path, options) => {
+  api = vi.fn<Api>(async (path, options) => {
     if (options?.method === 'POST') return post(path, options.data);
     if (path.includes('/drafting?')) return context;
     if (path.startsWith('/api/drafting-runs/')) return run;

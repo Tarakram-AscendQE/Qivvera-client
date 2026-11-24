@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deferred, fakeShell } from '../test-utils';
-import type { LegacyApi } from '../legacy-bridge';
+import type { Api } from '../shell-contract';
 import { createResolutionUI, type ResolutionUI } from './resolution-module';
 
 const shell = fakeShell();
@@ -15,14 +15,14 @@ const record = (over: Record<string, unknown> = {}) => ({
 });
 
 let ui: ResolutionUI;
-let api: ReturnType<typeof vi.fn<LegacyApi>>;
+let api: ReturnType<typeof vi.fn<Api>>;
 let toast: ReturnType<typeof vi.fn<(text: string) => void>>;
 let generation = 0;
 
 function setup(answer: (path: string) => Promise<unknown>, roles = ['POLICY_AUTHORITY']) {
   document.body.innerHTML = '<div id="root"></div><dialog id="modal"></dialog>';
   location.hash = '#/resolutions/res1-0000-4000';
-  api = vi.fn<LegacyApi>(answer);
+  api = vi.fn<Api>(answer);
   toast = vi.fn();
   const S = { session: { email: me, roles }, workspace: { capabilities: { resolutionWorkflow: true } }, change: { id: 'chg-1' } };
   const closeDialog = () => { generation++; ui.unmountDialog(); const modal = document.querySelector<HTMLDialogElement>('#modal')!; if (modal.open) modal.close(); modal.replaceChildren(); };

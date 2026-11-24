@@ -1,14 +1,14 @@
 import { downloadJson } from '../download';
-import type { LegacyApi, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
+import type { Api, Reroute, Shell, ShellState } from '../shell-contract';
 import { createVisits } from '../visits';
 import { ImpactLoading, ImpactPage } from './ImpactPage';
 import { parseImpactReport, type ChangeTab } from './report';
 
 export interface ImpactBridge {
-  readonly S: LegacyState;
-  readonly api: LegacyApi;
-  readonly shell: LegacyShell;
-  readonly route: LegacyRoute;
+  readonly S: ShellState;
+  readonly api: Api;
+  readonly shell: Shell;
+  readonly route: Reroute;
 }
 
 export interface ImpactUI {
@@ -18,8 +18,8 @@ export interface ImpactUI {
 }
 
 /**
- * Built as /impact.js. A read-only explanation of saved revision scope; it never grants authority
- * or queues work. Keeps the factory the legacy shell imports: createImpactUI({S, api, shell, route}).
+ * Revision impact: a read-only explanation of saved revision scope; it never grants authority
+ * or queues work.
  */
 export function createImpactUI({ S, api, shell, route }: ImpactBridge): ImpactUI {
   const visits = createVisits(S);

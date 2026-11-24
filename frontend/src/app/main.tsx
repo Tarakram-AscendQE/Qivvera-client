@@ -5,7 +5,7 @@ import { createDraftingUI, type DraftingUI } from '../drafting/drafting-module';
 import { createGuideUI, type GuideUI } from '../guide/guide-module';
 import { createImpactUI, type ImpactUI } from '../impact/impact-module';
 import { createIntakeUI, type IntakeUI } from '../intake/intake-module';
-import type { LegacySession, LegacyState, LegacyWorkspace } from '../legacy-bridge';
+import type { SessionInfo, ShellState, WorkspaceInfo } from '../shell-contract';
 import { createResolutionUI, type ResolutionUI } from '../resolution/resolution-module';
 import type { ResolutionPage } from '../resolution/parts';
 import { createTemplatesUI, type TemplatesUI } from '../templates/templates-module';
@@ -27,12 +27,12 @@ import { SignInPage } from './SignInPage';
  * dialog changed is ignored, and nothing is retried automatically.
  */
 
-interface Session extends LegacySession { readonly csrfToken?: unknown }
-type Workspace = LegacyWorkspace & { readonly capabilities: Readonly<Record<string, unknown>>; readonly release?: unknown; readonly storage?: unknown };
+interface Session extends SessionInfo { readonly csrfToken?: unknown }
+type Workspace = WorkspaceInfo & { readonly capabilities: Readonly<Record<string, unknown>>; readonly release?: unknown; readonly storage?: unknown };
 type Run = { readonly status: string };
 
 /** The shell's state. Screen modules read it; only the shell and the change loaders write it. */
-interface AppState extends LegacyState {
+interface AppState extends ShellState {
   session: Session | null;
   workspace: Workspace | null;
   change: ChangeRecord | null;

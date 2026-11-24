@@ -1,6 +1,6 @@
 import { Badge, formatDate } from '../format';
 import { lookup } from '../json';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 
 /** Increment 4 resolution records. The server rechecks every permission, version and evidence rule. */
 

@@ -1,11 +1,11 @@
 import { Badge, formatDate } from '../format';
 import { field } from '../json';
-import { text, type LegacyApi } from '../legacy-bridge';
+import { text, type Api } from '../shell-contract';
 import type { ChangeObligation, ChangeRecord } from '../change/types';
 import { spaced } from '../change/labels';
 import { Field, FormDialog, type DialogEnvironment } from './FormDialog';
 
-interface Common { readonly env: DialogEnvironment; readonly api: LegacyApi }
+interface Common { readonly env: DialogEnvironment; readonly api: Api }
 
 export function NewApplicationDialog({ env, api }: Common) {
   return (
@@ -16,7 +16,7 @@ export function NewApplicationDialog({ env, api }: Common) {
   );
 }
 
-/** A new change opens on its Obligations tab (legacy S.tab), but only if the person is still on the view that asked. */
+/** A new change opens on its Obligations tab (S.tab), but only if the person is still on the view that asked. */
 export function NewChangeDialog({ env, api, applications, selected, openObligations }: Common & { applications: readonly { id: string; name?: unknown }[]; selected: string; openObligations: () => void }) {
   return (
     <FormDialog env={env} title="Create a change" description="Capture intent first. The change will remain unassessed." saveLabel="Create change"

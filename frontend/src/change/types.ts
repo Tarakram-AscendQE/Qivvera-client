@@ -1,7 +1,7 @@
 import type { ResolutionTabState } from '../resolution/parts';
 import type { WorkspaceSummary } from '../workspace/rows';
 
-/** The change record the legacy router loads into S.change. Server values are shown only as text. */
+/** The change record the shell's router loads into S.change. Server values are shown only as text. */
 export interface ChangeObligation {
   readonly id: string; readonly version: unknown; readonly statement: unknown; readonly reviewStatus: unknown; readonly authority: unknown; readonly state: unknown;
   readonly sourceReference?: unknown; readonly sourceVersion?: unknown; readonly criticality: unknown; readonly evidenceCount?: number | null;
@@ -37,7 +37,7 @@ export interface SourceReceipt {
   readonly source: { readonly url?: unknown; readonly repository?: unknown; readonly pullNumber?: unknown; readonly title?: unknown; readonly headSha?: unknown };
 }
 
-/** Everything the change page reads from the legacy shell's state when it draws. */
+/** Everything the change page reads from the shell's state when it draws. */
 export interface ChangeView {
   readonly change: ChangeRecord;
   readonly workspace: WorkspaceSummary & { readonly capabilities: Readonly<Record<string, unknown>> };

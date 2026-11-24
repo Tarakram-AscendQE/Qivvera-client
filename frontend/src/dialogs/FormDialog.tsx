@@ -1,29 +1,29 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { isSessionEnded } from '../legacy-bridge';
+import { isSessionEnded } from '../shell-contract';
 import type { ActiveCheck } from '../visits';
 
-/** What a dialog may do, as the legacy shell defines it. */
+/** What a dialog may do, as the shell defines it. */
 export interface DialogEnvironment {
   /** True while the page that opened the dialog is still the visible view. */
   readonly active: ActiveCheck;
   /** True while this dialog is still open and no newer dialog replaced it. */
   readonly present: () => boolean;
-  /** The legacy closeDialog(). */
+  /** The shell's closeDialog(). */
   readonly close: () => void;
   /** Re-reads the workspace summary. */
   readonly refresh: () => Promise<void>;
   readonly toast: (text: string) => void;
-  /** The legacy route(): re-reads and redraws the current view. */
+  /** The shell's route(): re-reads and redraws the current view. */
   readonly route: () => Promise<void>;
 }
 
-/** One labelled field, with the legacy field() markup. Label and hint are product text, not server text. */
+/** One labelled field, in the shared form-field markup. Label and hint are product text, not server text. */
 export function Field({ id, label, type = 'text', value = '', hint = '', required = false }: { id: string; label: string; type?: string; value?: string; hint?: string; required?: boolean }) {
   return <div className="form-field"><label htmlFor={id}>{label}{required ? ' *' : ''}</label>{type === 'textarea' ? <textarea id={id} name={id} required={required} defaultValue={value}></textarea> : <input id={id} name={id} type={type} defaultValue={value} required={required} />}{hint ? <small>{hint}</small> : null}</div>;
 }
 
 /**
- * The legacy openForm() contract. A save is sent once; controls stay locked until it settles; a lost
+ * The form-dialog contract. A save is sent once; controls stay locked until it settles; a lost
  * or failed save is never repeated automatically. After a save the dialog closes, the workspace
  * summary is refreshed, and the returned route opens (or the current view is redrawn).
  */

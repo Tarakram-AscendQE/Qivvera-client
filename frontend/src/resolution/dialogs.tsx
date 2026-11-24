@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { formatDate } from '../format';
 import { field } from '../json';
-import { text, type LegacyApi } from '../legacy-bridge';
+import { text, type Api } from '../shell-contract';
 import { Field, FormDialog, type DialogEnvironment } from '../dialogs/FormDialog';
 import { runLabel } from './parts';
 
@@ -18,7 +18,7 @@ export function ReasonField() {
 }
 
 /** Tracks a finding. The original assessment and evidence are preserved; a task status cannot change the result. */
-export function NewResolutionDialog({ env, api, directory, owner, runId, obligationId }: { env: DialogEnvironment; api: LegacyApi; directory: readonly Assignee[]; owner: unknown; runId: string; obligationId: string }) {
+export function NewResolutionDialog({ env, api, directory, owner, runId, obligationId }: { env: DialogEnvironment; api: Api; directory: readonly Assignee[]; owner: unknown; runId: string; obligationId: string }) {
   return (
     <FormDialog env={env} title="Track finding resolution" description="The original assessment and evidence will be preserved. A task status cannot change the assurance result." saveLabel="Create resolution"
       submit={async data => `#/resolutions/${text(field(await api(`/api/assessments/${runId}/resolutions`, { method: 'POST', data: { ...data, obligationId } }), 'id'))}`}>
@@ -29,7 +29,7 @@ export function NewResolutionDialog({ env, api, directory, owner, runId, obligat
 
 /** One recorded resolution action, sent with the version the person saw. */
 export function ActionDialog({ env, api, resolution, title, description, saveLabel, action, extra = {}, children }: {
-  env: DialogEnvironment; api: LegacyApi; resolution: { readonly id: string; readonly version: unknown };
+  env: DialogEnvironment; api: Api; resolution: { readonly id: string; readonly version: unknown };
   title: string; description: string; saveLabel: string; action: string; extra?: Record<string, unknown>; children: ReactNode;
 }) {
   return (

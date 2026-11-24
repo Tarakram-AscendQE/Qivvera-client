@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import type { LegacyBridge } from '../legacy-bridge';
+import type { ScreenServices } from '../shell-contract';
 import { createQueryClient } from '../query-client';
 import { GuidePage } from './GuidePage';
 import { SupportPage } from './SupportPage';
@@ -11,11 +11,10 @@ export interface GuideUI {
 }
 
 /**
- * Built as /guide.js. Replaces the legacy string-built Guide and Support screens with React while
- * keeping the factory the legacy shell imports: createGuideUI({S, api, shell}).
+ * The Guide and Support screens.
  * Product guidance is read-only. It never sets authority, evidence or disposition.
  */
-export function createGuideUI({ S, api, shell }: LegacyBridge): GuideUI {
+export function createGuideUI({ S, api, shell }: ScreenServices): GuideUI {
 
   function showGuide(): void {
     const session = S.session;
@@ -27,7 +26,7 @@ export function createGuideUI({ S, api, shell }: LegacyBridge): GuideUI {
     const session = S.session;
     // A new client per visit: support details are never reused across visits or sessions.
     const client = createQueryClient();
-    // Read before showing the screen, as before. A failure reaches the legacy router's error page.
+    // Read before showing the screen, as before. A failure reaches the router's error page.
     await client.fetchQuery(supportQueryOptions(api));
     // A late answer must not replace a newer view or a different session's view.
     if (!session || S.session !== session || location.hash.replace(/\/$/, '') !== '#/support') return;

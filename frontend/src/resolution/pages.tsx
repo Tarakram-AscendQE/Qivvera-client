@@ -1,5 +1,5 @@
 import { Badge, formatDate } from '../format';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { explain, Pagination, Rows, statusKind, statusLabel, type ResolutionPage } from './parts';
 
 export function InboxPage({ data }: { data: ResolutionPage }) {

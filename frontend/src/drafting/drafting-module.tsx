@@ -1,14 +1,14 @@
-import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
+import type { Api, Can, Refresh, Reroute, Shell, ShellState } from '../shell-contract';
 import { createVisits } from '../visits';
 import { createNoticeStore, RunView, SourceView, type DraftChange, type DraftContext, type DraftingView, type DraftRun, type NoticeStore } from './DraftingPages';
 
 export interface DraftingBridge {
-  readonly S: LegacyState;
-  readonly api: LegacyApi;
-  readonly shell: LegacyShell;
-  readonly can: LegacyCan;
-  readonly route: LegacyRoute;
-  readonly refresh: LegacyRefresh;
+  readonly S: ShellState;
+  readonly api: Api;
+  readonly shell: Shell;
+  readonly can: Can;
+  readonly route: Reroute;
+  readonly refresh: Refresh;
 }
 
 export interface DraftingUI {
@@ -18,8 +18,7 @@ export interface DraftingUI {
 }
 
 /**
- * Built as /drafting.js. Drafting prepares human-reviewed candidates; source and model text are
- * always data. Keeps the factory the legacy shell imports: createDraftingUI({S, api, shell, can, route, refresh}).
+ * Source drafting prepares human-reviewed candidates; source and model text are always data.
  */
 export function createDraftingUI({ S, api, shell, can, route, refresh }: DraftingBridge): DraftingUI {
   const visits = createVisits(S);

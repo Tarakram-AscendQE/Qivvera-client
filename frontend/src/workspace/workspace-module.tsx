@@ -7,23 +7,23 @@ import { dialogHost } from '../dialogs/dialog-host';
 import { openFormDialog } from '../dialogs/open-form';
 import type { DialogEnvironment } from '../dialogs/FormDialog';
 import { HistoryDialog, NewApplicationDialog, NewChangeDialog, NewRevisionDialog, ObligationDialog, ReviewDialog, type HistoryEvent, type ReviewAction } from '../dialogs/RecordDialogs';
-import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState, LegacyToast } from '../legacy-bridge';
+import type { Api, Can, Refresh, Reroute, Shell, ShellState, Toast } from '../shell-contract';
 import type { ActiveCheck } from '../visits';
 import { OverviewPage, type Roles } from './OverviewPage';
 import { ActivityPage, ApplicationPage, ApplicationsPage, ChangesPage } from './RegistryPages';
 import type { WorkspaceSummary } from './rows';
 
 export interface WorkspaceBridge {
-  readonly S: LegacyState;
-  readonly shell: LegacyShell;
-  readonly can: LegacyCan;
-  readonly api: LegacyApi;
-  readonly refresh: LegacyRefresh;
-  readonly toast: LegacyToast;
-  readonly route: LegacyRoute;
-  /** The legacy closeDialog(): ends the current dialog generation and empties the dialog. */
+  readonly S: ShellState;
+  readonly shell: Shell;
+  readonly can: Can;
+  readonly api: Api;
+  readonly refresh: Refresh;
+  readonly toast: Toast;
+  readonly route: Reroute;
+  /** The shell's closeDialog(): ends the current dialog generation and empties the dialog. */
   readonly closeDialog: () => void;
-  /** The legacy viewContext(): true while the visible view is the one that asked. */
+  /** The shell's viewContext(): true while the visible view is the one that asked. */
   readonly viewContext: () => ActiveCheck;
   /** Starts a new dialog generation (a dialog that loads first claims its place before reading). */
   readonly nextDialog: () => number;
@@ -52,20 +52,20 @@ export interface WorkspaceUI {
   openPlan(): void;
   openRequestAssessment(): void;
   showAssessment(id: string): Promise<void>;
-  /** Removes a React dialog; the legacy closeDialog() calls it before it empties the dialog element. */
+  /** Removes a React dialog; the shell's closeDialog() calls it before it empties the dialog element. */
   unmountDialog(): void;
 }
 
 /**
- * Built as /workspace.js: the workspace screens the legacy shell draws from its saved workspace summary.
- * Rendering is synchronous, as before. Buttons keep their data-action attributes, so the legacy click
- * handler still opens the same dialogs until the shell itself moves to React.
+ * The workspace screens, drawn from the shell's saved workspace summary, and the change and assurance
+ * dialogs. Rendering is synchronous. Buttons carry data-action attributes; the shell's click handler
+ * calls the matching opener here.
  */
 export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
   const { S, shell, can, api } = bridge;
   const workspace = () => S.workspace as unknown as WorkspaceSummary;
   const roles = (): Roles => ({ author: can('AUTHOR'), authority: can('POLICY_AUTHORITY') });
-  const state = S as LegacyState & { change: ChangeView['change']; session: { email: unknown }; tab?: string };
+  const state = S as ShellState & { change: ChangeView['change']; session: { email: unknown }; tab?: string };
 
   const openForm = (render: (env: DialogEnvironment) => ReactNode, active?: ActiveCheck) => openFormDialog(bridge, render, active);
   /** Resolution items can be tracked when the workflow is on and the person is an Author or Policy Authority. */

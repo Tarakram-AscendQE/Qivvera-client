@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { isSessionEnded } from '../legacy-bridge';
+import { isSessionEnded } from '../shell-contract';
 import { Logo } from './Logo';
 
 /**

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Badge } from '../format';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { resultKind } from '../workspace/rows';
 import { findingReason, spaced } from './labels';
 import type { ChangeView } from './types';

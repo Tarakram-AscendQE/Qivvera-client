@@ -1,5 +1,5 @@
 import { Badge, formatDate } from '../format';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { DistinctRecordsNote, type Roles } from './OverviewPage';
 import { ActivityRows, ChangeRows, type WorkspaceSummary } from './rows';
 

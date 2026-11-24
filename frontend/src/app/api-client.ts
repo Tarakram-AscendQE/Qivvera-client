@@ -1,4 +1,4 @@
-import type { ApiOptions, LegacyApi } from '../legacy-bridge';
+import type { ApiOptions, Api } from '../shell-contract';
 
 /** The session fields the client reads. The object's identity marks the session a request belongs to. */
 export interface ClientSession {
@@ -31,7 +31,7 @@ function failure(message: string, fields: Partial<ApiError> = {}): ApiError {
  * - A 401 for a signed-in session ends it: `onSessionEnded` shows the sign-in view.
  * - Error messages say whether a write may have been saved; nothing is retried automatically.
  */
-export function createApiClient(state: { readonly session: ClientSession | null }, onSessionEnded: () => void): LegacyApi {
+export function createApiClient(state: { readonly session: ClientSession | null }, onSessionEnded: () => void): Api {
   return async function api(path: string, { method = 'GET', data }: ApiOptions = {}): Promise<unknown> {
     const requestSession = state.session;
     const assertSession = (): void => {

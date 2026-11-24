@@ -1,7 +1,7 @@
 import { createElement, Fragment } from 'react';
 import { vi } from 'vitest';
 import { createPageHost, type PageHost } from './app/page-host';
-import type { LegacyShell } from './legacy-bridge';
+import type { Shell } from './shell-contract';
 
 /**
  * A stand-in for the shell(): like the real one it replaces the page with a frame around the screen,
@@ -10,7 +10,7 @@ import type { LegacyShell } from './legacy-bridge';
  */
 export function fakeShell() {
   let host: PageHost | null = null, container: HTMLElement | null = null;
-  const shell = vi.fn<LegacyShell>((screen, active = '', label = '') => {
+  const shell = vi.fn<Shell>((screen, active = '', label = '') => {
     if (!container?.isConnected) {
       host?.unmount();
       container = document.body.appendChild(document.createElement('div'));
@@ -34,7 +34,7 @@ export function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-/** The legacy shell services a workspace screen receives, as inert defaults that a test can override. */
+/** The shell services a workspace screen receives, as inert defaults that a test can override. */
 export function fakeWorkspaceServices() {
   let generation = 0;
   return {

@@ -115,8 +115,8 @@ export interface ImpactReport {
 }
 
 /**
- * Accepts only a report for exactly the requested change and revision (Increment 8 rule). The
- * structural checks are the legacy ones; deeper fields are read defensively while rendering.
+ * Accepts only a report for exactly the requested change and revision (Increment 8 rule). Only the
+ * structure is checked here; deeper fields are read defensively while rendering.
  */
 export function parseImpactReport(value: unknown, changeId: string, revisionId: string): ImpactReport {
   const report = value as Partial<Record<keyof ImpactReport, unknown>> | null;
@@ -141,7 +141,7 @@ const REVIEW_LABELS: Readonly<Record<string, string>> = { DRAFT: 'Draft', IN_REV
 const COMPARISON_LABELS: Readonly<Record<string, string>> = { NEW: 'No recorded copy link', COPIED_UNCHANGED: 'Copied · recorded fields unchanged', COPIED_CHANGED: 'Copied · recorded fields changed' };
 const ROLE_LABELS: Readonly<Record<string, string>> = { AUTHOR: 'Author', POLICY_AUTHORITY: 'Policy Authority', VIEWER: 'Viewer', OPERATOR: 'Workspace operator', EVERYONE: 'Everyone', ALL: 'Everyone', ANY: 'Everyone', AUTHOR_OR_POLICY_AUTHORITY: 'Author or Policy Authority' };
 
-/** Underscores read as spaces, as in the legacy report. */
+/** Underscores read as spaces. */
 export const named = (value: unknown): string => String(value ?? '').replaceAll('_', ' ');
 export const fieldLabel = (field: string): string => lookup(FIELD_LABELS, field) ?? named(field);
 /** Unknown values are shown as received. */

@@ -28,7 +28,7 @@ function Step({ done, number, title, children }: { done: boolean; number: string
   return <li><span className={`step ${done ? 'done' : ''}`}>{done ? '✓' : number}</span><div><strong>{title}</strong><p>{children}</p></div></li>;
 }
 
-/** The workspace starting point. Buttons carry data-action; the legacy shell handles them until it moves. */
+/** The workspace starting point. Buttons carry data-action; the shell handles them. */
 export function OverviewPage({ workspace, roles }: { workspace: WorkspaceSummary; roles: Roles }) {
   const { applications, changes } = workspace;
   return (

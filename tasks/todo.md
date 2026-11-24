@@ -85,7 +85,7 @@ pages and capability checks); route generation, toast and polling semantics pres
   delegation ported; legacy app.js and check-legacy-names deleted; one app.js bundle; whole-app parity 14 scenarios)
 
 ### Checkpoint D
-- [ ] All gates green twice in a row; no legacy JavaScript is loaded
+- [x] All gates green twice in a row; no legacy JavaScript is loaded (8/8 browser suites, two runs, same build)
 
 ## Phase E — Retire the legacy layer
 (Remove scripts/check-legacy-names.mjs from `npm run check` when no legacy JavaScript remains.)
@@ -93,8 +93,9 @@ pages and capability checks); route generation, toast and polling semantics pres
 **Acceptance:** `frontend/legacy` holds only static assets (or is removed); sync-assets copies index.html/CSS/logo
 only; README/AGENTS layout updated; offline component checks updated or retired with a note.
 **Size:** S. **Depends on:** Phase D.
-- [ ] Task 11
+- [x] Task 11 (frontend/legacy → frontend/static (static files only); legacy-bridge.ts → shell-contract.ts without
+  Legacy* names; README/AGENTS updated; the four offline component checks now load the built app.js and pass)
 
 ### Final checkpoint
-- [ ] code-review-and-quality review of the full frontend diff
+- [x] code-review-and-quality review of the full frontend diff (one test gap found and fixed: startup 401)
 - [ ] All gates green; report to user (what changed, what was verified, what was not)

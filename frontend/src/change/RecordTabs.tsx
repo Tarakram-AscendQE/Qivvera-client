@@ -1,6 +1,6 @@
 import { Badge, formatDate, obligationLabel } from '../format';
 import { lookup } from '../json';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { ActivityRows, resultKind, shortRevision } from '../workspace/rows';
 import { reviewLabel, spaced } from './labels';
 import type { ChangeObligation, ChangeView } from './types';
@@ -23,7 +23,7 @@ export function OverviewTab({ view }: { view: ChangeView }) {
 
 const STATUS_KIND: Readonly<Record<string, string>> = { ACCEPTED: 'accepted', CLARIFICATION_REQUIRED: 'clarify', REJECTED: 'rejected' };
 
-/** Review actions follow the legacy rules: contributors cannot decide on their own requirement unless founder-review mode is on. */
+/** Review actions follow these rules: contributors cannot decide on their own requirement unless founder-review mode is on. */
 function ObligationActions({ obligation, view, own }: { obligation: ChangeObligation; view: ChangeView; own: boolean }) {
   const current = !!view.change.isCurrentRevision, canEdit = view.roles.author && current, status = obligation.reviewStatus;
   const reviewer = view.roles.authority && current && (!own || view.session.reviewMode === 'founder-review');

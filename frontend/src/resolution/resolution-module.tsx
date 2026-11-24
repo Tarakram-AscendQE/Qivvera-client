@@ -2,17 +2,17 @@ import type { ReactNode } from 'react';
 import { dialogHost } from '../dialogs/dialog-host';
 import type { DialogEnvironment } from '../dialogs/FormDialog';
 import { openFormDialog, type DialogServices } from '../dialogs/open-form';
-import type { LegacyApi, LegacyCan, LegacyShell, LegacyState } from '../legacy-bridge';
+import type { Api, Can, Shell, ShellState } from '../shell-contract';
 import type { ActiveCheck } from '../visits';
 import { ActionDialog, CorrectionFields, LinkFields, NewResolutionDialog, OwnershipFields, ReasonField, ResponseFields, type Assignee, type CorrectionChange, type LinkableRun } from './dialogs';
 import { InboxPage, ItemPage, type ResolutionRecord } from './pages';
 import type { ResolutionPage } from './parts';
 
 export interface ResolutionBridge extends DialogServices {
-  readonly S: LegacyState;
-  readonly api: LegacyApi;
-  readonly can: LegacyCan;
-  readonly shell: LegacyShell;
+  readonly S: ShellState;
+  readonly api: Api;
+  readonly can: Can;
+  readonly shell: Shell;
 }
 
 export interface ResolutionUI {
@@ -22,23 +22,23 @@ export interface ResolutionUI {
   loadChange(offset?: number): Promise<boolean>;
   showInbox(offset?: number): Promise<void>;
   showItem(id: string): Promise<void>;
-  /** Handles a data-resolution button (the legacy click handlers pass it here). */
+  /** Handles a data-resolution button (the shell's click handlers pass it here). */
   handle(button: HTMLElement): Promise<boolean>;
   /** The shell supplies its change-page renderer so pagination redraws the selected change. */
   setChangeRenderer(render: () => void): void;
-  /** Removes a React dialog; the legacy closeDialog() calls it before it empties the dialog element. */
+  /** Removes a React dialog; the shell's closeDialog() calls it before it empties the dialog element. */
   unmountDialog(): void;
 }
 
-type ShellState = LegacyState & { change?: { id: string } | null; resolutions?: ResolutionPage | null; resolutionError?: string | null; session: { email: unknown } | null };
+type ResolutionState = ShellState & { change?: { id: string } | null; resolutions?: ResolutionPage | null; resolutionError?: string | null; session: { email: unknown } | null };
 
 /**
- * Built as /resolution.js. Increment 4 resolution workflow: ownership, corrections, fresh evidence and
+ * Increment 4 resolution workflow: ownership, corrections, fresh evidence and
  * independent verification. The server rechecks every permission, version and evidence rule.
  */
 export function createResolutionUI(bridge: ResolutionBridge): ResolutionUI {
   const { api, can } = bridge;
-  const S = bridge.S as ShellState;
+  const S = bridge.S as ResolutionState;
   let item: ResolutionRecord | null = null, itemActive: ActiveCheck = () => false;
   let generation = 0, actionGeneration = 0, refreshChange: () => void = () => {};
 

@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { isSessionEnded, text } from '../legacy-bridge';
+import { isSessionEnded, text } from '../shell-contract';
 import { changeLink } from '../links';
 import type { ActiveCheck } from '../visits';
 
@@ -20,13 +20,13 @@ export function problem(error: unknown): string {
 /** What links and buttons in a template view may do, only while that view is current. */
 export interface TemplateActions {
   readonly active: ActiveCheck;
-  /** Remembers which change tab a link opens (legacy S.tab). */
+  /** Remembers which change tab a link opens (S.tab). */
   selectTab(tab: string): void;
-  /** Re-reads the route (legacy route()). */
+  /** Re-reads the route (the shell's route()). */
   reload(): void;
-  /** Re-reads the workspace summary (legacy refresh()); throws on failure. */
+  /** Re-reads the workspace summary (the shell's refresh()); throws on failure. */
   refreshWorkspace(): Promise<void>;
-  /** The legacy router itself, for a save that lands on the same route. */
+  /** The shell's router itself, for a save that lands on the same route. */
   route(): Promise<void>;
 }
 
@@ -65,7 +65,7 @@ export function SourceRequirement({ entry }: { entry: TemplateEntry }) {
 }
 
 /**
- * The legacy mutation() contract for template saves:
+ * The mutation contract for template saves:
  * - one request key while the submitted content is unchanged, so a retry after a lost response
  *   cannot save twice (Increment 9 at-most-once receipts);
  * - every control is locked while saving; no automatic retry;

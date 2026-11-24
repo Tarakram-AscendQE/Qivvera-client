@@ -1,16 +1,16 @@
 import { downloadJson } from '../download';
-import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
+import type { Api, Can, Refresh, Reroute, Shell, ShellState } from '../shell-contract';
 import { createVisits, type ActiveCheck } from '../visits';
 import { DetailView, ListView, PlanView, SaveView, type Destination, type TemplateList, type TemplateReport } from './TemplatePages';
 import type { TemplateActions } from './shared';
 
 export interface TemplatesBridge {
-  readonly S: LegacyState;
-  readonly api: LegacyApi;
-  readonly shell: LegacyShell;
-  readonly can: LegacyCan;
-  readonly route: LegacyRoute;
-  readonly refresh: LegacyRefresh;
+  readonly S: ShellState;
+  readonly api: Api;
+  readonly shell: Shell;
+  readonly can: Can;
+  readonly route: Reroute;
+  readonly refresh: Refresh;
 }
 
 export interface TemplatesUI {
@@ -35,8 +35,8 @@ function inspect(value: unknown, templateId: string, versionId: string | null = 
 }
 
 /**
- * Built as /templates.js. Versioned preparation references; every reuse requires a fresh plan
- * decision. Keeps the factory the legacy shell imports: createTemplatesUI({S, api, shell, can, route, refresh}).
+ * Verification templates: versioned preparation references; every reuse requires a fresh plan
+ * decision.
  */
 export function createTemplatesUI({ S, api, shell, can, route, refresh }: TemplatesBridge): TemplatesUI {
   const visits = createVisits(S);

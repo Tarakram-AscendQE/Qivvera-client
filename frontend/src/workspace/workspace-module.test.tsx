@@ -30,7 +30,7 @@ describe('workspace overview', () => {
     expect((screen.getByRole('button', { name: '+ New change' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it('keeps the data-action hooks the legacy shell uses to open dialogs', () => {
+  it('keeps the data-action hooks the shell uses to open dialogs', () => {
     show(['AUTHOR'], { applications: apps, changes: [], activity: [] });
     expect(screen.getByRole('button', { name: '+ Register application' }).dataset['action']).toBe('new-application');
     expect(screen.getByRole('button', { name: '+ New change' }).dataset['action']).toBe('new-change');

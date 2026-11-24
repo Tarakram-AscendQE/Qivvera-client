@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { Logo } from './Logo';
 
 const ICONS: Record<string, ReactNode> = {

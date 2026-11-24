@@ -1,4 +1,4 @@
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { ResolutionChangeTab } from '../resolution/parts';
 import { shortRevision } from '../workspace/rows';
 import { AssuranceTab, EvidenceTab } from './AssuranceTabs';

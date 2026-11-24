@@ -1,5 +1,5 @@
 import { Badge, formatDate, obligationLabel } from '../format';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { changeLink } from '../links';
 import {
   comparisonLabel, destination, display, fieldLabel, named, reviewLabel, roleLabel,
@@ -7,7 +7,7 @@ import {
 } from './report';
 
 export interface ImpactActions {
-  /** Remembers which change tab a link opens (legacy S.tab), only while this view is current. */
+  /** Remembers which change tab a link opens (S.tab), only while this view is current. */
   selectTab(tab: ChangeTab): void;
   refresh(): void;
   download(): void;

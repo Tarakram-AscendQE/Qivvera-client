@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 
 /**
- * Query defaults that keep the legacy behaviour:
+ * Query defaults the UI relies on:
  * - no automatic retries: a failed read is shown to the person, who decides whether to try again;
  * - no refetching on focus, reconnect or mount: data changes only when the person refreshes or
  *   navigates, so a displayed record does not silently change under them.

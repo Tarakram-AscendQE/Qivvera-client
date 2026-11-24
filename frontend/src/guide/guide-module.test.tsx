@@ -1,12 +1,12 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeShell, deferred } from '../test-utils';
-import type { LegacyApi, LegacySession, LegacyState } from '../legacy-bridge';
+import type { Api, SessionInfo, ShellState } from '../shell-contract';
 import { createGuideUI, type GuideUI } from './guide-module';
 
 const shell = fakeShell();
 
-const author: LegacySession = { email: 'author@example.test', roles: ['AUTHOR', 'POLICY_AUTHORITY'] };
+const author: SessionInfo = { email: 'author@example.test', roles: ['AUTHOR', 'POLICY_AUTHORITY'] };
 
 function supportInfo(overrides: Record<string, unknown> = {}) {
   return {
@@ -19,13 +19,13 @@ function supportInfo(overrides: Record<string, unknown> = {}) {
 }
 
 
-let state: { session: LegacySession | null };
+let state: { session: SessionInfo | null };
 let ui: GuideUI;
-let api: ReturnType<typeof vi.fn<LegacyApi>>;
+let api: ReturnType<typeof vi.fn<Api>>;
 
-function setup(apiImpl: LegacyApi) {
-  api = vi.fn<LegacyApi>(apiImpl);
-  ui = createGuideUI({ S: state as LegacyState, api, shell });
+function setup(apiImpl: Api) {
+  api = vi.fn<Api>(apiImpl);
+  ui = createGuideUI({ S: state as ShellState, api, shell });
 }
 
 beforeEach(() => {
@@ -35,7 +35,7 @@ beforeEach(() => {
 afterEach(() => shell.reset());
 
 describe('Guide', () => {
-  it('is in the page when showGuide returns, like the legacy string screens', () => {
+  it('is in the page when showGuide returns, as the router expects', () => {
     setup(async () => ({}));
     location.hash = '#/guide';
     ui.showGuide();
@@ -93,7 +93,7 @@ describe('Support', () => {
     expect(shell).not.toHaveBeenCalled();
   });
 
-  it('passes a read failure or unknown format to the legacy router without drawing', async () => {
+  it('passes a read failure or unknown format to the router without drawing', async () => {
     setup(async () => supportInfo({ schema: 'other' }));
     location.hash = '#/support';
     await expect(ui.showSupport()).rejects.toThrow('Support details use an unrecognized format.');

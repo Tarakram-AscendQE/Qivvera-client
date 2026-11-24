@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deferred, fakeShell, fakeWorkspaceServices } from '../test-utils';
-import type { LegacyApi, LegacySession, LegacyState } from '../legacy-bridge';
+import type { Api, SessionInfo, ShellState } from '../shell-contract';
 import { createIntakeUI, type IntakeUI } from './intake-module';
 
 const shell = fakeShell();
@@ -21,14 +21,14 @@ const preview = {
 };
 
 
-let state: { session: LegacySession | null; workspace: typeof workspace };
+let state: { session: SessionInfo | null; workspace: typeof workspace };
 let ui: IntakeUI;
-let api: ReturnType<typeof vi.fn<LegacyApi>>;
+let api: ReturnType<typeof vi.fn<Api>>;
 let toast: ReturnType<typeof vi.fn<(text: string) => void>>;
 let generation = 0;
 
 function setup(previewAnswer: () => Promise<unknown>, repos: unknown = repositories) {
-  api = vi.fn<LegacyApi>(async path => {
+  api = vi.fn<Api>(async path => {
     if (path === '/api/source-repositories') return repos;
     if (path === '/api/source-previews') return previewAnswer();
     if (path === '/api/source-imports') return { changeId: 'chg-new' };
@@ -37,7 +37,7 @@ function setup(previewAnswer: () => Promise<unknown>, repos: unknown = repositor
   toast = vi.fn();
   // As the real closeDialog() does: unmount the React dialog before emptying the dialog element.
   const closeDialog = () => { generation++; ui.unmountDialog(); if (modal().open) modal().close(); modal().replaceChildren(); };
-  ui = createIntakeUI({ ...fakeWorkspaceServices(), S: state as LegacyState, api, shell, toast, closeDialog, dialogGeneration: () => generation, can: role => (state.session?.roles ?? []).includes(role) });
+  ui = createIntakeUI({ ...fakeWorkspaceServices(), S: state as ShellState, api, shell, toast, closeDialog, dialogGeneration: () => generation, can: role => (state.session?.roles ?? []).includes(role) });
 }
 
 async function previewPull(number = '12') {

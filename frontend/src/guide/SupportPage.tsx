@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { downloadJson } from '../download';
-import { isSessionEnded, text, type LegacyApi } from '../legacy-bridge';
+import { isSessionEnded, text, type Api } from '../shell-contract';
 import { Detail } from './GuidePage';
 import {
   ACTION_LABELS, CAPABILITY_LABELS, availabilityText, enabledText, reviewModeName, roleName,
@@ -25,12 +25,12 @@ function storageText(value: unknown): string {
  * Shows configuration diagnostics. The first read happens before this screen is shown; Refresh
  * reads again in place. A failed refresh keeps the last details visible and explains the failure.
  */
-export function SupportPage({ api }: { api: LegacyApi }) {
+export function SupportPage({ api }: { api: Api }) {
   const query = useQuery(supportQueryOptions(api));
   if (!query.data) return null;
   const report = toSupportReport(query.data);
   const w = report.workspace;
-  // The legacy api() already showed sign-in for an ended or replaced session.
+  // api() already showed sign-in for an ended or replaced session.
   const refreshError = query.error && !isSessionEnded(query.error) ? query.error.message : null;
 
   return (

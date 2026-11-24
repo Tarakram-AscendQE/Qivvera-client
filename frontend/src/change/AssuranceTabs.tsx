@@ -1,5 +1,5 @@
 import { Badge, formatDate } from '../format';
-import { text } from '../legacy-bridge';
+import { text } from '../shell-contract';
 import { resultKind } from '../workspace/rows';
 import { findingReason, spaced } from './labels';
 import type { AssuranceContext, ChangeView, PlanMapping } from './types';

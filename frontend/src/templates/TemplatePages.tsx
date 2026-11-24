@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Badge, formatDate } from '../format';
-import { isSessionEnded, text, type LegacyApi, type LegacyChange } from '../legacy-bridge';
+import { isSessionEnded, text, type Api, type SummaryChange } from '../shell-contract';
 import { changeLink } from '../links';
 import {
   Back, Boundary, detailLink, Input, planLink, problem, saveLink, SourceRequirement, TabLink,
@@ -64,7 +64,7 @@ export function ListView({ list, dest, includeArchived, changeId, revisionId, ca
   );
 }
 
-function MaintainTemplate({ report, templateId, changes, api, actions }: { report: TemplateReport; templateId: string; changes: readonly LegacyChange[]; api: LegacyApi; actions: TemplateActions }) {
+function MaintainTemplate({ report, templateId, changes, api, actions }: { report: TemplateReport; templateId: string; changes: readonly SummaryChange[]; api: Api; actions: TemplateActions }) {
   const [choosing, setChoosing] = useState(false);
   const [sourceError, setSourceError] = useState('');
   const [archiving, setArchiving] = useState(false);
@@ -103,8 +103,8 @@ function MaintainTemplate({ report, templateId, changes, api, actions }: { repor
 }
 
 export function DetailView({ report, templateId, canPolicy, founderReview, changes, api, actions, download }: {
-  report: TemplateReport; templateId: string; canPolicy: boolean; founderReview: boolean; changes: readonly LegacyChange[];
-  api: LegacyApi; actions: TemplateActions; download(): void;
+  report: TemplateReport; templateId: string; canPolicy: boolean; founderReview: boolean; changes: readonly SummaryChange[];
+  api: Api; actions: TemplateActions; download(): void;
 }) {
   const snapshot = report.version.snapshot, latest = report.version.number === latestNumber(report);
   const editable = report.family.state === 'ACTIVE' && latest && canPolicy;
@@ -125,7 +125,7 @@ export function DetailView({ report, templateId, canPolicy, founderReview, chang
 }
 
 function SaveForm({ dest, previous, changeId, revisionId, templateId, api, actions }: {
-  dest: Destination; previous: TemplateReport | null; changeId: string; revisionId: string; templateId: string | null; api: LegacyApi; actions: TemplateActions;
+  dest: Destination; previous: TemplateReport | null; changeId: string; revisionId: string; templateId: string | null; api: Api; actions: TemplateActions;
 }) {
   const { context } = dest, plan = context.plan!;
   const save = useTemplateSave({
@@ -144,7 +144,7 @@ function SaveForm({ dest, previous, changeId, revisionId, templateId, api, actio
 
 export function SaveView({ dest, previous, allowed, changeId, revisionId, templateId, founderReview, api, actions }: {
   dest: Destination; previous: TemplateReport | null; allowed: boolean; changeId: string; revisionId: string; templateId: string | null;
-  founderReview: boolean; api: LegacyApi; actions: TemplateActions;
+  founderReview: boolean; api: Api; actions: TemplateActions;
 }) {
   const { change, context } = dest, plan = context.plan, snapshot = plan?.snapshot;
   return (
@@ -158,7 +158,7 @@ export function SaveView({ dest, previous, allowed, changeId, revisionId, templa
 
 function PlanForm({ report, dest, accepted, targets, changeId, revisionId, templateId, versionId, api, actions }: {
   report: TemplateReport; dest: Destination; accepted: readonly ScopeObligation[]; targets: Destination['context']['targets'];
-  changeId: string; revisionId: string; templateId: string; versionId: string; api: LegacyApi; actions: TemplateActions;
+  changeId: string; revisionId: string; templateId: string; versionId: string; api: Api; actions: TemplateActions;
 }) {
   const snapshot = report.version.snapshot, { context } = dest;
   const [selected, setSelected] = useState<Readonly<Record<string, string>>>({});
@@ -197,7 +197,7 @@ function PlanForm({ report, dest, accepted, targets, changeId, revisionId, templ
 
 export function PlanView({ report, dest, changeId, revisionId, templateId, versionId, canPolicy, founderReview, api, actions }: {
   report: TemplateReport; dest: Destination; changeId: string; revisionId: string; templateId: string; versionId: string;
-  canPolicy: boolean; founderReview: boolean; api: LegacyApi; actions: TemplateActions;
+  canPolicy: boolean; founderReview: boolean; api: Api; actions: TemplateActions;
 }) {
   const snapshot = report.version.snapshot, { change, context } = dest;
   const accepted = context.scope.obligations.filter(item => item.reviewStatus === 'ACCEPTED');
