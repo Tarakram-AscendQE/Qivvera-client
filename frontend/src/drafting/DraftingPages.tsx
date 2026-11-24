@@ -2,9 +2,10 @@ import { useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode 
 import { Badge, formatDate } from '../format';
 import { field } from '../json';
 import { isSessionEnded, text, type LegacyApi } from '../legacy-bridge';
+import { changeLink } from '../links';
 import type { ActiveCheck } from '../visits';
 import {
-  changeLink, draftingBase, failureText, methodLabel, problem, runLink, sizeProblem, sizeText, sourceSize, statusLabel, warningText
+  draftingBase, failureText, methodLabel, problem, runLink, sizeProblem, sizeText, sourceSize, statusLabel, warningText
 } from './labels';
 
 export interface DraftChange { readonly id: string; readonly title?: unknown; readonly sourceRevision?: unknown; readonly revision: { readonly id: string; readonly number?: unknown } }

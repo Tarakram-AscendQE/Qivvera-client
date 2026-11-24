@@ -2,8 +2,9 @@ import { useRef, useState, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { Badge, formatDate } from '../format';
 import { isSessionEnded, text, type LegacyApi, type LegacyChange } from '../legacy-bridge';
+import { changeLink } from '../links';
 import {
-  Back, Boundary, changeLink, detailLink, Input, planLink, problem, saveLink, SourceRequirement, TabLink,
+  Back, Boundary, detailLink, Input, planLink, problem, saveLink, SourceRequirement, TabLink,
   useTemplateSave, type TemplateActions, type TemplateEntry
 } from './shared';
 

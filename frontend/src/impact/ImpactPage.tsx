@@ -1,7 +1,8 @@
 import { Badge, formatDate, obligationLabel } from '../format';
 import { text } from '../legacy-bridge';
+import { changeLink } from '../links';
 import {
-  changeLink, comparisonLabel, destination, display, fieldLabel, named, reviewLabel, roleLabel,
+  comparisonLabel, destination, display, fieldLabel, named, reviewLabel, roleLabel,
   type ChangeTab, type ImpactDifference, type ImpactGuidance, type ImpactObligation, type ImpactReport, type ImpactRevision
 } from './report';
 

@@ -152,9 +152,6 @@ export const roleLabel = (value: unknown): string => lookup(ROLE_LABELS, value) 
 export const display = (value: unknown): string =>
   value === null || value === undefined || value === '' ? 'Not supplied' : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
 
-export const changeLink = (changeId: string, revisionId: string): string =>
-  `#/changes/${encodeURIComponent(changeId)}/revisions/${encodeURIComponent(revisionId)}`;
-
 export type ChangeTab = 'overview' | 'obligations' | 'assurance' | 'evidence';
 
 export function destination(action: unknown): { tab: ChangeTab; label: string } | { tab: null; href: string; label: string } | null {

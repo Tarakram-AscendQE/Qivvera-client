@@ -1,11 +1,11 @@
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { isSessionEnded, text } from '../legacy-bridge';
+import { changeLink } from '../links';
 import type { ActiveCheck } from '../visits';
 
 /** Versioned preparation references. Every reuse requires a fresh plan decision. */
 
 const id = (value: unknown): string => encodeURIComponent(String(value));
-export const changeLink = (changeId: unknown, revisionId: unknown): string => `#/changes/${id(changeId)}/revisions/${id(revisionId)}`;
 export const detailLink = (templateId: unknown, versionId?: unknown): string => `#/verification-templates/${id(templateId)}${versionId ? '/versions/' + id(versionId) : ''}`;
 export const saveLink = (changeId: unknown, revisionId: unknown, templateId?: unknown): string => `#/template-save/${id(changeId)}/${id(revisionId)}${templateId ? '/' + id(templateId) : ''}`;
 export const planLink = (changeId: unknown, revisionId: unknown, templateId?: unknown, versionId?: unknown): string =>

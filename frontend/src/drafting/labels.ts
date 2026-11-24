@@ -34,7 +34,6 @@ export const failureText = (code: unknown): string =>
   lookup(FAILURES, code) ?? 'This run could not produce an accepted drafting result. Ask the workspace operator to inspect its reference.';
 
 export const draftingBase = (changeId: string, revisionId: string): string => `#/drafting/${encodeURIComponent(changeId)}/${encodeURIComponent(revisionId)}`;
-export const changeLink = (changeId: string, revisionId: string): string => `#/changes/${encodeURIComponent(changeId)}/revisions/${encodeURIComponent(revisionId)}`;
 export const runLink = (changeId: string, revisionId: string, id: unknown): string => `${draftingBase(changeId, revisionId)}/runs/${encodeURIComponent(String(id))}`;
 
 export interface SourceSize { text: string; characters: number; bytes: number; lines: number }
