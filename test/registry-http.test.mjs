@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {resolve} from 'node:path';
-import {openRepository} from '../server/repository.mjs';
-import {createApplicationServer} from '../server/app.mjs';
-import {hashPassword} from '../server/auth.mjs';
+import {openRepository} from '../backend/server/repository.mjs';
+import {createApplicationServer} from '../backend/server/app.mjs';
+import {hashPassword} from '../backend/server/auth.mjs';
 const ownerEmail='owner@example.test',password='synthetic-http-test-password-not-secret',passwordHash=hashPassword(password),origin='http://review.local';
-async function fixture(t){const repository=openRepository(':memory:');const server=createApplicationServer({repository,ownerEmail,passwordHash,publicOrigin:origin,webRoot:resolve('web')});server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>new Promise(resolve=>server.close(()=>{repository.close();resolve();})));const base=`http://127.0.0.1:${server.address().port}`;return {base,server,repository};}
+async function fixture(t){const repository=openRepository(':memory:');const server=createApplicationServer({repository,ownerEmail,passwordHash,publicOrigin:origin,webRoot:resolve('frontend/src')});server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>new Promise(resolve=>server.close(()=>{repository.close();resolve();})));const base=`http://127.0.0.1:${server.address().port}`;return {base,server,repository};}
 async function login(base){const response=await fetch(`${base}/api/session`,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify({email:ownerEmail,password})});assert.equal(response.status,200);const data=await response.json();return {cookie:response.headers.get('set-cookie').split(';')[0],csrf:data.csrfToken};}
 const headers=s=>({'Content-Type':'application/json',Origin:origin,Cookie:s.cookie,'X-CSRF-Token':s.csrf});
 test('registry health is real but does not claim assurance execution',async t=>{const {base}=await fixture(t);const r=await fetch(`${base}/healthz`);assert.equal(r.status,200);assert.equal((await r.json()).assuranceExecution,false);});

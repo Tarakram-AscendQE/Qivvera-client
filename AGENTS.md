@@ -126,3 +126,9 @@ credentials, databases, account settings or costs without the appropriate author
   hosted permissions/HTTPS/recovery or independent human QE/customer acceptance.
 - Run npm run check:engineering with all eight PostgreSQL suites and all eight native browser suites.
   Source publication, hosted deployment and product scope completion remain separate recorded outcomes.
+
+## Repository layout
+- Frontend source is frontend/src (frontend/public is the generated Vercel copy); backend code is under
+  backend/. api/index.mjs stays at the root for Vercel. See the README layout section.
+- Keep backend/server, backend/verifiers and backend/migrations as siblings: verifier digests include
+  the relative path strings, so moving one without the others changes published verifier identity.

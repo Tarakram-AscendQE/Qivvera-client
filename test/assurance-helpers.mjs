@@ -3,10 +3,10 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {randomUUID,randomBytes} from 'node:crypto';
 import {once} from 'node:events';
-import {openWorkflowRepository} from '../server/workflow-repository.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
+import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
 import {createApprovalTarget,artifactDigest} from '../fixtures/approval-target/server.mjs';
-import {workOnce} from '../server/assurance/worker.mjs';
+import {workOnce} from '../backend/server/assurance/worker.mjs';
 export const author={email:'author@example.test',roles:['AUTHOR']},authority={email:'policy@example.test',roles:['POLICY_AUTHORITY']},viewer={email:'viewer@example.test',roles:['VIEWER']};
 export async function setup(t,{mode='correct',extraObligation=false,clock,postgresURL}={}){
  const dir=mkdtempSync(join(tmpdir(),'qivvera-assurance-'));

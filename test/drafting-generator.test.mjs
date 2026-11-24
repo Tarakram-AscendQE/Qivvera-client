@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { normalizeSource, normalizeRunInput, normalizeDecisionInput, validateGenerated, RULES_ENGINE, PROMPT_DIGEST } from '../server/drafting/contracts.mjs';
-import { extractExplicitClauses, generateDrafts, loadDraftingConfig } from '../server/drafting/generator.mjs';
+import { normalizeSource, normalizeRunInput, normalizeDecisionInput, validateGenerated, RULES_ENGINE, PROMPT_DIGEST } from '../backend/server/drafting/contracts.mjs';
+import { extractExplicitClauses, generateDrafts, loadDraftingConfig } from '../backend/server/drafting/generator.mjs';
 
 const source = 'Approval policy\nA requester must not approve their own request.\nApproved requests must not be approved again.';
 const input = () => ({ requestId: randomUUID(), revisionId: randomUUID(), sourceReference: 'Policy AP-1', sourceVersion: 'v3', sourceText: source, method: 'rules', externalProcessingConfirmed: false });

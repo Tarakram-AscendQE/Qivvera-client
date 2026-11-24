@@ -4,8 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {setup,author} from './assurance-helpers.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
-import {openWorkflowRepository} from '../server/workflow-repository.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
+import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
 const url=process.env.TEST_DATABASE_URL;
 if(!url){test('ASSURANCE POSTGRES NOT EXECUTED: isolated database required',{skip:process.env.REQUIRE_POSTGRES!=='true'},()=>{throw new Error('Mandatory assurance PostgreSQL verification did not execute.');});}
 else{
@@ -33,7 +33,7 @@ else{
      finally{await check.end();}
      worker=await openAssuranceRepository({...h.options,connectionString:limited.toString(),migrate:false,worker:true});
      await h.queue();const job=await worker.claim('limited-worker');assert.ok(job);
-     const {executeApprovalSeparation}=await import('../verifiers/approval-separation.mjs');
+     const {executeApprovalSeparation}=await import('../backend/verifiers/approval-separation.mjs');
      const report=await executeApprovalSeparation(h.target,{requesterToken:h.makerToken,approverToken:h.checkerToken,allowLoopback:true,runId:job.id});
      await worker.complete(job,report);assert.equal((await h.service.getRun(job.id)).disposition,'READY');
    }finally{if(worker)await worker.close();await owner.query(`DROP OWNED BY ${role}`);await owner.query(`DROP ROLE ${role}`);await owner.end();}

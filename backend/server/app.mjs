@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createAuth } from './auth.mjs';
 import { createWorkspaceAuth } from './workspace-auth.mjs';
@@ -50,7 +51,7 @@ async function body(req, maxBytes = 16384) {
         reject(new InputError('INVALID_JSON', 'The request is not valid JSON.'));
     } }); req.on('error', reject); req.on('aborted', () => reject(new InputError('REQUEST_ABORTED', 'The request was interrupted.'))); });
 }
-export function createApplicationServer({ repository, assurance = null, resolution = null, intake = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = resolve('web'), releaseRevision = 'unrecorded' }) {
+export function createApplicationServer({ repository, assurance = null, resolution = null, intake = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin, secureCookies = false, webRoot = fileURLToPath(new URL('../../frontend/src', import.meta.url)), releaseRevision = 'unrecorded' }) {
     if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin)
         throw new Error('PUBLIC_ORIGIN must be an exact origin.');
     if (secureCookies && !publicOrigin.startsWith('https://'))

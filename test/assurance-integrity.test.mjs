@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { setup, author, authority } from './assurance-helpers.mjs';
 import { setupMulti } from './generalization-helpers.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
 
 const integrity = error => error?.code === 'ASSURANCE_INTEGRITY_FAILED';
 const supported = { outcome: 'SUPPORTED', reason: 'CONTROL_CHECKS_PASSED', observations: [] };

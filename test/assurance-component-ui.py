@@ -4,7 +4,7 @@ import json,re,os
 from playwright.sync_api import sync_playwright,expect
 work=Path(__file__).resolve().parents[1];out=Path(os.environ.get('QIVVERA_TEST_OUTPUT',str(work/'review-test-results')));out.mkdir(parents=True,exist_ok=True)
 f=json.loads((out/'ui-self-approval-defect.json').read_text());good=json.loads((out/'ui-correct.json').read_text());gap=json.loads((out/'ui-reject-all.json').read_text())
-html=(work/'web/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
+html=(work/'frontend/src/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
 checks=[]
 with sync_playwright() as p:
  browser=p.chromium.launch(executable_path=os.environ.get('CHROMIUM_EXECUTABLE','/usr/bin/chromium'),headless=True)
@@ -22,7 +22,7 @@ with sync_playwright() as p:
  else {status=404;value={message:'Offline component route is not defined.'};}
  return {ok:status===200,status,json:async()=>JSON.parse(JSON.stringify(value))};};}''',{'bad':f,'good':good,'gap':gap})
  page.evaluate("id=>location.hash='#/changes/'+id",f['change']['id'])
- page.add_script_tag(type='module',content=(work/'web/app.js').read_text())
+ page.add_script_tag(type='module',content=(work/'frontend/src/app.js').read_text())
  expect(page.get_by_role('heading',name='NOT READY',exact=True)).to_be_visible();checks.append('Current violated execution displays NOT READY')
  expect(page.get_by_text('Requirement accepted',exact=True)).to_be_visible();expect(page.get_by_text('VIOLATED',exact=True)).to_be_visible();checks.append('Accepted requirement and violated software remain distinct')
  page.screenshot(path=str(out/'01-assessment-not-ready.png'),full_page=True)

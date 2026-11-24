@@ -4,10 +4,10 @@ import {tmpdir} from 'node:os';
 import {spawn} from 'node:child_process';
 import {createInterface} from 'node:readline';
 import {randomUUID,randomBytes} from 'node:crypto';
-import {openWorkflowRepository} from '../server/workflow-repository.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
-import {workOnce} from '../server/assurance/worker.mjs';
-import {CHECKS} from '../server/assurance/generalization.mjs';
+import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
+import {workOnce} from '../backend/server/assurance/worker.mjs';
+import {CHECKS} from '../backend/server/assurance/generalization.mjs';
 export const author={email:'author@example.test',roles:['AUTHOR']},authority={email:'policy@example.test',roles:['POLICY_AUTHORITY']},viewer={email:'viewer@example.test',roles:['VIEWER']};
 export const rationale='This fixed control directly exercises the accepted approval expectation within the declared limits.';
 export async function setupMulti(t,{adapter='approval-v1',mode='correct',postgresURL,source='a'.repeat(40)}={}){
@@ -37,5 +37,5 @@ export async function setupMulti(t,{adapter='approval-v1',mode='correct',postgre
 export async function separateWorker(h){
  const env={...process.env,...h.secretEnv,QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_GENERALIZATION_ENABLED:'true',QIVVERA_LOCAL_SQLITE:'true',QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',QIVVERA_TARGETS_JSON:JSON.stringify([h.target]),QIVVERA_WORKER_ID:'separate-reference-worker',DATABASE_PATH:h.db.path};
  delete env.DATABASE_URL;delete env.ASSURANCE_DATABASE_URL;delete env.VERCEL;delete env.NODE_ENV;
- return new Promise((resolve,reject)=>{const child=spawn(process.execPath,['scripts/assurance-worker.mjs','--once'],{env,stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',c=>output+=c);const timer=setTimeout(()=>{child.kill();reject(new Error('Worker deadline exceeded'));},15000);child.once('error',reject);child.once('exit',code=>{clearTimeout(timer);code===0?resolve(JSON.parse(output)):reject(new Error('Reference worker failed: '+code));});});
+ return new Promise((resolve,reject)=>{const child=spawn(process.execPath,['backend/scripts/assurance-worker.mjs','--once'],{env,stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',c=>output+=c);const timer=setTimeout(()=>{child.kill();reject(new Error('Worker deadline exceeded'));},15000);child.once('error',reject);child.once('exit',code=>{clearTimeout(timer);code===0?resolve(JSON.parse(output)):reject(new Error('Reference worker failed: '+code));});});
 }

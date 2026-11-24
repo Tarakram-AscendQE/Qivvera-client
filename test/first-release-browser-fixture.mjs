@@ -2,12 +2,12 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openAssuranceRepository } from '../server/assurance/repository.mjs';
-import { openResolutionRepository } from '../server/resolution/repository.mjs';
-import { openIntakeRepository } from '../server/intake/repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
+import { openResolutionRepository } from '../backend/server/resolution/repository.mjs';
+import { openIntakeRepository } from '../backend/server/intake/repository.mjs';
+import { createApplicationServer } from '../backend/server/app.mjs';
+import { hashPassword } from '../backend/server/auth.mjs';
 
 const password = process.env.FIRST_RELEASE_TEST_PASSWORD;
 if (typeof password !== 'string' || password.length < 24)

@@ -4,9 +4,9 @@
  */
 import {randomBytes,randomUUID} from 'node:crypto';
 import {resolutionSetup,author,accounts,note} from './resolution-helpers.mjs';
-import {openIntakeRepository} from '../server/intake/repository.mjs';
-import {createApplicationServer} from '../server/app.mjs';
-import {hashPassword} from '../server/auth.mjs';
+import {openIntakeRepository} from '../backend/server/intake/repository.mjs';
+import {createApplicationServer} from '../backend/server/app.mjs';
+import {hashPassword} from '../backend/server/auth.mjs';
 
 const password=process.env.NAVIGATION_TEST_PASSWORD;
 if(typeof password!=='string'||password.length<24)throw new Error('Supply a generated fixture password.');

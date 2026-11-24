@@ -53,6 +53,33 @@ establish that a worker is running.
 There is no public signup or account administration screen. The founder steers the product as an
 end user; the deployment owner provisions accounts, protected configuration, targets and operations.
 
+## Repository layout
+
+```text
+frontend/
+  src/          Browser UI source (HTML, JS, CSS) served by the Node server
+  public/       Generated copy of src/ (npm run build); Vercel static output. Do not edit by hand.
+backend/
+  server/       HTTP application, repositories, assurance/resolution/drafting/impact/templates modules
+  verifiers/    Fixed verifier bundles run by the separate assurance worker
+  migrations/   Published PostgreSQL migrations
+  scripts/      Backend operator CLIs: worker, migrate, accounts, permission audit, recovery rehearsal
+  core/         TypeScript disposition model (compiled to dist/core/)
+  ops/          Reviewed database grant scripts
+  config/       Example target and repository catalogues (shape only)
+api/index.mjs   Vercel function entry; Vercel requires it at the project root
+scripts/        Build, syntax, verification and reference-demo tooling
+test/           Unit, HTTP, PostgreSQL and native browser suites
+fixtures/       Synthetic reference target applications used by tests and demos
+docs/           Contracts, operations and historical increment records
+```
+
+`backend/server/`, `backend/verifiers/` and `backend/migrations/` must stay sibling directories.
+Published verifier digests include the relative path strings `../../verifiers/…`, so moving one of
+them without the others changes the recorded verifier identity. Historical increment records in
+`docs/` predate this layout and refer to `server/`, `web/`, `public/`, `verifiers/`, `migrations/`,
+`ops/`, `config/` and `src/core/` at the repository root.
+
 ## Engineering checks
 
 Use Node 22.16 or later within Node 22 and the locked dependencies:

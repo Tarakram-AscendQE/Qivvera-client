@@ -5,11 +5,11 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { setupTemplates, author, authority, rationale } from './templates-helpers.mjs';
-import { openAssuranceRepository } from '../server/assurance/repository.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
-import { createAssuranceReadModel } from '../server/assurance/read-model.mjs';
-import { createTemplateRepository } from '../server/templates/repository.mjs';
-import { migrateTemplates, templatesChecksum } from '../server/templates/migration.mjs';
+import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
+import { createAssuranceReadModel } from '../backend/server/assurance/read-model.mjs';
+import { createTemplateRepository } from '../backend/server/templates/repository.mjs';
+import { migrateTemplates, templatesChecksum } from '../backend/server/templates/migration.mjs';
 import { setupMulti } from './generalization-helpers.mjs';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -118,7 +118,7 @@ else {
             await owner.query(`GRANT INSERT ON assurance_plans,assurance_runs,activity TO ${role}`);
             await owner.query(`GRANT UPDATE(id) ON changes TO ${role}`);
             await owner.query(`GRANT UPDATE(status,finished_at,failure_code,lease_hash) ON assurance_runs TO ${role}`);
-            await owner.query(readFileSync(new URL('../ops/templates-permissions.sql', import.meta.url), 'utf8').replaceAll('qivvera_web', role));
+            await owner.query(readFileSync(new URL('../backend/ops/templates-permissions.sql', import.meta.url), 'utf8').replaceAll('qivvera_web', role));
             const connection = new URL(url); connection.username = role; connection.password = password;
             limited = await openAssuranceRepository({ ...h.options, connectionString: connection.toString(), migrate: false });
             pool = new pg.Pool({ connectionString: connection.toString() });

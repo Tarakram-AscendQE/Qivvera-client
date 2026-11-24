@@ -2,9 +2,9 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { generateDrafts } from '../server/drafting/generator.mjs';
-import { PROMPT_DIGEST, PROMPT_VERSION } from '../server/drafting/contracts.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { generateDrafts } from '../backend/server/drafting/generator.mjs';
+import { PROMPT_DIGEST, PROMPT_VERSION } from '../backend/server/drafting/contracts.mjs';
 
 export const author = { email: 'draft-author@example.test', roles: ['AUTHOR'] };
 export const otherAuthor = { email: 'other-draft-author@example.test', roles: ['AUTHOR'] };

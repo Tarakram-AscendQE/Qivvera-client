@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {setup,author,authority,viewer} from './assurance-helpers.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
-import {openDatabase} from '../server/workflow-store.mjs';
-import {validateCatalogue} from '../server/assurance/contracts.mjs';
-import {loadAssuranceConfig} from '../server/assurance/config.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
+import {openDatabase} from '../backend/server/workflow-store.mjs';
+import {validateCatalogue} from '../backend/server/assurance/contracts.mjs';
+import {loadAssuranceConfig} from '../backend/server/assurance/config.mjs';
 const rejected=code=>e=>e.code===code;
 async function input(h){const c=await h.service.getContext(h.change.id,h.change.revision.id);return{revisionId:h.change.revision.id,scopeDigest:c.scopeDigest,expectedPlanVersion:c.plan?.version??0,obligationId:h.obligation.id,targetId:h.target.id,rationale:'Explicitly mapping the accepted requirement to a limited behavioural check.',acknowledgeLimits:true};}
 test('author cannot approve a verification mapping',async t=>{const h=await setup(t);await assert.rejects(h.service.approvePlan(h.change.id,await input(h),author),rejected('FORBIDDEN'));});

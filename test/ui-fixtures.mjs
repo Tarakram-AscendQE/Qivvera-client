@@ -1,6 +1,6 @@
 // Synthetic states from the real workflow repository, for offline component rendering.
 import { writeFileSync } from 'node:fs';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
 const r = await openWorkflowRepository({ migrate: true });
 const author = { email: 'author@example.test', roles: ['AUTHOR'] }, reviewer = { email: 'reviewer@example.test', roles: ['POLICY_AUTHORITY'] };
 const app = await r.createApplication({ name: 'VendorPay', description: 'Synthetic supplier-payment application used only for review.' }, author);

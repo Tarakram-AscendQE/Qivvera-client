@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {resolutionSetup,author,authority,accounts,note} from './resolution-helpers.mjs';
-import {openResolutionRepository} from '../server/resolution/repository.mjs';
+import {openResolutionRepository} from '../backend/server/resolution/repository.mjs';
 const url=process.env.TEST_DATABASE_URL;
 if(!url){test('RESOLUTION POSTGRES NOT EXECUTED: disposable database required',{skip:process.env.REQUIRE_POSTGRES!=='true'},()=>{throw new Error('Mandatory resolution PostgreSQL tests did not execute.');});}
 else{

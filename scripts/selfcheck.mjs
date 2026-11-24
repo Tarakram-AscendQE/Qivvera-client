@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { PRODUCT_VERSION } from '../server/release.mjs';
+import { PRODUCT_VERSION } from '../backend/server/release.mjs';
 const p = JSON.parse(readFileSync(new URL('../package.json', import.meta.url))), l = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url)));
 if (p.name !== l.name || p.version !== l.version || p.version !== PRODUCT_VERSION || p.version !== l.packages[''].version || !p.private)
     throw new Error('PACKAGE_IDENTITY_MISMATCH');

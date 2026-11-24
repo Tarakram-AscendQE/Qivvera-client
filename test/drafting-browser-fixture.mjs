@@ -2,9 +2,9 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { createApplicationServer } from '../backend/server/app.mjs';
+import { hashPassword } from '../backend/server/auth.mjs';
 
 const password = process.env.DRAFTING_TEST_PASSWORD;
 if (typeof password !== 'string' || password.length < 24)

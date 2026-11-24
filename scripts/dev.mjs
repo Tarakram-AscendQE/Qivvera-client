@@ -3,7 +3,7 @@ try { process.loadEnvFile('.env.local'); }
 catch { console.error('DEV_SETUP_REQUIRED: create .env.local (local settings) next to package.json.'); process.exit(1); }
 
 const url = process.env.PUBLIC_ORIGIN || `http://127.0.0.1:${process.env.PORT ?? 3000}`;
-await import('../server/start.mjs');
+await import('../backend/server/start.mjs');
 
 for (let i = 0; i < 50 && !process.exitCode; i++) {
   try {

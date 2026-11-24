@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {openDatabase} from '../server/workflow-store.mjs';
-import {openResolutionRepository} from '../server/resolution/repository.mjs';
+import {openDatabase} from '../backend/server/workflow-store.mjs';
+import {openResolutionRepository} from '../backend/server/resolution/repository.mjs';
 import {resolutionSetup,author,authority,viewer,anotherAuthority,dual,accounts,err,note} from './resolution-helpers.mjs';
 
 test('resolution / real defect -> correction -> fresh support -> independent verification preserves original evidence',async t=>{
@@ -185,7 +185,7 @@ test('resolution / missing authority is clarified and verified without hiding ot
  item=await h.act(item,'PROPOSE_CORRECTION',{revisionId:h.change.revision.id,obligationId:o.id});
  const ctx=await h.service.getContext(h.change.id,h.change.revision.id);const plan=await h.service.approvePlan(h.change.id,{revisionId:h.change.revision.id,scopeDigest:ctx.scopeDigest,expectedPlanVersion:ctx.plan.version,obligationId:o.id,targetId:h.target.id,rationale:note,acknowledgeLimits:true},authority);
  const queued=await h.service.requestRun(h.change.id,{revisionId:h.change.revision.id,planId:plan.id,requestKey:randomUUID()},author);
- const {workOnce}=await import('../server/assurance/worker.mjs');await workOnce({repository:h.worker,targets:[h.target],workerId:'authority-gap-test',secretEnv:{MAKER_TEST_TOKEN:h.makerToken,CHECKER_TEST_TOKEN:h.checkerToken},allowLoopback:true});
+ const {workOnce}=await import('../backend/server/assurance/worker.mjs');await workOnce({repository:h.worker,targets:[h.target],workerId:'authority-gap-test',secretEnv:{MAKER_TEST_TOKEN:h.makerToken,CHECKER_TEST_TOKEN:h.checkerToken},allowLoopback:true});
  item=await h.act(item,'LINK_ASSESSMENT',{runId:queued.id});assert.equal(item.comparison.candidate.disposition,'INDETERMINATE');item=await h.act(item,'VERIFY',{},authority);assert.equal(item.status,'RESOLVED');
 });
 test('resolution / an accepted but unmapped obligation becomes a verification gap',async t=>{

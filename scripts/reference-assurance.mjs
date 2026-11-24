@@ -7,10 +7,10 @@ import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {randomUUID,randomBytes} from 'node:crypto';
-import {openWorkflowRepository} from '../server/workflow-repository.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
-import {hashPassword} from '../server/auth.mjs';
-import {createApplicationServer} from '../server/app.mjs';
+import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
+import {hashPassword} from '../backend/server/auth.mjs';
+import {createApplicationServer} from '../backend/server/app.mjs';
 const out=resolve(process.env.QIVVERA_TEST_OUTPUT??'review-test-results');mkdirSync(out,{recursive:true});
 const results=[];
 for(const mode of ['correct','self-approval-defect','reject-all']){
@@ -51,7 +51,7 @@ for(const mode of ['correct','self-approval-defect','reject-all']){
   const plan=await api(`/api/changes/${change.id}/assurance-plan`,'POST',{revisionId:change.revision.id,scopeDigest:ctx.scopeDigest,expectedPlanVersion:0,obligationId:o.id,targetId:target.id,rationale:'The configured oracle checks self-approval and a different-person positive control.',acknowledgeLimits:true});
   const run=await api(`/api/changes/${change.id}/assessments`,'POST',{revisionId:change.revision.id,planId:plan.id,requestKey:randomUUID()});
   if(run.status!=='QUEUED'||run.disposition!==null)throw new Error('QUEUE_STATE_INVALID');
-  const worker=spawn(process.execPath,['scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',QIVVERA_LOCAL_SQLITE:'true',DATABASE_PATH:db.path,QIVVERA_WORKER_ID:'reference-worker-process',REF_MAKER:maker,REF_CHECKER:checker},stdio:['ignore','pipe','pipe']});
+  const worker=spawn(process.execPath,['backend/scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',QIVVERA_LOCAL_SQLITE:'true',DATABASE_PATH:db.path,QIVVERA_WORKER_ID:'reference-worker-process',REF_MAKER:maker,REF_CHECKER:checker},stdio:['ignore','pipe','pipe']});
   let workerOutput='';worker.stdout.on('data',b=>workerOutput+=b);const [code]=await once(worker,'exit');if(code!==0)throw new Error('WORKER_FAILED');
   const completed=await api(`/api/assessments/${run.id}`);const expected={correct:'READY','self-approval-defect':'NOT_READY','reject-all':'INDETERMINATE'}[mode];if(completed.disposition!==expected)throw new Error('UNEXPECTED_DISPOSITION');
   writeFileSync(join(out,`case-${mode}.json`),JSON.stringify(completed,null,2));

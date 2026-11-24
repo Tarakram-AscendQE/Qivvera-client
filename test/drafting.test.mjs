@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { setupDrafting, draftingAssuranceJourney, author, otherAuthor, authority, viewer, dualRole, modelResult, SOURCE } from './drafting-helpers.mjs';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
-import { generateDrafts } from '../server/drafting/generator.mjs';
-import { digest } from '../server/assurance/contracts.mjs';
-import { InputError } from '../server/errors.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
+import { generateDrafts } from '../backend/server/drafting/generator.mjs';
+import { digest } from '../backend/server/assurance/contracts.mjs';
+import { InputError } from '../backend/server/errors.mjs';
 
 const code = expected => error => error.code === expected;
 async function inspect(h, fn) { const db = await openDatabase(h.db); try { return await fn(db); } finally { await db.close(); } }

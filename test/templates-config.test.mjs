@@ -1,7 +1,7 @@
 /** Deployment boundary: template preparation requires the existing generalized assurance service. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { loadAssuranceConfig } from '../server/assurance/config.mjs';
+import { loadAssuranceConfig } from '../backend/server/assurance/config.mjs';
 
 test('templates configuration / existing deployments remain disabled by default', () => {
     assert.equal(loadAssuranceConfig({}).templatesEnabled, false);

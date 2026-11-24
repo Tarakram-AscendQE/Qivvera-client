@@ -6,9 +6,9 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { createApplicationServer } from '../backend/server/app.mjs';
+import { hashPassword } from '../backend/server/auth.mjs';
 
 const author = { email: 'draft-author@example.test', roles: ['AUTHOR'] };
 const other = { email: 'draft-other@example.test', roles: ['AUTHOR'] };

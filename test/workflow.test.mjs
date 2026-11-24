@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openRepository } from '../server/repository.mjs';
-import { openDatabase, migrateDatabase } from '../server/workflow-store.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openRepository } from '../backend/server/repository.mjs';
+import { openDatabase, migrateDatabase } from '../backend/server/workflow-store.mjs';
 import { contractCases, fixtureData, author, reviewer, owner, act } from './workflow-contract.mjs';
 for (const [name, fn] of contractCases())
     test(`workflow / ${name}`, async (t) => { const r = await openWorkflowRepository({ migrate: true }); t.after(() => r.close()); await fn(r); });

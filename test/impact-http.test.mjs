@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { setup, author, authority, viewer } from './assurance-helpers.mjs';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
+import { createApplicationServer } from '../backend/server/app.mjs';
+import { hashPassword } from '../backend/server/auth.mjs';
 
 async function fixture(t, { assurance = true, mode = 'correct', clock } = {}) {
     const h = await setup(t, { mode, ...(clock ? { clock } : {}) });

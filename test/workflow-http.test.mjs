@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { createApplicationServer } from '../backend/server/app.mjs';
+import { hashPassword } from '../backend/server/auth.mjs';
 const password = 'synthetic-http-workflow-password', passwordHash = hashPassword(password), origin = 'http://127.0.0.1';
 const accounts = [{ email: 'author@example.test', roles: ['AUTHOR'], passwordHash }, { email: 'authority@example.test', roles: ['POLICY_AUTHORITY'], passwordHash }, { email: 'viewer@example.test', roles: ['VIEWER'], passwordHash }];
 async function fixture(t) { const r = await openWorkflowRepository({ migrate: true }); const s = createApplicationServer({ repository: r, accounts, publicOrigin: origin }); s.listen(0, '127.0.0.1'); await once(s, 'listening'); t.after(async () => { await new Promise(done => s.close(done)); await r.close(); }); const base = `http://127.0.0.1:${s.address().port}`; const login = async (email) => { const res = await fetch(base + '/api/session', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }); assert.equal(res.status, 200); return { cookie: res.headers.get('set-cookie').split(';')[0], ...await res.json() }; }; const call = async (session, path, method = 'GET', body, headers = {}) => fetch(base + path, { method, headers: { Origin: origin, 'Content-Type': 'application/json', ...(session ? { Cookie: session.cookie, 'X-CSRF-Token': session.csrfToken } : {}), ...headers }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) }); return { r, s, base, login, call }; }

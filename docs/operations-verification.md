@@ -12,7 +12,7 @@ an authorized operator supplies and interprets operational configuration.
 
 ## Runtime permission audit
 
-Run `node scripts/audit-permissions.mjs` with these explicit environment variables:
+Run `node backend/scripts/audit-permissions.mjs` with these explicit environment variables:
 
 - `QIVVERA_AUDIT_WEB_DATABASE_URL`: the actual non-owner web runtime login.
 - `QIVVERA_AUDIT_WORKER_DATABASE_URL`: the actual distinct worker runtime login.
@@ -47,7 +47,7 @@ resolution example grants table-wide UPDATE on `resolution_items` and `resolutio
 The new profile allows only the columns the current application changes and protects original source
 and identity fields. Likewise, source previews require updates only to `import_id` and `request_digest`.
 Do not blindly apply a broad table-wide UPDATE merely to satisfy a missing-column finding. The
-reviewed profile is declared in `server/operations/permissions.mjs`; existing direct, inherited,
+reviewed profile is declared in `backend/server/operations/permissions.mjs`; existing direct, inherited,
 owner and PUBLIC privileges must be considered together by the database owner.
 
 The profile covers all current features in schema 7. It is not a minimal-grants calculator for an
@@ -66,7 +66,7 @@ an administrator from changing grants afterwards.
 
 ## Synthetic backup and isolated restore
 
-Run `node scripts/rehearse-recovery.mjs` with:
+Run `node backend/scripts/rehearse-recovery.mjs` with:
 
 - `QIVVERA_RECOVERY_SOURCE_DATABASE_URL`: an explicit disposable loopback source whose database
   name starts `qivvera_test_`, containing the complete reviewed schema 7.

@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { createWorkspaceAuth, normalizeAccounts } from '../server/workspace-auth.mjs';
-import { hashPassword } from '../server/auth.mjs';
-import { loadConfig, normalizeOrigin } from '../server/config.mjs';
-import { postgresOptions } from '../server/workflow-store.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { createWorkspaceAuth, normalizeAccounts } from '../backend/server/workspace-auth.mjs';
+import { hashPassword } from '../backend/server/auth.mjs';
+import { loadConfig, normalizeOrigin } from '../backend/server/config.mjs';
+import { postgresOptions } from '../backend/server/workflow-store.mjs';
 const password = 'synthetic-long-test-password-2026', hash = hashPassword(password), accounts = [{ email: 'author@example.test', passwordHash: hash, roles: ['AUTHOR'] }];
 function req(cookie) { return { headers: { cookie: cookie.split(';')[0] } }; }
 async function setup(t) { const repository = await openWorkflowRepository({ migrate: true }); t.after(() => repository.close()); return repository; }

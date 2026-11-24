@@ -3,7 +3,7 @@ from pathlib import Path
 import json,re,os
 from playwright.sync_api import sync_playwright,expect
 work=Path(__file__).resolve().parents[1];out=work/'review-test-results';fixture=json.loads((out/'generalization-ui.json').read_text())
-html=(work/'web/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
+html=(work/'frontend/src/index.html').read_text();html=re.sub(r'<link[^>]+>','',html);html=re.sub(r'<script[^>]*>.*?</script>','',html,flags=re.S)
 checks=[];errors=[];report={'passed':False,'checks':checks,'method':'Offline Chromium components with captured local API data and explicitly stubbed fetch. Not native E2E or live GitHub.'}
 try:
  with sync_playwright() as p:
@@ -14,9 +14,9 @@ try:
    if(path==='/api/session')data=f.session;else if(path==='/api/workspace')data=f.workspace;else if(path==='/api/source-repositories')data=f.repositories;else if(path==='/api/source-previews')data=f.preview;
    else if(path.endsWith('/source-imports'))data=[];else if(path.includes('assurance-context'))data=f.context;else if(path.includes('/assessments?'))data=f.runs;else if(path.startsWith('/api/assessments/'))data=f.runs[0];else if(path.startsWith('/api/changes/'))data=f.change;else{code=404;data={message:'Unconfigured offline component route'};}
    return {ok:code===200,status:code,json:async()=>structuredClone(data)};};}''',fixture)
-  page.add_script_tag(type='module',content=(work/'web/intake.js').read_text()+'\nwindow.IntakeComponent={createIntakeUI};');page.wait_for_function('!!window.IntakeComponent')
+  page.add_script_tag(type='module',content=(work/'frontend/src/intake.js').read_text()+'\nwindow.IntakeComponent={createIntakeUI};');page.wait_for_function('!!window.IntakeComponent')
   page.evaluate("id=>location.hash='#/changes/'+id",fixture['change']['id'])
-  js=(work/'web/app.js').read_text().replace("await import('./intake.js')","window.IntakeComponent")
+  js=(work/'frontend/src/app.js').read_text().replace("await import('./intake.js')","window.IntakeComponent")
   page.add_script_tag(type='module',content=js)
   expect(page.get_by_role('heading',name=fixture['change']['title'],exact=True)).to_be_visible();checks.append('Actual captured change renders without fabricated outcome')
   page.get_by_role('button',name='Assurance',exact=True).click();expect(page.get_by_role('heading',name='Approved verification plan',exact=True)).to_be_visible();checks.append('Version 2 plan renders')

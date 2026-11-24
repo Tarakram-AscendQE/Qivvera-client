@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
-import {createApplicationServer} from '../server/app.mjs';
-import {hashPassword} from '../server/auth.mjs';
+import {createApplicationServer} from '../backend/server/app.mjs';
+import {hashPassword} from '../backend/server/auth.mjs';
 import {setup,author,authority,viewer} from './assurance-helpers.mjs';
-import {workOnce} from '../server/assurance/worker.mjs';
-import {openDatabase} from '../server/workflow-store.mjs';
+import {workOnce} from '../backend/server/assurance/worker.mjs';
+import {openDatabase} from '../backend/server/workflow-store.mjs';
 async function app(t,mode='correct'){
  const h=await setup(t,{mode}),password='disposable-http-only-password';
  const server=createApplicationServer({repository:h.workflow,assurance:h.service,publicOrigin:'http://127.0.0.1:3109',accounts:[author,authority,viewer].map(a=>({...a,passwordHash:hashPassword(password)}))});

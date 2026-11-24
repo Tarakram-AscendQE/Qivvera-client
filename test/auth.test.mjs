@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createAuth,hashPassword,verifyPassword,validatePasswordHash} from '../server/auth.mjs';
+import {createAuth,hashPassword,verifyPassword,validatePasswordHash} from '../backend/server/auth.mjs';
 const password='synthetic-test-password-not-a-real-secret',ownerEmail='owner@example.test',passwordHash=hashPassword(password);
 const make=(args={})=>createAuth({ownerEmail,passwordHash,...args});
 const request=cookie=>({headers:{cookie:cookie.split(';')[0]}});

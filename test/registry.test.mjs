@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openRepository } from '../server/repository.mjs';
+import { openRepository } from '../backend/server/repository.mjs';
 const actor='owner@example.test';
 function setup(t){const dir=mkdtempSync(join(tmpdir(),'qivvera-'));const r=openRepository(join(dir,'registry.sqlite'));t.after(()=>{r.close();rmSync(dir,{recursive:true,force:true});});return r;}
 function fixture(r){const a=r.createApplication({name:'VendorPay'},actor);return r.createChange({applicationId:a.id,title:'Bank account workflow'},actor);}
