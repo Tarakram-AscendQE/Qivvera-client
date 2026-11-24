@@ -61,7 +61,7 @@ including late-answer and dialog-after-navigation guards.
 - [x] Task 7 (inbox, item, change tab, source buttons and actions; parity 19 cases)
 
 ### Checkpoint C
-- [ ] All gates green; the legacy shell now only routes, signs in, frames and opens dialogs
+- [x] All gates green; the legacy shell now only routes, signs in, frames and opens dialogs
 
 ## Phase D — Replace the shell
 
@@ -75,13 +75,14 @@ including late-answer and dialog-after-navigation guards.
 **Acceptance:** sign-in page and password toggle match; api() semantics identical (CSRF, stale-session
 rejection, 401 → sign-in, unreadable/5xx/403 messages, request reference); bootstrap error page matches.
 **Size:** M. **Depends on:** Task 8.
-- [ ] Task 9
+- [x] Task 9 (TS API client, React sign-in and startup error page; done together with Task 10)
 
 ### Task 10: App frame and router (React Router, same hash routes); delete app.js
 **Acceptance:** sidebar/top bar/footer match; every legacy route resolves identically (incl. invalid-link error
 pages and capability checks); route generation, toast and polling semantics preserved; app.js deleted.
 **Size:** L (do in sub-steps: frame → router → polling → delete). **Depends on:** Task 9.
-- [ ] Task 10
+- [x] Task 10 (React frame, typed hash route table instead of React Router by user decision, polling and
+  delegation ported; legacy app.js and check-legacy-names deleted; one app.js bundle; whole-app parity 14 scenarios)
 
 ### Checkpoint D
 - [ ] All gates green twice in a row; no legacy JavaScript is loaded

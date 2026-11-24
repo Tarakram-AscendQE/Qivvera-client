@@ -1,11 +1,10 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { deferred } from '../test-utils';
-import type { LegacyApi, LegacyShell } from '../legacy-bridge';
+import { deferred, fakeShell } from '../test-utils';
+import type { LegacyApi } from '../legacy-bridge';
 import { createResolutionUI, type ResolutionUI } from './resolution-module';
 
-/** Like the real shell, this replaces only #root, so the separate <dialog> survives page redraws. */
-const shell = vi.fn<LegacyShell>((content, active = '', label = '') => { document.querySelector('#root')!.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`; });
+const shell = fakeShell();
 const me = 'me@example.test';
 const record = (over: Record<string, unknown> = {}) => ({
   id: 'res1-0000-4000', changeId: 'chg-1', kind: 'VIOLATION', version: 3, status: 'AWAITING_REASSESSMENT', effectiveStatus: 'AWAITING_REASSESSMENT', reviewMode: 'independent',
@@ -33,7 +32,7 @@ const button = (data: Record<string, string>) => { const element = document.crea
 const modal = () => document.querySelector<HTMLDialogElement>('#modal')!;
 
 beforeEach(() => { shell.mockClear(); });
-afterEach(() => { ui?.unmountDialog(); ui?.unmount(); });
+afterEach(() => { ui?.unmountDialog(); shell.reset(); });
 
 describe('resolution', () => {
   it('requires a Policy Authority who neither owns nor contributed to verify a correction', async () => {
@@ -41,7 +40,7 @@ describe('resolution', () => {
     await ui.showItem('res1-0000-4000');
     expect((screen.getByRole('button', { name: 'Verify resolution' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('A different authorized Policy Authority must verify this correction.')).toBeTruthy();
-    ui.unmount();
+    shell.reset();
     setup(async () => record());
     await ui.showItem('res1-0000-4000');
     expect((screen.getByRole('button', { name: 'Verify resolution' }) as HTMLButtonElement).disabled).toBe(false);

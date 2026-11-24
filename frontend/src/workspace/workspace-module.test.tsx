@@ -17,14 +17,14 @@ function show(roles: string[], workspace: unknown) {
 }
 
 beforeEach(() => { shell.mockClear(); });
-afterEach(() => ui?.unmount());
+afterEach(() => shell.reset());
 
 describe('workspace overview', () => {
   it('lets only an Author start work, and only once an application exists', () => {
     show(['AUTHOR'], { applications: [], changes: [], activity: [] });
     expect((screen.getByRole('button', { name: '+ Register application' }) as HTMLButtonElement).disabled).toBe(false);
     expect((screen.getByRole('button', { name: '+ New change' }) as HTMLButtonElement).disabled).toBe(true);
-    ui.unmount();
+    shell.reset();
     show(['VIEWER'], { applications: apps, changes: [], activity: [] });
     expect((screen.getByRole('button', { name: '+ Register application' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('button', { name: '+ New change' }) as HTMLButtonElement).disabled).toBe(true);

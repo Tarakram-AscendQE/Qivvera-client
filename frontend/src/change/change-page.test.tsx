@@ -23,7 +23,7 @@ function show(state: Record<string, unknown>, roles: string[], resolutionEnabled
 }
 
 beforeEach(() => { shell.mockClear(); });
-afterEach(() => ui?.unmount());
+afterEach(() => shell.reset());
 
 describe('change page', () => {
   it('does not let a contributor decide on their own requirement in independent review', () => {
@@ -70,7 +70,7 @@ describe('change page', () => {
     show({ change: change({ obligations: [obligation('a', 'DRAFT', { statement: '<img src=x onerror=alert(1)>' })] }) }, ['VIEWER']);
     expect(screen.getByRole('heading', { name: '<img src=x onerror=alert(1)>' })).toBeTruthy();
     expect(document.querySelector('img')).toBeNull();
-    ui.unmount();
+    shell.reset();
     show({ tab: 'resolutions', resolutions: { items: [], total: 0, offset: 0, limit: 50, hasMore: false } }, ['VIEWER'], true);
     expect(screen.getByRole('heading', { name: 'Findings to resolve' })).toBeTruthy();
   });

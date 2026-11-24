@@ -23,9 +23,10 @@ legacy error page; five behaviour-preserving refactors.
   requested it (`visits.ts`); saves keep one request ID per unchanged submission; no automatic retries.
 - **Dialogs stay native `<dialog>`** rendered from React (the browser suites select `dialog`; native
   `showModal()` already gives focus containment, Esc and `aria-modal`). React Aria only for widgets HTML lacks.
-- **Routing.** When the shell moves (Phase D), use React Router with the same hash routes (bookmarks and tests
-  keep working). Verify the React Router 8 API against its docs before using it (source-driven-development).
-  Loader-style "load, then draw" matches the legacy route() (the old page stays until new data is ready).
+- **Routing.** Decided with the user (24 Nov): the shell uses a typed hash route table
+  (`frontend/src/app/routes.ts`) with the legacy load-then-draw and generation semantics, not React Router.
+  React Router 8 (data mode) would require rewriting every screen module as route loader + component;
+  that refactor is deferred until after the backend work. Same hash routes, so bookmarks and tests keep working.
 - **Out of scope for this run** (needs a user decision): porting the Python browser suites to Playwright Test
   (AGENTS.md names the current suites as mandatory gates); CSS Modules (styling-only move, no visual tests);
   a formatter (Prettier) for long JSX lines.

@@ -1,7 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { LegacyBridge } from '../legacy-bridge';
 import { createQueryClient } from '../query-client';
-import { createScreenHost } from '../screen-host';
 import { GuidePage } from './GuidePage';
 import { SupportPage } from './SupportPage';
 import { supportQueryOptions } from './support-report';
@@ -9,8 +8,6 @@ import { supportQueryOptions } from './support-report';
 export interface GuideUI {
   showGuide(): void;
   showSupport(): Promise<void>;
-  /** Removes the screen; the legacy shell calls it before it replaces the page or ends a session. */
-  unmount(): void;
 }
 
 /**
@@ -19,12 +16,11 @@ export interface GuideUI {
  * Product guidance is read-only. It never sets authority, evidence or disposition.
  */
 export function createGuideUI({ S, api, shell }: LegacyBridge): GuideUI {
-  const host = createScreenHost(shell);
 
   function showGuide(): void {
     const session = S.session;
     if (!session || !location.hash.startsWith('#/guide')) return;
-    host.show(<GuidePage roles={session.roles ?? []} />, 'guide', 'Product guide');
+    shell(<GuidePage roles={session.roles ?? []} />, 'guide', 'Product guide');
   }
 
   async function showSupport(): Promise<void> {
@@ -35,8 +31,8 @@ export function createGuideUI({ S, api, shell }: LegacyBridge): GuideUI {
     await client.fetchQuery(supportQueryOptions(api));
     // A late answer must not replace a newer view or a different session's view.
     if (!session || S.session !== session || location.hash.replace(/\/$/, '') !== '#/support') return;
-    host.show(<QueryClientProvider client={client}><SupportPage api={api} /></QueryClientProvider>, 'support', 'Support');
+    shell(<QueryClientProvider client={client}><SupportPage api={api} /></QueryClientProvider>, 'support', 'Support');
   }
 
-  return { showGuide, showSupport, unmount: host.unmount };
+  return { showGuide, showSupport };
 }

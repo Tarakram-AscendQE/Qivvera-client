@@ -33,7 +33,7 @@ beforeEach(() => {
   shell.mockClear();
   location.hash = '#/impact/chg-1/rev-2';
 });
-afterEach(() => ui?.unmount());
+afterEach(() => shell.reset());
 
 describe('impact report contract', () => {
   it('accepts only the requested change and revision in the expected format', () => {
@@ -74,7 +74,7 @@ describe('impact screen', () => {
       answer.resolve(report());
       await shown;
       expect(screen.queryByRole('heading', { name: 'Impact & next checks', level: 1 })?.closest('#impact-report')).toBeFalsy();
-      ui.unmount();
+      shell.reset();
     }
   });
 

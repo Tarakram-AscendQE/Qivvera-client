@@ -1,1 +1,0 @@
-export{r as createTemplatesUI}from"./shared.js";

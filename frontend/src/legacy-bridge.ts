@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 /**
  * Contract between the hand-written legacy shell (frontend/legacy/app.js) and React screens.
  * Until the shell itself is migrated, it owns routing, sign-in, the session and the page frame.
@@ -75,8 +77,12 @@ export interface ApiOptions {
  */
 export type LegacyApi = (path: string, options?: ApiOptions) => Promise<unknown>;
 
-/** Replaces the whole page with the frame (navigation, top bar, footer) around trusted HTML. */
-export type LegacyShell = (content: string, active?: string, label?: string) => void;
+/**
+ * Draws a screen inside the page frame (navigation, top bar, footer), replacing the previous page.
+ * `active` marks the navigation entry and `label` is the breadcrumb. Synchronous: the screen is in
+ * the DOM when this returns. A screen that fails to render throws, so the router shows its error page.
+ */
+export type LegacyShell = (screen: ReactNode, active?: string, label?: string) => void;
 
 export interface LegacyBridge {
   readonly S: LegacyState;

@@ -1,1 +1,0 @@
-export{t as createResolutionUI}from"./shared.js";

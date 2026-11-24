@@ -32,14 +32,14 @@ beforeEach(() => {
   state = { session: author };
   shell.mockClear();
 });
-afterEach(() => ui?.unmount());
+afterEach(() => shell.reset());
 
 describe('Guide', () => {
   it('is in the page when showGuide returns, like the legacy string screens', () => {
     setup(async () => ({}));
     location.hash = '#/guide';
     ui.showGuide();
-    expect(shell).toHaveBeenCalledWith(expect.any(String), 'guide', 'Product guide');
+    expect(shell).toHaveBeenCalledWith(expect.anything(), 'guide', 'Product guide');
     expect(screen.getByRole('heading', { level: 1, name: 'Your guide to Qivvera' })).toBeTruthy();
     expect(screen.getByText('Your role: Author and Policy Authority.')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Supported scope' })).toBeTruthy();
@@ -55,14 +55,6 @@ describe('Guide', () => {
     ui.showGuide();
     expect(shell).not.toHaveBeenCalled();
   });
-
-  it('is removed when the legacy shell unmounts it', () => {
-    setup(async () => ({}));
-    location.hash = '#/guide';
-    ui.showGuide();
-    ui.unmount();
-    expect(document.querySelector('[data-react-screen]')?.childNodes.length).toBe(0);
-  });
 });
 
 describe('Support', () => {
@@ -71,7 +63,7 @@ describe('Support', () => {
     location.hash = '#/support';
     await ui.showSupport();
     expect(api).toHaveBeenCalledWith('/api/support-info');
-    expect(shell).toHaveBeenCalledWith(expect.any(String), 'support', 'Support');
+    expect(shell).toHaveBeenCalledWith(expect.anything(), 'support', 'Support');
     expect(screen.getByRole('heading', { level: 1, name: 'Workspace support' })).toBeTruthy();
     expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeTruthy();
     expect(document.querySelector('img')).toBeNull();

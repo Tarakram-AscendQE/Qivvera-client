@@ -39,7 +39,7 @@ beforeEach(() => {
   shell.mockClear();
   location.hash = '#/drafting/chg-1/rev-1';
 });
-afterEach(() => ui?.unmount());
+afterEach(() => shell.reset());
 
 describe('drafting limits', () => {
   it('counts normalized characters, UTF-8 bytes and lines', () => {
@@ -107,7 +107,7 @@ describe('saved drafting run', () => {
     expect(document.querySelector('pre')!.textContent).toBe('<script>alert(1)</script>');
     expect(document.querySelector('script')).toBeNull();
     expect(screen.getByText('Review and create a draft candidate')).toBeTruthy();
-    ui.unmount();
+    shell.reset();
     S.session = { email: 'other@example.test', roles: ['AUTHOR'] };
     await ui.show('chg-1', 'rev-1', { runId: 'run-1' });
     expect(screen.queryByText('Review and create a draft candidate')).toBeNull();

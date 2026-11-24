@@ -32,7 +32,7 @@ beforeEach(() => {
   S = { session: { email: 'pa@example.test', roles: ['POLICY_AUTHORITY'] }, tab: 'start', workspace: { applications: [], changes: [{ id: C, title: 'Change' }] } };
   shell.mockClear();
 });
-afterEach(() => ui?.unmount());
+afterEach(() => shell.reset());
 
 describe('verification templates', () => {
   it('asks for a smaller page when the saved history exceeds the read limit', async () => {

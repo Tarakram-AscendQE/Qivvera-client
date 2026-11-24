@@ -3,7 +3,6 @@ import { dialogHost } from '../dialogs/dialog-host';
 import type { DialogEnvironment } from '../dialogs/FormDialog';
 import { openFormDialog, type DialogServices } from '../dialogs/open-form';
 import type { LegacyApi, LegacyCan, LegacyShell, LegacyState } from '../legacy-bridge';
-import { createScreenHost } from '../screen-host';
 import type { ActiveCheck } from '../visits';
 import { ActionDialog, CorrectionFields, LinkFields, NewResolutionDialog, OwnershipFields, ReasonField, ResponseFields, type Assignee, type CorrectionChange, type LinkableRun } from './dialogs';
 import { InboxPage, ItemPage, type ResolutionRecord } from './pages';
@@ -27,7 +26,6 @@ export interface ResolutionUI {
   handle(button: HTMLElement): Promise<boolean>;
   /** The shell supplies its change-page renderer so pagination redraws the selected change. */
   setChangeRenderer(render: () => void): void;
-  unmount(): void;
   /** Removes a React dialog; the legacy closeDialog() calls it before it empties the dialog element. */
   unmountDialog(): void;
 }
@@ -41,7 +39,6 @@ type ShellState = LegacyState & { change?: { id: string } | null; resolutions?: 
 export function createResolutionUI(bridge: ResolutionBridge): ResolutionUI {
   const { api, can } = bridge;
   const S = bridge.S as ShellState;
-  const host = createScreenHost(bridge.shell);
   let item: ResolutionRecord | null = null, itemActive: ActiveCheck = () => false;
   let generation = 0, actionGeneration = 0, refreshChange: () => void = () => {};
 
@@ -75,14 +72,14 @@ export function createResolutionUI(bridge: ResolutionBridge): ResolutionUI {
   async function showInbox(offset = 0): Promise<void> {
     const active = begin(), data = await api(`/api/resolutions?offset=${offset}`) as ResolutionPage;
     if (!active() || !location.hash.startsWith('#/resolutions') || location.hash.split('/')[2]) return;
-    host.show(<InboxPage data={data} />, 'resolutions', 'Resolutions');
+    bridge.shell(<InboxPage data={data} />, 'resolutions', 'Resolutions');
   }
 
   async function showItem(id: string): Promise<void> {
     const active = begin(), record = await api(`/api/resolutions/${id}`) as ResolutionRecord;
     if (!active() || !location.hash.endsWith('/' + id)) return;
     item = record; itemActive = active;
-    host.show(<ItemPage record={record} email={S.session?.email} canTrack={writable()} isAuthority={can('POLICY_AUTHORITY')} />, 'resolutions', 'Resolution');
+    bridge.shell(<ItemPage record={record} email={S.session?.email} canTrack={writable()} isAuthority={can('POLICY_AUTHORITY')} />, 'resolutions', 'Resolution');
   }
 
   async function handle(button: HTMLElement): Promise<boolean> {
@@ -134,7 +131,6 @@ export function createResolutionUI(bridge: ResolutionBridge): ResolutionUI {
     invalidate() { generation++; actionGeneration++; item = null; itemActive = () => false; },
     loadChange, showInbox, showItem, handle,
     setChangeRenderer(render) { refreshChange = render; },
-    unmount: host.unmount,
     unmountDialog: dialogHost.unmount
   };
 }

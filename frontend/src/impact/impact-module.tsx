@@ -1,6 +1,5 @@
 import { downloadJson } from '../download';
 import type { LegacyApi, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
-import { createScreenHost } from '../screen-host';
 import { createVisits } from '../visits';
 import { ImpactLoading, ImpactPage } from './ImpactPage';
 import { parseImpactReport, type ChangeTab } from './report';
@@ -16,8 +15,6 @@ export interface ImpactUI {
   show(changeId: string, revisionId: string): Promise<void>;
   /** Ends the current visit: late answers from it are ignored. Called when a route starts. */
   invalidate(): void;
-  /** Removes the screen; the legacy shell calls it before it replaces the page or ends a session. */
-  unmount(): void;
 }
 
 /**
@@ -25,13 +22,12 @@ export interface ImpactUI {
  * or queues work. Keeps the factory the legacy shell imports: createImpactUI({S, api, shell, route}).
  */
 export function createImpactUI({ S, api, shell, route }: ImpactBridge): ImpactUI {
-  const host = createScreenHost(shell);
   const visits = createVisits(S);
 
   async function show(changeId: string, revisionId: string): Promise<void> {
     const active = visits.begin();
     if (!S.session) return;
-    host.show(<ImpactLoading />, 'changes', 'Impact & next checks');
+    shell(<ImpactLoading />, 'changes', 'Impact & next checks');
     const value = await api(`/api/changes/${encodeURIComponent(changeId)}/impact?revision=${encodeURIComponent(revisionId)}`);
     if (!active()) return;
     const report = parseImpactReport(value, changeId, revisionId);
@@ -48,8 +44,8 @@ export function createImpactUI({ S, api, shell, route }: ImpactBridge): ImpactUI
         if (active()) downloadJson(`Qivvera-impact-revision-${String(report.selectedRevision.number)}.json`, serialized);
       }
     };
-    host.show(<ImpactPage report={report} founderReview={S.session.reviewMode === 'founder-review'} actions={actions} />, 'changes', 'Impact & next checks');
+    shell(<ImpactPage report={report} founderReview={S.session.reviewMode === 'founder-review'} actions={actions} />, 'changes', 'Impact & next checks');
   }
 
-  return { show, invalidate: visits.invalidate, unmount: host.unmount };
+  return { show, invalidate: visits.invalidate };
 }

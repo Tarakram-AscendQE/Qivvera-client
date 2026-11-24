@@ -9,7 +9,6 @@ import type { DialogEnvironment } from '../dialogs/FormDialog';
 import { HistoryDialog, NewApplicationDialog, NewChangeDialog, NewRevisionDialog, ObligationDialog, ReviewDialog, type HistoryEvent, type ReviewAction } from '../dialogs/RecordDialogs';
 import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState, LegacyToast } from '../legacy-bridge';
 import type { ActiveCheck } from '../visits';
-import { createScreenHost } from '../screen-host';
 import { OverviewPage, type Roles } from './OverviewPage';
 import { ActivityPage, ApplicationPage, ApplicationsPage, ChangesPage } from './RegistryPages';
 import type { WorkspaceSummary } from './rows';
@@ -55,8 +54,6 @@ export interface WorkspaceUI {
   showAssessment(id: string): Promise<void>;
   /** Removes a React dialog; the legacy closeDialog() calls it before it empties the dialog element. */
   unmountDialog(): void;
-  /** Removes the screen; the legacy shell calls it before it replaces the page or ends a session. */
-  unmount(): void;
 }
 
 /**
@@ -66,7 +63,6 @@ export interface WorkspaceUI {
  */
 export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
   const { S, shell, can, api } = bridge;
-  const host = createScreenHost(shell);
   const workspace = () => S.workspace as unknown as WorkspaceSummary;
   const roles = (): Roles => ({ author: can('AUTHOR'), authority: can('POLICY_AUTHORITY') });
   const state = S as LegacyState & { change: ChangeView['change']; session: { email: unknown }; tab?: string };
@@ -78,21 +74,21 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
 
   return {
     showOverview() {
-      host.show(<OverviewPage workspace={workspace()} roles={roles()} />, 'overview', 'Workspace');
+      shell(<OverviewPage workspace={workspace()} roles={roles()} />, 'overview', 'Workspace');
     },
     showApplications() {
-      host.show(<ApplicationsPage workspace={workspace()} roles={roles()} />, 'applications', 'Applications');
+      shell(<ApplicationsPage workspace={workspace()} roles={roles()} />, 'applications', 'Applications');
     },
     showApplication(id) {
       const app = workspace().applications.find(candidate => candidate.id === id);
       if (!app) throw new Error('Application not found.');
-      host.show(<ApplicationPage app={app} workspace={workspace()} roles={roles()} />, 'applications', String(app.name));
+      shell(<ApplicationPage app={app} workspace={workspace()} roles={roles()} />, 'applications', String(app.name));
     },
     showChanges() {
-      host.show(<ChangesPage workspace={workspace()} roles={roles()} />, 'changes', 'Changes');
+      shell(<ChangesPage workspace={workspace()} roles={roles()} />, 'changes', 'Changes');
     },
     showActivity() {
-      host.show(<ActivityPage workspace={workspace()} />, 'activity', 'Activity');
+      shell(<ActivityPage workspace={workspace()} />, 'activity', 'Activity');
     },
     showChange(resolutionEnabled) {
       const shellState = S as unknown as { change: ChangeView['change']; session: ChangeView['session']; tab: string; runs: ChangeView['runs']; assuranceContext: ChangeView['context']; assuranceError: string | null; sources?: ChangeView['sources'] | null; sourceError?: string | null; resolutions?: ResolutionPage | null; resolutionError?: string | null };
@@ -102,7 +98,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
         sources: shellState.sources ?? [], sourceError: shellState.sourceError ?? null,
         resolution: resolutionEnabled ? { resolutions: shellState.resolutions ?? null, resolutionError: shellState.resolutionError ?? null, runs: shellState.runs as never, canTrack: canTrack() } : null
       };
-      host.show(<ChangePage view={view} />, 'changes', String(shellState.change.title));
+      shell(<ChangePage view={view} />, 'changes', String(shellState.change.title));
     },
     openNewApplication() {
       openForm(env => <NewApplicationDialog env={env} api={api} />);
@@ -151,7 +147,6 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
       if (!active() || dialog !== bridge.dialogGeneration()) return;
       dialogHost.show(<AssessmentCaseDialog record={record} close={bridge.closeDialog} resolution={bridge.resolutionEnabled?.() ? { canTrack: canTrack() } : null} />);
     },
-    unmountDialog: dialogHost.unmount,
-    unmount: host.unmount
+    unmountDialog: dialogHost.unmount
   };
 }

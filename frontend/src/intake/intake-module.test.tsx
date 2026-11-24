@@ -1,11 +1,10 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { deferred, fakeWorkspaceServices } from '../test-utils';
-import type { LegacyApi, LegacySession, LegacyShell, LegacyState } from '../legacy-bridge';
+import { deferred, fakeShell, fakeWorkspaceServices } from '../test-utils';
+import type { LegacyApi, LegacySession, LegacyState } from '../legacy-bridge';
 import { createIntakeUI, type IntakeUI } from './intake-module';
 
-/** Like the real shell, this replaces only #root, so the separate <dialog> survives page redraws. */
-const shell = vi.fn<LegacyShell>((content, active = '', label = '') => { document.querySelector('#root')!.innerHTML = `<nav data-active="${active}" data-label="${label}"></nav><main id="main">${content}</main>`; });
+const shell = fakeShell();
 const modal = () => document.querySelector<HTMLDialogElement>('#modal')!;
 
 const repositories = [{ id: 'repo-1', owner: 'acme', repo: 'approvals', applicationId: 'app-1' }];
@@ -52,13 +51,13 @@ beforeEach(() => {
   shell.mockClear();
   location.hash = '#/intake';
 });
-afterEach(() => { ui?.unmountDialog(); ui?.unmount(); });
+afterEach(() => { ui?.unmountDialog(); shell.reset(); });
 
 describe('GitHub intake', () => {
   it('shows the preview form to an Author with a configured repository', async () => {
     setup(async () => preview);
     await ui.show();
-    expect(shell).toHaveBeenCalledWith(expect.any(String), 'intake', 'GitHub intake');
+    expect(shell).toHaveBeenCalledWith(expect.anything(), 'intake', 'GitHub intake');
     expect(screen.getByRole('heading', { level: 1, name: 'Import a GitHub change' })).toBeTruthy();
     expect(screen.getByRole('option', { name: 'acme/approvals · Approvals' })).toBeTruthy();
   });
@@ -67,7 +66,7 @@ describe('GitHub intake', () => {
     setup(async () => preview, []);
     await ui.show();
     expect(screen.getByRole('heading', { name: 'No repository is configured' })).toBeTruthy();
-    ui.unmount();
+    shell.reset();
     state.session = { email: 'viewer@example.test', roles: ['VIEWER'] };
     setup(async () => preview);
     await ui.show();

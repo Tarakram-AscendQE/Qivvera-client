@@ -1,5 +1,4 @@
 import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
-import { createScreenHost } from '../screen-host';
 import { createVisits } from '../visits';
 import { createNoticeStore, RunView, SourceView, type DraftChange, type DraftContext, type DraftingView, type DraftRun, type NoticeStore } from './DraftingPages';
 
@@ -16,8 +15,6 @@ export interface DraftingUI {
   show(changeId: string, revisionId: string, options?: { runId?: string | null; offset?: number }): Promise<void>;
   /** Ends the current visit: late answers from it are ignored. Called when a route starts. */
   invalidate(): void;
-  /** Removes the screen; the legacy shell calls it before it replaces the page or ends a session. */
-  unmount(): void;
 }
 
 /**
@@ -25,13 +22,12 @@ export interface DraftingUI {
  * always data. Keeps the factory the legacy shell imports: createDraftingUI({S, api, shell, can, route, refresh}).
  */
 export function createDraftingUI({ S, api, shell, can, route, refresh }: DraftingBridge): DraftingUI {
-  const host = createScreenHost(shell);
   const visits = createVisits(S);
 
   function renderRun(run: unknown, view: DraftingView, message = ''): NoticeStore | null {
     if (!view.active()) return null;
     const notices = createNoticeStore();
-    host.show(<RunView run={run as DraftRun} view={view} message={message} notices={notices} actions={{ redraw: (next, text) => renderRun(next, view, text), refreshWorkspace: refresh }} />, 'changes', 'Review source drafts');
+    shell(<RunView run={run as DraftRun} view={view} message={message} notices={notices} actions={{ redraw: (next, text) => renderRun(next, view, text), refreshWorkspace: refresh }} />, 'changes', 'Review source drafts');
     return notices;
   }
 
@@ -56,8 +52,8 @@ export function createDraftingUI({ S, api, shell, can, route, refresh }: Draftin
       reload() { if (active()) void route(); }
     };
     if (run) renderRun(run, view);
-    else host.show(<SourceView view={view} />, 'changes', 'Source drafts');
+    else shell(<SourceView view={view} />, 'changes', 'Source drafts');
   }
 
-  return { show, invalidate: visits.invalidate, unmount: host.unmount };
+  return { show, invalidate: visits.invalidate };
 }

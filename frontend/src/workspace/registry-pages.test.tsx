@@ -13,20 +13,20 @@ function setup(roles: string[], workspace: Record<string, unknown>) {
 }
 
 beforeEach(() => { shell.mockClear(); });
-afterEach(() => ui?.unmount());
+afterEach(() => shell.reset());
 
 describe('application registry', () => {
   it('invites only an Author to register the first application', () => {
     setup(['VIEWER'], { applications: [], changes: [], activity: [] });
     ui.showApplications();
-    expect(shell).toHaveBeenCalledWith(expect.any(String), 'applications', 'Applications');
+    expect(shell).toHaveBeenCalledWith(expect.anything(), 'applications', 'Applications');
     expect((screen.getByRole('button', { name: 'Register application' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('shows an application with its own changes and an honest source status', () => {
     setup(['AUTHOR'], { applications: [app], changes, activity: [] });
     ui.showApplication('a1');
-    expect(shell).toHaveBeenCalledWith(expect.any(String), 'applications', 'VendorPay');
+    expect(shell).toHaveBeenCalledWith(expect.anything(), 'applications', 'VendorPay');
     expect(screen.getByText('Not supplied')).toBeTruthy();
     expect(screen.getByText('Reference only. Source access has not been verified.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Mine' })).toBeTruthy();

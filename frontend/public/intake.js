@@ -1,1 +1,0 @@
-export{o as createIntakeUI}from"./shared.js";

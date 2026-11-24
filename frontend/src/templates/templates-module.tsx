@@ -1,6 +1,5 @@
 import { downloadJson } from '../download';
 import type { LegacyApi, LegacyCan, LegacyRefresh, LegacyRoute, LegacyShell, LegacyState } from '../legacy-bridge';
-import { createScreenHost } from '../screen-host';
 import { createVisits, type ActiveCheck } from '../visits';
 import { DetailView, ListView, PlanView, SaveView, type Destination, type TemplateList, type TemplateReport } from './TemplatePages';
 import type { TemplateActions } from './shared';
@@ -21,8 +20,6 @@ export interface TemplatesUI {
   showPlan(changeId: string, revisionId: string, templateId: string, versionId: string): Promise<void>;
   /** Ends the current visit: late answers from it are ignored. Called when a route starts. */
   invalidate(): void;
-  /** Removes the screen; the legacy shell calls it before it replaces the page or ends a session. */
-  unmount(): void;
 }
 
 const id = (value: unknown): string => encodeURIComponent(String(value));
@@ -42,7 +39,6 @@ function inspect(value: unknown, templateId: string, versionId: string | null = 
  * decision. Keeps the factory the legacy shell imports: createTemplatesUI({S, api, shell, can, route, refresh}).
  */
 export function createTemplatesUI({ S, api, shell, can, route, refresh }: TemplatesBridge): TemplatesUI {
-  const host = createScreenHost(shell);
   const visits = createVisits(S);
   const founderReview = () => S.session?.reviewMode === 'founder-review';
 
@@ -86,7 +82,7 @@ export function createTemplatesUI({ S, api, shell, can, route, refresh }: Templa
     const [list, dest] = await Promise.all([readPage(), changeId && revisionId ? destination(changeId, revisionId) : Promise.resolve(null)]);
     if (!active()) return;
     if (!Array.isArray(list?.items)) throw new Error('The template list could not be read. Reload this view.');
-    host.show(<ListView list={list} dest={dest} includeArchived={includeArchived} changeId={changeId} revisionId={revisionId} canPolicy={can('POLICY_AUTHORITY')} founderReview={founderReview()} actions={actionsFor(active)} />, 'verification-templates', 'Verification templates');
+    shell(<ListView list={list} dest={dest} includeArchived={includeArchived} changeId={changeId} revisionId={revisionId} canPolicy={can('POLICY_AUTHORITY')} founderReview={founderReview()} actions={actionsFor(active)} />, 'verification-templates', 'Verification templates');
   }
 
   async function showDetail(templateId: string, versionId: string | null = null): Promise<void> {
@@ -97,7 +93,7 @@ export function createTemplatesUI({ S, api, shell, can, route, refresh }: Templa
     const download = () => {
       if (active()) downloadJson(`Qivvera-template-${report.family.id}-v${report.version.number}.json`, JSON.stringify(report, null, 2) + '\n');
     };
-    host.show(<DetailView report={report} templateId={templateId} canPolicy={can('POLICY_AUTHORITY')} founderReview={founderReview()} changes={S.workspace?.changes ?? []} api={api} actions={actionsFor(active)} download={download} />, 'verification-templates', 'Template version');
+    shell(<DetailView report={report} templateId={templateId} canPolicy={can('POLICY_AUTHORITY')} founderReview={founderReview()} changes={S.workspace?.changes ?? []} api={api} actions={actionsFor(active)} download={download} />, 'verification-templates', 'Template version');
   }
 
   async function showSave(changeId: string, revisionId: string, templateId: string | null = null): Promise<void> {
@@ -107,7 +103,7 @@ export function createTemplatesUI({ S, api, shell, can, route, refresh }: Templa
     const { change, context } = dest, plan = context.plan, snapshot = plan?.snapshot;
     const previous = previousValue && templateId ? inspect(previousValue, templateId) : null;
     const allowed = can('POLICY_AUTHORITY') && !!change.isCurrentRevision && !!context.isCurrent && !!plan?.current && snapshot?.schema === 'qivvera.assurance-plan/2' && (!previous || previous.family.state === 'ACTIVE');
-    host.show(<SaveView dest={dest} previous={previous} allowed={allowed} changeId={changeId} revisionId={revisionId} templateId={templateId} founderReview={founderReview()} api={api} actions={actionsFor(active)} />, 'verification-templates', 'Save template');
+    shell(<SaveView dest={dest} previous={previous} allowed={allowed} changeId={changeId} revisionId={revisionId} templateId={templateId} founderReview={founderReview()} api={api} actions={actionsFor(active)} />, 'verification-templates', 'Save template');
   }
 
   async function showPlan(changeId: string, revisionId: string, templateId: string, versionId: string): Promise<void> {
@@ -115,8 +111,8 @@ export function createTemplatesUI({ S, api, shell, can, route, refresh }: Templa
     const [dest, value] = await Promise.all([destination(changeId, revisionId), api(`/api/verification-templates/${id(templateId)}?version=${id(versionId)}`)]);
     if (!active()) return;
     const report = inspect(value, templateId, versionId);
-    host.show(<PlanView report={report} dest={dest} changeId={changeId} revisionId={revisionId} templateId={templateId} versionId={versionId} canPolicy={can('POLICY_AUTHORITY')} founderReview={founderReview()} api={api} actions={actionsFor(active)} />, 'changes', 'Review template mappings');
+    shell(<PlanView report={report} dest={dest} changeId={changeId} revisionId={revisionId} templateId={templateId} versionId={versionId} canPolicy={can('POLICY_AUTHORITY')} founderReview={founderReview()} api={api} actions={actionsFor(active)} />, 'changes', 'Review template mappings');
   }
 
-  return { showList, showDetail, showSave, showPlan, invalidate: visits.invalidate, unmount: host.unmount };
+  return { showList, showDetail, showSave, showPlan, invalidate: visits.invalidate };
 }
