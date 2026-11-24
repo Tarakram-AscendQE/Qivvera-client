@@ -5,13 +5,13 @@ import { createSupportReader } from '../../backend/server/support-info.mjs';
 import { createWorkspaceAuth } from '../../backend/server/workspace-auth.mjs';
 import { createExpressApp } from './app.js';
 import { loadAssets } from './common/assets.js';
-import type { Services, WorkflowRepository } from './common/services.js';
+import type { AssuranceRepository, IntakeRepository, ResolutionRepository, Services, WorkflowRepository } from './common/services.js';
 
 export interface ApplicationServerOptions {
   readonly repository: WorkflowRepository;
-  readonly assurance?: unknown;
-  readonly resolution?: unknown;
-  readonly intake?: unknown;
+  readonly assurance?: AssuranceRepository | null;
+  readonly resolution?: ResolutionRepository | null;
+  readonly intake?: IntakeRepository | null;
   /** Static accounts (local review and tests) when no account directory is configured. */
   readonly accounts?: unknown;
   readonly accountDirectory?: unknown;
@@ -37,7 +37,7 @@ export function createApplicationServer(options: ApplicationServerOptions): http
   if (repository.workflow !== true) throw new Error('WORKFLOW_REPOSITORY_REQUIRED');
   const defaultOwner = [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }];
   const services: Services = {
-    repository, publicOrigin, secureCookies, releaseRevision,
+    repository, assurance, resolution, intake, publicOrigin, secureCookies, releaseRevision,
     auth: createWorkspaceAuth({ directory: accountDirectory ?? undefined, accounts: accountDirectory ? undefined : accounts ?? defaultOwner, repository, secureCookies }),
     readSupport: createSupportReader({ repository, assurance, resolution, intake, accountDirectory, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies }),
     assets: loadAssets(webRoot)

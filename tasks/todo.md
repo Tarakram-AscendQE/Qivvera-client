@@ -19,7 +19,7 @@ everything else by the old router as fallback; parity harness identical; all che
 - [x] Task 2 (parity harness: 35 responses identical; 6 routing tests; 660 backend tests pass)
 
 ### Task 3: Workspace, applications, changes, obligations, revisions, support info
-- [ ] Task 3
+- [x] Task 3 (12 endpoints; parity 74 responses identical incl. review, revision and permission paths)
 
 ### Task 4: Assurance and resolution endpoints
 - [ ] Task 4
