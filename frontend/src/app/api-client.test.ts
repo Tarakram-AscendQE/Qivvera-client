@@ -37,6 +37,14 @@ describe('api client', () => {
     expect(ended).not.toHaveBeenCalled();
   });
 
+  it('does not report an ended session for a 401 before anyone signed in (startup)', async () => {
+    state.session = null;
+    fetchMock.mockResolvedValueOnce(json(401, {}));
+    const error = await failureOf(api()('/api/session'));
+    expect(ended).not.toHaveBeenCalled();
+    expect([error.status, error.sessionExpired]).toEqual([401, undefined]);
+  });
+
   it('ends a signed-in session on 401 and says so', async () => {
     fetchMock.mockResolvedValueOnce(json(401, {}));
     const error = await failureOf(api()('/api/workspace'));
