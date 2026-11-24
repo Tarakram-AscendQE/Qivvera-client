@@ -22,7 +22,7 @@ everything else by the old router as fallback; parity harness identical; all che
 - [x] Task 3 (12 endpoints; parity 74 responses identical incl. review, revision and permission paths)
 
 ### Task 4: Assurance and resolution endpoints
-- [ ] Task 4
+- [x] Task 4 (14 endpoints; parity 36 responses identical with a real assurance + resolution stack)
 
 ### Task 5: Drafting, impact, verification templates, GitHub intake
 - [ ] Task 5

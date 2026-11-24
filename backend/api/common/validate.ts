@@ -40,3 +40,17 @@ export function onlyKnownQueryKeys(search: URLSearchParams, allowed: readonly st
 
 /** A non-negative whole number written without a leading zero ("0", "20"). */
 export const wholeNumberText = z.string().regex(/^(0|[1-9][0-9]*)$/);
+
+/**
+ * `offset` and `limit` exactly as the API has always read them: absent → 0 and `defaultLimit`; any other
+ * text → Number(text). The repositories reject values that are not usable page numbers.
+ */
+export function readPage(search: URLSearchParams, defaultLimit: number) {
+  const { offset, limit } = readQuery(search, z.object({ offset: optionalText, limit: optionalText }));
+  return { offset: Number(offset ?? 0), limit: Number(limit ?? defaultLimit) };
+}
+
+/** The `revision` query value as the assurance endpoints read it: the text, or null when absent. */
+export function readRevision(search: URLSearchParams): string | null {
+  return readQuery(search, z.object({ revision: optionalText })).revision ?? null;
+}
