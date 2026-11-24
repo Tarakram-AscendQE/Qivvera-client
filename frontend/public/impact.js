@@ -1,1 +1,1 @@
-export{t as createImpactUI}from"./shared.js";
+export{n as createImpactUI}from"./shared.js";
