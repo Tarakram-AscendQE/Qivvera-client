@@ -1,6 +1,6 @@
 # Spec: express-api — V1
 
-Status: proposed (awaiting user review)
+Status: approved 2026-11-24 (with the decisions below)
 
 ## Objective
 
@@ -16,9 +16,10 @@ route that has not moved yet falls through to today's handler, untouched.
 Who benefits: the founder's demo keeps working; engineers get typed, validated routes for the many new
 features that are coming.
 
-**For the Friday 2026-11-27 demo (hosted Vercel):** the Express foundation and the first route group
-are in place, verified, and committed on `feat/express-backend`. Someone with deployment authority deploys
-it; this work never pushes or deploys.
+**Decided 2026-11-24:** all endpoints move to Express before the Friday 2026-11-27 demo (the user wants
+the transition finished today) and the hand-written router in `backend/server/app.mjs` is deleted. Groups
+are verified and committed one by one; the old router is a fallback only until the last group moves.
+Someone with deployment authority deploys; this work never pushes or deploys.
 
 ## Tech Stack
 
@@ -41,10 +42,12 @@ http.Server (same timeouts: request 15 s, headers 10 s, max header 16 KB)
   checks, the `body()` reader (415/413/400 behaviour), `InputError` and the error response shape.
 - Zod validates request bodies, path parameters and query strings of migrated routes at the boundary.
 
-**First route group (before the demo):** `POST/GET/DELETE /api/session`, `GET /api/workspace`,
-`GET /api/export`, `GET/POST /api/applications`, `GET /api/applications/:id`.
-Later groups (after the demo, see plan): changes/obligations/revisions, assurance, resolution, drafting,
-impact, templates, intake, support.
+**Route groups (all before the demo, in this order):** system + session; workspace, applications, changes,
+obligations, revisions, support info; assurance + resolution; drafting, impact, verification templates,
+GitHub intake. Then the old router is deleted.
+
+**Validation scope (decided):** Zod checks every path id and query string now. Request bodies keep today's
+validators (exact messages); Zod body schemas follow after the demo.
 
 ## Commands
 
@@ -60,13 +63,14 @@ Local server:     npm start
 ## Project Structure
 
 ```
-backend/http/            NEW. Express app and HTTP layer (TypeScript), compiled to dist/http/
-  app.ts                 createExpressApp(): middleware order, migrated routers, legacy fallback
-  middleware/            security headers + request id, origin, session, CSRF, error handler
-  validate.ts            small helper: apply a Zod schema to body/params/query, map failures to InputError
-  routes/                one file per route group (session.ts, workspace.ts, applications.ts, ...)
-backend/server/          existing code; app.mjs keeps createApplicationServer() and the fallback handler
-test/                    node:test suites (.mjs); new express-*.test.mjs files test the compiled dist/http
+backend/api/                 Express app and HTTP layer (TypeScript), compiled to dist/api/
+  app.ts                     creates the Express app: settings, security headers, request id, error handler
+  server.ts                  createApplicationServer(): Express app inside Node's http.Server (same timeouts)
+  routes.ts                  EVERY endpoint in one list: method, path, handler, access rules
+  endpoints/<area>/<name>.ts one exported endpoint function per file
+  common/                    reusable, documented helpers (validate, respond, errors, security, session,
+                             body, services)
+test/                        node:test suites (.mjs); new express-*.test.mjs files test the compiled dist/api
 ```
 
 `backend/server`, `backend/verifiers` and `backend/migrations` stay where they are (verifier digests
@@ -135,14 +139,8 @@ routes. Strict TypeScript, no `any`, no `@ts-ignore`. Comments explain why, not 
 - Migrating every route group before Friday — only the first group is needed for the demo.
 - Removing SQLite — separate module (`postgres-only`).
 
-## Open Questions
+## Decisions (formerly open questions)
 
-1. **Zod error messages.** Today invalid input gets specific codes and messages (for example
-   `INVALID_FIELD`, "Application name must contain 1–100 readable characters.", from
-   `backend/server/workflow-input.mjs:7`). Recommended: Zod failures are mapped
-   to exactly the same codes and messages, so clients see no change. Alternative: accept new, more
-   detailed Zod messages (the UI shows server messages, so users would see different text). Which?
-2. **First route group.** Is session + workspace + export + applications the right demo-safe first
-   group, or should the demo exercise a different area?
-3. **Order after the demo.** Confirm: express-api foundation first (Friday), then postgres-only, then the
-   remaining route groups and new features.
+1. Zod failures and existing validators return exactly today's codes and messages.
+2. All route groups move before Friday (see above); first group is system + session.
+3. Order: express-api today, then postgres-only today; new features start tomorrow (2026-11-25).

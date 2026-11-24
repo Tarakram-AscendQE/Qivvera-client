@@ -1,6 +1,6 @@
 # Spec: postgres-only — V1
 
-Status: proposed (awaiting user review)
+Status: approved 2026-11-24
 
 ## Objective
 
@@ -84,12 +84,9 @@ Browser suites:          .venv-browser/bin/python3 test/run-browser-suites.py   
 - Kysely/Drizzle repository rewrite; per-record locks and worker rework; multitenancy (capability map).
 - PgBouncer / connection pooling changes and managed-database settings (hosting work).
 
-## Open Questions
+## Decisions (formerly open questions)
 
-1. **Old registry store** (`backend/server/repository.mjs`, SQLite-only, unused by the server): delete
-   it with `test/registry.test.mjs`, `test/registry-http.test.mjs` and the parts of `test/workflow.test.mjs`
-   that use it (recommended — it is dead code for the product), or port those tests to PostgreSQL?
-2. **`npm run dev`:** should it start the Docker database automatically (recommended), or should the
-   developer start it separately and set `DATABASE_URL`?
-3. **Timing:** confirm postgres-only starts right after the Friday express-api foundation and must be
-   finished before new features begin.
+1. Delete the old registry store (`backend/server/repository.mjs`) with `test/registry.test.mjs`,
+   `test/registry-http.test.mjs` and the SQLite file-upgrade test in `test/workflow.test.mjs`.
+2. `npm run dev` starts the Docker database automatically.
+3. Timing: right after express-api, finished today (2026-11-24), before new features start.
