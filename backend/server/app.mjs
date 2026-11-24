@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { createAuth } from './auth.mjs';
 import { createWorkspaceAuth } from './workspace-auth.mjs';
 import { fields, InputError } from './errors.mjs';
 import { PRODUCT_VERSION } from './release.mjs';
@@ -56,12 +55,11 @@ export function createApplicationServer({ repository, assurance = null, resoluti
         throw new Error('PUBLIC_ORIGIN must be an exact origin.');
     if (secureCookies && !publicOrigin.startsWith('https://'))
         throw new Error('HTTPS_REQUIRED');
-    const workflow = repository.workflow === true;
-    // Legacy adapter retained only for baseline local regression tests. Hosted startup always
-    // creates the workflow repository and cannot fall back to this adapter.
-    const auth = workflow ? createWorkspaceAuth({ directory: accountDirectory ?? undefined, accounts: accountDirectory ? undefined : accounts ?? [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], repository, secureCookies }) : createAuth({ ownerEmail, passwordHash, secureCookies });
+    if (repository.workflow !== true)
+        throw new Error('WORKFLOW_REPOSITORY_REQUIRED');
+    const auth = createWorkspaceAuth({ directory: accountDirectory ?? undefined, accounts: accountDirectory ? undefined : accounts ?? [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], repository, secureCookies });
     const readSupport = createSupportReader({ repository, assurance, resolution, intake, accountDirectory, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies });
-    const publicSession = s => ({ email: s.email, roles: s.roles ?? ['AUTHOR'], csrfToken: s.csrfToken, reviewMode: workflow ? repository.reviewMode : 'not-available' });
+    const publicSession = s => ({ email: s.email, roles: s.roles ?? ['AUTHOR'], csrfToken: s.csrfToken, reviewMode: repository.reviewMode });
     const decorate = async change => {
         if (!change || !assurance) return change;
         let runs;
@@ -150,8 +148,8 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 res.setHeader('Set-Cookie', await auth.logout(req));
                 return json(res, 200, { signedOut: true });
             }
-            const actor = workflow ? session : session.email;
-            if (workflow && assurance?.templates) {
+            const actor = session;
+            if (assurance?.templates) {
                 const templatePath = path.match(/^\/api\/verification-templates(?:\/([a-f0-9-]{36})(\/versions|\/archive|\/export)?)?$/);
                 if (templatePath) {
                     const templates = assurance.templates, [, templateId, action] = templatePath;
@@ -181,7 +179,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                     if (req.method === 'POST' && action === '/archive') return json(res, 200, await templates.archive(templateId, await body(req, 32768), session));
                 }
             }
-            if (workflow && repository.impact) {
+            if (repository.impact) {
                 const impactPath = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/impact(\/export)?$/);
                 if (impactPath && req.method === 'GET') {
                     const entries = [...url.searchParams.entries()];
@@ -192,7 +190,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                     return json(res, 200, report);
                 }
             }
-            if (workflow && repository.drafting) {
+            if (repository.drafting) {
                 const drafting = repository.drafting;
                 let d = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/drafting$/);
                 if (d && req.method === 'GET') {
@@ -211,7 +209,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                     return json(res, 200, run);
                 }
             }
-            if (workflow && assurance) {
+            if (assurance) {
                 let a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assurance-context$/);
                 if (req.method === 'GET' && a) return json(res,200,await assurance.getContext(a[1],url.searchParams.get('revision')));
                 a = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/assurance-plan$/);
@@ -233,7 +231,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 // No worker claim, completion, evidence-upload or arbitrary URL execution endpoint.
             }
 
-            if (workflow && intake) {
+            if (intake) {
                 if(req.method==='GET'&&path==='/api/source-repositories')return json(res,200,await intake.listRepositories());
                 if(req.method==='POST'&&path==='/api/source-previews')return json(res,201,await intake.preview(await body(req),session));
                 if(req.method==='POST'&&path==='/api/source-imports'){const result=await intake.importPreview(await body(req),session);return json(res,result.replayed?200:201,result);}
@@ -241,7 +239,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
                 if(req.method==='GET'&&sourcePath)return json(res,200,await intake.list(sourcePath[1]));
             }
 
-            if (workflow && resolution) {
+            if (resolution) {
                 const page = () => ({offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??50)});
                 if (req.method === 'GET' && path === '/api/resolution-assignees') return json(res,200,await resolution.listAssignees());
                 if (req.method === 'GET' && path === '/api/resolutions') return json(res,200,await resolution.list(page()));
@@ -259,7 +257,7 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             }
 
             if (req.method === 'GET' && path === '/api/workspace')
-                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: workflow, changeRevisions: workflow, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
+                return json(res, 200, { applications: await repository.listApplications(), changes: await Promise.all((await repository.listChanges()).map(decorate)), activity: await repository.listActivity(), capabilities: { registry: true, authorityDecisions: true, changeRevisions: true, verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled, assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates }, storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available' });
             if (req.method === 'GET' && path === '/api/export') {
                 res.setHeader('Content-Disposition', 'attachment; filename="qivvera-workspace.json"');
                 return json(res, 200, await repository.exportWorkspace());
@@ -290,17 +288,15 @@ export function createApplicationServer({ repository, assurance = null, resoluti
             m = path.match(/^\/api\/obligations\/([a-f0-9-]{36})$/);
             if (req.method === 'PATCH' && m)
                 return json(res, 200, await repository.editObligation(m[1], await body(req), actor));
-            if (workflow) {
-                m = path.match(/^\/api\/obligations\/([a-f0-9-]{36})\/review$/);
-                if (req.method === 'POST' && m)
-                    return json(res, 200, await repository.transitionObligation(m[1], await body(req), actor));
-                m = path.match(/^\/api\/obligations\/([a-f0-9-]{36})\/history$/);
-                if (req.method === 'GET' && m)
-                    return json(res, 200, await repository.getObligationHistory(m[1]));
-                m = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/revisions$/);
-                if (req.method === 'POST' && m)
-                    return json(res, 201, await repository.createRevision(m[1], await body(req), actor));
-            }
+            m = path.match(/^\/api\/obligations\/([a-f0-9-]{36})\/review$/);
+            if (req.method === 'POST' && m)
+                return json(res, 200, await repository.transitionObligation(m[1], await body(req), actor));
+            m = path.match(/^\/api\/obligations\/([a-f0-9-]{36})\/history$/);
+            if (req.method === 'GET' && m)
+                return json(res, 200, await repository.getObligationHistory(m[1]));
+            m = path.match(/^\/api\/changes\/([a-f0-9-]{36})\/revisions$/);
+            if (req.method === 'POST' && m)
+                return json(res, 201, await repository.createRevision(m[1], await body(req), actor));
             return json(res, 404, { error: 'NOT_FOUND', message: 'This capability is not available in this release.', requestId });
         }
         catch (e) {

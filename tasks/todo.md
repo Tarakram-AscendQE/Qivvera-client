@@ -9,7 +9,7 @@ Plan: [tasks/plan.md](plan.md). Each task: implement → `npm run check` → par
 **Acceptance:** `backend/server/repository.mjs`, `test/registry.test.mjs`, `test/registry-http.test.mjs` and
 the SQLite file-upgrade test in `test/workflow.test.mjs` are gone; the server always runs in workflow mode
 (the non-workflow branch in app.mjs is removed); all remaining tests pass.
-- [ ] Task 1
+- [x] Task 1 (40 tests removed: 39 registry + 1 SQLite file-upgrade test; 654 remain, 0 failures)
 
 ### Task 2: Express foundation + public and session routes
 **Acceptance:** express/zod/@types/express installed; `backend/api/` with `app.ts`, `routes.ts`,
