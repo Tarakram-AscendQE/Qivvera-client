@@ -1,6 +1,7 @@
 import { ChangePage } from '../change/ChangePage';
 import type { ChangeView } from '../change/types';
 import type { ReactNode } from 'react';
+import { AssessmentCaseDialog, MultiPlanDialog, RequestAssessmentDialog, SinglePlanDialog, type AssessmentCase, type PlanCheck, type PlanContext } from '../dialogs/AssuranceDialogs';
 import { dialogHost } from '../dialogs/dialog-host';
 import type { DialogEnvironment } from '../dialogs/FormDialog';
 import { HistoryDialog, NewApplicationDialog, NewChangeDialog, NewRevisionDialog, ObligationDialog, ReviewDialog, type HistoryEvent, type ReviewAction } from '../dialogs/RecordDialogs';
@@ -26,6 +27,8 @@ export interface WorkspaceBridge {
   /** Starts a new dialog generation (a dialog that loads first claims its place before reading). */
   readonly nextDialog: () => number;
   readonly dialogGeneration: () => number;
+  /** Until resolution moves to React: its buttons for an assessment case, or null when resolution is off. */
+  readonly resolutionButtons?: (record: unknown) => string | null;
 }
 
 export interface WorkspaceUI {
@@ -44,6 +47,10 @@ export interface WorkspaceUI {
   openObligation(id?: string): void;
   openReview(id: string, action: ReviewAction): void;
   showObligationHistory(id: string): Promise<void>;
+  /** Approve or revise the verification plan (one check, or the two-check form when checks are listed). */
+  openPlan(): void;
+  openRequestAssessment(): void;
+  showAssessment(id: string): Promise<void>;
   /** Removes a React dialog; the legacy closeDialog() calls it before it empties the dialog element. */
   unmountDialog(): void;
   /** Removes the screen; the legacy shell calls it before it replaces the page or ends a session. */
@@ -127,6 +134,26 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
       const events = await api(`/api/obligations/${obligation(id)?.id}/history`) as HistoryEvent[];
       if (!active() || dialog !== bridge.dialogGeneration()) return;
       dialogHost.show(<HistoryDialog events={events} close={bridge.closeDialog} />);
+    },
+    openPlan() {
+      const change = state.change, context = (S as unknown as { assuranceContext: PlanContext }).assuranceContext;
+      const accepted = change.obligations.filter(candidate => candidate.reviewStatus === 'ACCEPTED');
+      if (!accepted.length) { bridge.toast('Accept an obligation before mapping a verifier.'); return; }
+      const checks = context.checks;
+      if (checks?.length) openForm(env => <MultiPlanDialog env={env} api={api} context={{ ...context, checks: checks as readonly PlanCheck[] }} accepted={accepted} />);
+      else openForm(env => <SinglePlanDialog env={env} api={api} change={change} context={context} accepted={accepted} />);
+    },
+    openRequestAssessment() {
+      const active = bridge.viewContext(), change = state.change, context = (S as unknown as { assuranceContext: PlanContext | null }).assuranceContext;
+      const requestKey = crypto.randomUUID();
+      if (!context?.plan?.current) return;
+      openForm(env => <RequestAssessmentDialog env={env} api={api} change={change} context={context} requestKey={requestKey} openAssurance={() => { if (active()) state.tab = 'assurance'; }} />, active);
+    },
+    async showAssessment(id) {
+      const active = bridge.viewContext(), dialog = bridge.nextDialog();
+      const record = await api(`/api/assessments/${id}`) as AssessmentCase;
+      if (!active() || dialog !== bridge.dialogGeneration()) return;
+      dialogHost.show(<AssessmentCaseDialog record={record} close={bridge.closeDialog} resolutionButtonsHtml={bridge.resolutionButtons ? bridge.resolutionButtons(record) : null} />);
     },
     unmountDialog: dialogHost.unmount,
     unmount: host.unmount

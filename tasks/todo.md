@@ -52,7 +52,7 @@ same own-contribution rules; review-history dialog matches and ignores late answ
 **Acceptance:** plan dialogs (one/two checks), request dialog (one key per request), cancel, and the
 assessment-case dialog match; polling behaviour unchanged.
 **Size:** M. **Depends on:** Task 4.
-- [ ] Task 6
+- [x] Task 6 (assurance dialogs + assessment case; parity 8 cases)
 
 ### Task 7: Resolution (inbox, item, change tab, actions)
 **Acceptance:** inbox, item view, change-page panel, source buttons and every resolution action match,
