@@ -6,6 +6,11 @@ import { migratePrAssurance } from '../server/pr-assurance/migration.mjs';
 import { migrateResolution } from '../server/resolution/migration.mjs';
 import { migrateAssurance } from '../server/assurance/migration.mjs';
 import { openDatabase, migrateDatabase } from '../server/workflow-store.mjs';
+import { setDefaultAutoSelectFamilyAttemptTimeout } from 'node:net';
+
+// As in scripts/dev.mjs: a remote database (for example Neon in the US) can take longer than Node's
+// default 250 ms per address to accept a connection, so every address fails with ETIMEDOUT.
+setDefaultAutoSelectFamilyAttemptTimeout(1000);
 
 try { process.loadEnvFile('.env'); } catch {}
 
