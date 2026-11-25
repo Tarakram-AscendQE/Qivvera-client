@@ -30,11 +30,23 @@ function ObligationActions({ obligation, view, own }: { obligation: ChangeObliga
   return (
     <div className="actions obligation-actions">
       {canEdit && status !== 'IN_REVIEW' ? <button className="button" data-action="edit-obligation" data-id={obligation.id}>{status === 'ACCEPTED' ? 'Revise requirement' : 'Edit draft'}</button> : null}
-      {canEdit && (status === 'DRAFT' || status === 'CLARIFICATION_REQUIRED') ? <button className="button primary" data-action="review-submit" data-id={obligation.id}>Request review</button> : null}
+      {canEdit && !obligation.imported && (status === 'DRAFT' || status === 'CLARIFICATION_REQUIRED') ? <button className="button primary" data-action="review-submit" data-id={obligation.id}>Request review</button> : null}
       {canEdit && status === 'IN_REVIEW' && own ? <button className="button" data-action="review-withdraw" data-id={obligation.id}>Withdraw request</button> : null}
       {status === 'IN_REVIEW' && current ? (reviewer ? <button className="button primary" data-action="review-decision" data-id={obligation.id}>Record decision</button> : <span className="small muted">{own ? 'Needs a different authorized reviewer.' : 'Awaiting a policy authority.'}</span>) : null}
     </div>
   );
+}
+
+/**
+ * An obligation that existed before the review workflow has no recorded author, so the server refuses
+ * a review request (IMPORTED_REVIEW_REQUIRED) until an author edits and saves it. Explain that instead
+ * of offering a button that can only fail.
+ */
+function ImportedNotice({ canEdit }: { canEdit: boolean }) {
+  const why = 'This obligation was added before the review workflow, so it has no recorded author. ';
+  return <div className="notice warning"><strong>No author yet</strong><span>{why + (canEdit
+    ? 'Click Edit draft, check the wording, fill in Source reference and Source version, then click Save new draft. After that you can request review.'
+    : 'An author must check and save it before it can be reviewed.')}</span></div>;
 }
 
 function ObligationCard({ obligation, view }: { obligation: ChangeObligation; view: ChangeView }) {
@@ -46,7 +58,9 @@ function ObligationCard({ obligation, view }: { obligation: ChangeObligation; vi
       <div className="obligation-top"><span className="field-label">{obligationLabel(obligation.id)} · Version {text(obligation.version)}</span><button className="link-button" data-action="obligation-history" data-id={obligation.id}>Review history</button></div><h3>{text(obligation.statement)}</h3>
       <div className="chip-row"><Badge text={reviewLabel(status)} kind={kind} /><Badge text={obligation.authority} /><Badge text={spaced(obligation.state)} kind={resultKind(obligation.state)} /></div>
       <div className="obligation-foot"><span><strong>Source:</strong> {text(obligation.sourceReference || 'Not supplied')}<br /><strong>Source version:</strong> {text(obligation.sourceVersion || 'Not supplied')} · {text(obligation.criticality)}</span><span>{obligation.evidenceCount ?? 0} evidence {obligation.evidenceCount === 1 ? 'item' : 'items'}</span></div>
-      <p className="small muted">{status === 'ACCEPTED' ? 'Accepted for this revision by a recorded human decision. This does not establish that the software satisfies it.' : obligation.imported ? 'Imported candidate: review and save under a named identity before submission.' : 'Proposed by ' + text(obligation.proposedBy)}</p>
+      {status !== 'ACCEPTED' && obligation.imported
+        ? <ImportedNotice canEdit={view.roles.author && !!view.change.isCurrentRevision} />
+        : <p className="small muted">{status === 'ACCEPTED' ? 'Accepted for this revision by a recorded human decision. This does not establish that the software satisfies it.' : 'Proposed by ' + text(obligation.proposedBy)}</p>}
       <ObligationActions obligation={obligation} view={view} own={own} />
     </article>
   );
