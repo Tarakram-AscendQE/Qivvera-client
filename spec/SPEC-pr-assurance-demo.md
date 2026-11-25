@@ -139,19 +139,19 @@ npm test                                           # build + frontend + backend 
 npm run test:frontend                              # Vitest only
 npm run test:postgres                              # PostgreSQL suites (the new one is added to this list)
 PATH=<node22>:<.venv-browser>/bin:$PATH npm run test:browser   # native browser suites (Node 22 + .venv-browser)
-npm run migrate                                    # deployer only: applies migration 009 on Neon
+npm run migrate                                    # deployer only: also applies the PR assurance add-on tables on Neon
 ```
 
 ## Project Structure (new and changed files)
 
 ```
-backend/migrations/009_pr_assurance.sql            # additive: pulls, runs, run progress (schema 9)
-backend/server/release.mjs                         # MAX_SUPPORTED_SCHEMA_VERSION 8 → 9
+backend/scripts/migrate.mjs                        # also applies the add-on tables (own ledger; workspace schema stays 8)
 backend/server/pr-assurance/
   config.mjs                                       # env: enabled flag + token; fixed scenario
   github.mjs                                       # fixed-path GitHub calls: read PR, dispatch, find run, read check run
   repository.mjs                                   # PostgreSQL: import PR, create run, record progress, store evidence
-  migration.mjs                                    # applies 009 (same pattern as accounts/migration.mjs)
+  schema.sql                                       # add-on tables: pulls, runs, run events (+ history triggers)
+  migration.mjs                                    # applies schema.sql, recorded in its own pr_assurance_migrations ledger
 backend/core/pr-assurance.ts                       # pure: evidence check, obligation states, rules, disposition, delta
 backend/api/endpoints/pr-assurance/*.ts            # one endpoint per file, listed in backend/api/routes.ts
 fixtures/pr-assurance/vendorpay-policies-e408884.json   # rules snapshot (static)
@@ -250,6 +250,8 @@ compare the evidence with the recorded results before building the Qivvera side.
 - Other applications, other PRs, configurable scenarios.
 - Exceptions and READY WITH EXCEPTIONS.
 - AI-generated checks (requested → generated → proven → approved).
+- Bringing the add-on tables into the workspace schema and the operations backup, restore and permission-audit
+  tools (they cover the schema-8 contract). Until then demo runs are reproducible by running them again.
 - Entering the GitHub token in the Qivvera UI, stored encrypted (AES-256-GCM with a key from a Vercel
   variable, as prcheck-platform's onboarding did). The environment variable stands in for now.
 
@@ -260,6 +262,7 @@ compare the evidence with the recorded results before building the Qivvera side.
 | Team's tests in the same run | Yes: after the checks, shown as context, never part of the verdict |
 | Who may evaluate | Author and Policy Authority; Viewers watch |
 | Migration on Neon | The user runs `npm run migrate` after deploying |
+| Database version | The add-on keeps its own version ledger (`pr_assurance_migrations`); the workspace schema stays 8 and no existing module changes |
 | GitHub token | Environment variable for now; UI entry deferred |
 | Where the workflow lives | prcheck-verifiers (two new files; nothing existing changes) |
 | Spike runs (before the Qivvera screens exist) | Started by me with the GitHub login on this machine |

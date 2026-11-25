@@ -119,3 +119,36 @@ test('comparing PR #7 with PR #6: FIN-001 fixed, FIN-002 still broken', () => {
   assert.deepEqual(compareAssessments(previous, current), { fixed: ['FIN-001'], stillBroken: ['FIN-002'], newlyBroken: [] });
   assert.equal(compareAssessments(null, current), null);
 });
+
+// ---- Reading the check run the workflow writes (Task 5) ---------------------------------------
+const { parseAssessmentOutput } = await import('../dist/core/pr-assurance.js');
+/** Real texts written by prcheck-verifiers' check-run reporter in the local dry run of PR #6. */
+const doneText = readFileSync(new URL('../fixtures/pr-assurance/check-run-done-af51c26.txt', import.meta.url), 'utf8');
+const progressText = readFileSync(new URL('../fixtures/pr-assurance/check-run-progress-af51c26.txt', import.meta.url), 'utf8');
+const dryRun = { correlationId: 'spike-local-0001', appSha: 'af51c26b0b9f94894cccfaa5b0fb893221952c65' };
+
+test('a finished check run gives evidence that assesses to PR #6\'s result, with the team totals', () => {
+  const parsed = parseAssessmentOutput(doneText, dryRun);
+  assert.equal(parsed.ok, true);
+  assert.deepEqual([parsed.output.stage, parsed.output.checks.length, parsed.output.teamTests.passed, parsed.output.teamTests.total], ['done', 14, 25, 25]);
+  const result = assess(parsed.output.evidence, 'af51c26', parsed.output.evidenceSha256);
+  assert.equal(result.summary, 'NOT READY · 2 rules broken · 11 of 14 obligations supported');
+});
+
+test('a check run still in progress gives the stage and the checks so far, but no evidence', () => {
+  const parsed = parseAssessmentOutput(progressText, dryRun);
+  assert.deepEqual([parsed.output.stage, parsed.output.checks.length, parsed.output.checksTotal, parsed.output.evidence], ['running-checks', 5, 14, null]);
+});
+
+test('a check run for another run or another commit is refused', () => {
+  assert.equal(parseAssessmentOutput(doneText, { ...dryRun, correlationId: 'another-run-0001' }).reason, 'OUTPUT_FOR_ANOTHER_RUN');
+  assert.equal(parseAssessmentOutput(doneText, { ...dryRun, appSha: 'ae50debcd01bcc47fc137855cbc21b0e72107f1e' }).reason, 'OUTPUT_FOR_ANOTHER_RUN');
+});
+
+test('a malformed check-run text, or a finished one without evidence, is refused', () => {
+  assert.equal(parseAssessmentOutput('{', dryRun).reason, 'OUTPUT_MALFORMED');
+  const done = JSON.parse(doneText);
+  delete done.evidence;
+  assert.equal(parseAssessmentOutput(JSON.stringify(done), dryRun).reason, 'OUTPUT_MALFORMED');
+  assert.equal(parseAssessmentOutput(JSON.stringify({ ...JSON.parse(progressText), stage: 'deploying' }), dryRun).reason, 'OUTPUT_MALFORMED');
+});

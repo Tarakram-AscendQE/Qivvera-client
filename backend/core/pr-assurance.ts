@@ -250,6 +250,73 @@ export function assessEvidence(input: AssessInput): Assessment | Refusal {
   };
 }
 
+// ---- The check run written by prcheck-verifiers' check-run reporter ---------------------------
+
+export type AssessmentStage = "preparing" | "starting-app" | "running-checks" | "running-team-tests" | "done" | "failed";
+const STAGES = new Set<string>(["preparing", "starting-app", "running-checks", "running-team-tests", "done", "failed"]);
+const OUTPUT_KIND = "qivvera.pr-assessment/v1";
+
+export interface TeamTests {
+  readonly total: number;
+  readonly passed: number;
+  readonly failed: number;
+  readonly flaky: number;
+  readonly skipped: number;
+}
+
+export interface AssessmentOutput {
+  readonly stage: AssessmentStage;
+  readonly message: string;
+  readonly checksTotal: number | null;
+  readonly checks: readonly { readonly check: string; readonly outcome: string; readonly durationMs: number }[];
+  readonly teamTests: TeamTests | null;
+  /** Present only once the stage is "done": the evidence.json text and its hex SHA-256. */
+  readonly evidence: string | null;
+  readonly evidenceSha256: string | null;
+}
+
+const count = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+const shortText = (value: unknown, max: number): value is string => typeof value === "string" && value.length <= max;
+
+function teamTestsOf(value: unknown): TeamTests | null | undefined {
+  if (value === null) return null;
+  if (!isObject(value)) return undefined;
+  const { total, passed, failed, flaky, skipped } = value;
+  return count(total) && count(passed) && count(failed) && count(flaky) && count(skipped) && passed + failed + flaky + skipped === total
+    ? { total, passed, failed, flaky, skipped } : undefined;
+}
+
+/** Reads one check-run text, refusing anything malformed or written for another run or commit. */
+export function parseAssessmentOutput(text: string, expected: { readonly correlationId: string; readonly appSha: string }):
+  { readonly ok: true; readonly output: AssessmentOutput } | { readonly ok: false; readonly reason: "OUTPUT_MALFORMED" | "OUTPUT_FOR_ANOTHER_RUN" } {
+  const malformed = { ok: false, reason: "OUTPUT_MALFORMED" } as const;
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return malformed;
+  }
+  if (!isObject(value) || value["kind"] !== OUTPUT_KIND) return malformed;
+  if (value["correlationId"] !== expected.correlationId || value["appSha"] !== expected.appSha) return { ok: false, reason: "OUTPUT_FOR_ANOTHER_RUN" };
+  const { stage, message, checksTotal, checks, evidence, evidenceSha256 } = value;
+  const teamTests = teamTestsOf(value["teamTests"]);
+  const checksValid = Array.isArray(checks) && checks.length <= 100 &&
+    checks.every(c => isObject(c) && shortText(c["check"], 200) && shortText(c["outcome"], 40) && typeof c["durationMs"] === "number");
+  if (typeof stage !== "string" || !STAGES.has(stage) || !shortText(message, 500) || !(checksTotal === null || count(checksTotal)) || !checksValid || teamTests === undefined) {
+    return malformed;
+  }
+  const done = stage === "done";
+  if (done && (typeof evidence !== "string" || typeof evidenceSha256 !== "string" || !/^[a-f0-9]{64}$/.test(evidenceSha256))) return malformed;
+  return {
+    ok: true,
+    output: {
+      stage: stage as AssessmentStage, message, checksTotal, teamTests,
+      checks: (checks as Record<string, unknown>[]).map(c => ({ check: c["check"] as string, outcome: c["outcome"] as string, durationMs: c["durationMs"] as number })),
+      evidence: done ? evidence as string : null, evidenceSha256: done ? evidenceSha256 as string : null,
+    },
+  };
+}
+
 /** Which rules a PR fixed, kept broken or newly broke compared with the previous PR; null without one. */
 export function compareAssessments(previous: Assessment | null, current: Assessment): { fixed: string[]; stillBroken: string[]; newlyBroken: string[] } | null {
   if (!previous) return null;

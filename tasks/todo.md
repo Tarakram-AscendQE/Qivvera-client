@@ -68,18 +68,19 @@ disposition (payments-critical rules, first match wins), report summary, compari
   same 6 policies); 15 unit tests pass. `npm run check`: 137 frontend + 760/764 backend tests pass; the 4 failures
   are the known recovery tests that need postgresql-client-17 (`RECOVERY_POSTGRES_CLIENT_UNAVAILABLE`).
 
-### Task 3: Migration 009 (schema 9)
+### Task 3: Add-on tables (own version ledger)
 **Description:** Additive tables for imported pulls, runs (request key, correlation id, GitHub run id,
 status, timestamps, evidence text + SHA-256, disposition) and run progress entries.
 
 **Acceptance:**
-- [ ] `npm run migrate` applies it after migration 008; running it twice changes nothing.
-- [ ] `MAX_SUPPORTED_SCHEMA_VERSION` is 9; earlier migrations are byte-identical.
+- [x] `npm run migrate` applies it after the workspace migrations; running it twice changes nothing.
+- [x] The workspace schema stays 8 and no existing module changes (user decision 2026-11-25: separate ledger
+  `pr_assurance_migrations` instead of schema 9). Finished runs never change, runs are never deleted, events are append-only.
 
 **Verify:** `npm run test:postgres` (migration test in the new PostgreSQL suite).
 **Dependencies:** none.
-**Files:** `backend/migrations/009_pr_assurance.sql`, `backend/server/pr-assurance/migration.mjs`,
-`backend/scripts/migrate.mjs`, `backend/server/release.mjs`.
+**Files:** `backend/server/pr-assurance/schema.sql`, `backend/server/pr-assurance/migration.mjs`,
+`backend/scripts/migrate.mjs`, `test/pr-assurance-postgres.test.mjs`, `package.json`.
 **Size:** S.
 
 ### Task 4: PR assurance repository
@@ -87,9 +88,10 @@ status, timestamps, evidence text + SHA-256, disposition) and run progress entri
 per request key), append progress, finalize a run exactly once, list history.
 
 **Acceptance:**
-- [ ] Same request key → the same run, no second dispatch.
-- [ ] Two parallel finalize calls store the evidence once (row lock in one transaction).
-- [ ] History keeps every run, newest first; a failed run has no disposition.
+- [x] Same request key → the same run, no second dispatch (also when two requests arrive in parallel).
+- [x] Two parallel finalize calls store the evidence once (row lock in one transaction).
+- [x] History keeps every run, newest first; a failed run has no disposition.
+- [x] The run's commit always comes from the imported PR; a second run while one is active is refused (409).
 
 **Verify:** `npm run test:postgres` (new `test/pr-assurance-postgres.test.mjs`, added to the script list).
 **Dependencies:** Task 3.
@@ -102,9 +104,12 @@ PR numbers, workflow file). GitHub calls with fixed paths only: read a PR (reusi
 validation), start the workflow, find the run by correlation id, read the run and its check run.
 
 **Acceptance:**
-- [ ] Only `https://api.github.com` with fixed paths; redirects are errors; 8 s timeouts; size limits.
-- [ ] 401/403/404/429/5xx give clear errors that name the missing permission where possible.
-- [ ] The token never appears in an error, log or return value.
+- [x] Only `https://api.github.com` with fixed paths; redirects are errors; 6 s timeouts; size limits.
+- [x] 401/403/404/429/5xx give clear errors that name the missing permission where possible.
+- [x] The token never appears in an error, log or return value.
+- [x] Pinned repository ids; only check runs written by GitHub Actions are read; an unanswered start request is
+  GITHUB_DISPATCH_UNCERTAIN (never repeated). Reading the check-run text is in the core (`parseAssessmentOutput`),
+  tested on the real texts from the dry run.
 
 **Verify:** `npm test` (new `test/pr-assurance-github.test.mjs` with a stub `fetch`).
 **Dependencies:** none.

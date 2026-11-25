@@ -53,7 +53,7 @@ tests, or the browser suite.
 ```
 Task 1 workflow (prcheck-verifiers) ─────────────────────────────┐ real evidence + check-run format
 Task 2 snapshot + pure logic ──┐                                  │
-Task 3 migration 009 ──► Task 4 repository ──┐                    │
+Task 3 add-on tables  ──► Task 4 repository ──┐                    │
 Task 5 GitHub client + config ───────────────┼──► Task 6 scenario + import (API + UI)
                                              │        └──► Checkpoint B (Vercel preview)
                                              └──► Task 7 evaluate API ──► Task 8 evaluate UI + progress
@@ -70,10 +70,10 @@ Task 5 GitHub client + config ───────────────┼�
 - [ ] All three runs match the expected results; time per run recorded; go/no-go for the Qivvera side
 
 ### Phase 1: Foundation
-- [ ] Task 2: Rules snapshot + pure decision logic (tested with the recorded evidence)
-- [ ] Task 3: Migration 009 (schema 9) wired into `npm run migrate`
-- [ ] Task 4: PR assurance repository (pulls, runs, progress, evidence) + PostgreSQL tests
-- [ ] Task 5: Fixed-path GitHub client + configuration (stub-fetch tests)
+- [x] Task 2: Rules snapshot + pure decision logic (tested with the recorded evidence)
+- [x] Task 3: Add-on tables with their own version ledger, wired into `npm run migrate` (user chose this over schema 9)
+- [x] Task 4: PR assurance repository (pulls, runs, progress, evidence) + PostgreSQL tests
+- [x] Task 5: Fixed-path GitHub client + configuration (stub-fetch tests)
 
 ### Phase 2: Vertical slices
 - [ ] Task 6: Slice "see and import the PRs" (API + wiring + timeline page)
