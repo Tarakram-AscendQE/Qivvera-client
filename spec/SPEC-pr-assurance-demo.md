@@ -80,7 +80,7 @@ GitHub Actions (fresh machine)               (workflow: qivvera-pr-assessment.ym
    4. writes progress and finally the evidence JSON (~9 KB) and the team-test totals into a GitHub check run
       named "qivvera-evidence <correlation id>" in prcheck-verifiers (job token, checks: write)
    ▼
-While the run page is open, the browser asks Qivvera every ~2 s; Qivvera asks GitHub
+While the run page is open, the browser asks Qivvera to sync every ~2 s; Qivvera asks GitHub
    (run status → check run), stores new progress, and when the run is complete:
    checks the evidence (SHA-256, kind, expected commit = PR head, environment confirmed),
    stores it, derives obligation states → rule results → disposition, and shows the report
@@ -172,7 +172,8 @@ Endpoints (all authenticated, same origin/CSRF/session rules as today):
 | GET | `/api/pr-assurance` | Scenario: application, change, the three PRs (imported or not), latest run per PR, rules snapshot summary, whether a token is configured (never the token) |
 | POST | `/api/pr-assurance/pulls/:number/import` | Reads PR metadata from GitHub; only #6, #7, #8 are accepted |
 | POST | `/api/pr-assurance/pulls/:number/runs` | `{requestKey}` → QUEUED run for the imported head commit; dispatches the workflow (at most once per request key) |
-| GET | `/api/pr-assurance/runs/:runId` | Status, progress and, when complete, the report. Each call advances the run from GitHub; repeated or parallel calls are safe |
+| GET | `/api/pr-assurance/runs/:runId` | Status, progress events and, when complete, the report. Never contacts GitHub |
+| POST | `/api/pr-assurance/runs/:runId/sync` | Brings an active run up to date with GitHub (progress, then verified evidence) and returns it as GET does. Any signed-in user; repeated or parallel calls are safe |
 | GET | `/api/pr-assurance/pulls/:number/runs` | The PR's run history, newest first |
 
 ## Code Style

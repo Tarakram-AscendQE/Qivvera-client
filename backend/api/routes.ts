@@ -60,6 +60,10 @@ import { exportWorkspace } from './endpoints/workspace/export-workspace.js';
 import { getWorkspace } from './endpoints/workspace/get-workspace.js';
 import { getPrAssurance } from './endpoints/pr-assurance/get-scenario.js';
 import { importPull } from './endpoints/pr-assurance/import-pull.js';
+import { startRun } from './endpoints/pr-assurance/start-run.js';
+import { getRun } from './endpoints/pr-assurance/get-run.js';
+import { syncRun } from './endpoints/pr-assurance/sync-run.js';
+import { listRuns } from './endpoints/pr-assurance/list-runs.js';
 
 /** No sign-in, any origin (GET only). */
 export const publicRoutes: readonly Route[] = [
@@ -160,6 +164,10 @@ export const workspaceRoutes: readonly Route[] = [
   // repositories, the workflow and every commit are pinned or read from GitHub by the server.
   ...onlyWhen(({ prAssurance }) => !!prAssurance, [
     get('/api/pr-assurance', getPrAssurance),
-    post('/api/pr-assurance/pulls/:pullNumber/import', importPull)
+    post('/api/pr-assurance/pulls/:pullNumber/import', importPull),
+    post('/api/pr-assurance/pulls/:pullNumber/runs', startRun),
+    get('/api/pr-assurance/pulls/:pullNumber/runs', listRuns),
+    get('/api/pr-assurance/runs/:runId', getRun),
+    post('/api/pr-assurance/runs/:runId/sync', syncRun)
   ])
 ];

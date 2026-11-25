@@ -119,6 +119,10 @@ export interface IntakeRepository {
 export interface PrAssuranceService {
   scenario(session: Session): Promise<unknown>;
   importPull(pullNumber: number, session: Session): Promise<unknown>;
+  startRun(pullNumber: number, input: unknown, session: Session): Promise<unknown>;
+  getRun(runId: string, session: Session): Promise<unknown>;
+  syncRun(runId: string, session: Session): Promise<unknown>;
+  listRuns(pullNumber: number, session: Session): Promise<unknown>;
 }
 
 export interface Services {
