@@ -1,78 +1,115 @@
-# Implementation Plan: Backend platform foundation (express-api + postgres-only)
+# Implementation Plan: pr-assurance-demo
 
-Source specs: [spec/capability-map.md](../spec/capability-map.md), [spec/SPEC-express-api.md](../spec/SPEC-express-api.md),
-[spec/SPEC-postgres-only.md](../spec/SPEC-postgres-only.md). Branch `feat/express-backend` (from 018ab17).
-Earlier frontend plan: [tasks/done/frontend-plan.md](done/frontend-plan.md).
+Source spec: [spec/SPEC-pr-assurance-demo.md](../spec/SPEC-pr-assurance-demo.md) (approved 2026-11-25).
+Task details: [tasks/todo.md](todo.md).
+Status: approved by the user 2026-11-25. The earlier backend plan is archived in
+[tasks/done/backend-plan.md](done/backend-plan.md) (one open item: the postgresql-client-17 recovery gate).
 
 ## Overview
 
-Today (2026-11-24) the user wants the whole backend and database transition finished, so new features can
-start tomorrow and the hosted demo on Friday 2026-11-27 runs on a stable frontend + backend + database:
+For the Friday 2026-11-27 demo, a senior on the deployed Qivvera URL imports VendorPay PRs #6, #7 and
+#8 from GitHub, clicks **Evaluate**, watches Qivvera's 14 checks run for real on GitHub Actions, and
+reads a report per PR: **2 broken rules → 1 → 0**. The inputs (PRs, rules, checks) are fixed; the test
+runs are real.
 
-1. **express-api:** every endpoint on Express 5 + TypeScript, in one uniform layout; the hand-written
-   router in `backend/server/app.mjs` is deleted. Behaviour seen by clients does not change.
-2. **postgres-only:** SQLite removed; PostgreSQL 17 is the only database (local runs use Docker).
+## Timeline
 
-## Decisions (user, 2026-11-24)
-
-| Decision | Choice |
+| When | Work |
 |---|---|
-| Framework | Express 5.3.0 (+ `@types/express` 5.0.6 dev); Zod 4.6.7 |
-| Scope before Friday | All ~49 endpoints on Express; old router deleted. Demo-safe order: each group verified and committed; the old router stays as a fallback only until the last group moves |
-| Layout | `backend/api/`: `app.ts`, `routes.ts` (every endpoint in one list), `endpoints/<area>/<endpoint>.ts` (one function per file), `common/` reusable, documented helpers |
-| Validation | Zod checks every path id and query string now; request bodies keep today's validators (exact messages); Zod body schemas after the demo |
-| Error messages | Unchanged for clients |
-| Old SQLite registry store | Delete `backend/server/repository.mjs` with `test/registry*.test.mjs` and the SQLite file-upgrade test in `test/workflow.test.mjs` |
-| Database | PostgreSQL only; local and test databases from Docker `postgres:17-alpine` on 127.0.0.1; `npm run dev` starts it |
-| Repositories | Stay `.mjs` for now; endpoints call them through typed interfaces (`common/services.ts`) |
+| Wed 25 Nov (today) | Task 1: the GitHub Actions spike. It is the biggest unknown, so it goes first |
+| Thu 26 Nov, morning | Tasks 2–6, then **Checkpoint B: the user deploys a Vercel preview** to test hosting early |
+| Thu 26 Nov, afternoon | Tasks 7–11, then Checkpoint C (full local run against real GitHub) |
+| Thu 26 Nov, evening | Task 12: the user deploys; rehearsal of all three PRs on the preview |
+| Fri 27 Nov | Demo |
 
-## Architecture notes
+**Cut line if Thursday runs late** (in this order): the compare table in Task 10 (the timeline still
+shows 2 → 1 → 0), then the "since the previous PR" section in Task 9. Never cut: evidence checks, the
+tests, or the browser suite.
 
-- **Build:** `tsc -p backend/api/tsconfig.json` compiles `backend/api/**/*.ts` to `dist/api/` (gitignored;
-  Vercel and `npm test` run `npm run build` first). TypeScript imports existing modules as
-  `../../backend/server/x.mjs`-style paths that resolve to the same file from `backend/api/` and `dist/api/`
-  (same depth), so repositories, `InputError` and verifier paths are the originals, never copies.
-  Small `.d.mts` files give those few `.mjs` modules their types.
-- **One server:** `createApplicationServer()` (TypeScript) builds the Express app and wraps it in Node's
-  `http.Server` with today's timeouts; `start.mjs`, `api/index.mjs` and tests keep calling it.
-- **Express settings for identical behaviour:** strict + case-sensitive routing, `x-powered-by` and ETag
-  off, HEAD treated like any non-GET (origin check, then 404), unmatched paths → today's 401/404 bodies,
-  malformed ids → `NOT_FOUND` (not a validation error), JSON body reader with today's 415/413/400 rules.
-- **Middleware order (same as today):** security headers + request id → `/healthz` `/readyz` → static
-  assets → origin check (non-GET) → `POST /api/session` → session required → support info → CSRF
-  (non-GET) → feature routes → 404.
+## Architecture decisions
 
-## Task List
+- **GitHub Actions is the runner** (the senior uses the Vercel URL, so there is no laptop or server).
+  One workflow in prcheck-verifiers starts the PR's exact commit of VendorPay and runs the checks
+  against it on the same throwaway machine. It reuses vendorpay-app's `ci.yml` (start app + PostgreSQL),
+  prcheck-verifiers' `verify.yml` (browser + checks + evidence reporter) and `demo-matrix.sh`
+  (`GIT_SHA`, log file).
+- **Results travel through a GitHub check run**, not an artifact: an artifact download is a redirect,
+  and Qivvera never follows redirects. Evidence is about 9 KB and fits.
+- **The Neon password stays in Vercel.** Qivvera reads progress from GitHub when the page asks (every
+  ~2 s), stores it, and finalizes the run once. Repeated or parallel requests must be safe.
+- **Rules are a static snapshot** of vendorpay-policies @ `e408884`, generated by that repository's own
+  `select --json` (the shape prcheck froze), checked into `fixtures/pr-assurance/`.
+- **Decision logic is pure TypeScript** in `backend/core/pr-assurance.ts`, tested with the recorded
+  evidence of all three commits before any UI exists.
+- **A separate, bounded feature area** (`pr-assurance`), switched on by `QIVVERA_PR_ASSURANCE_ENABLED`.
+  It does not touch the existing assurance kernel, verifiers, profiles or earlier migrations.
+- **Token:** `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN` environment variable (UI entry deferred).
+- **Branch:** a new local branch `feat/pr-assurance-demo` from `feat/express-backend` (d878f86). Each
+  verified task is committed locally. The user pushes and deploys. I push only the two workflow
+  files to prcheck-verifiers (approved).
 
-See [tasks/todo.md](todo.md).
+## Dependency graph
 
-## Verification for every slice
+```
+Task 1 workflow (prcheck-verifiers) ─────────────────────────────┐ real evidence + check-run format
+Task 2 snapshot + pure logic ──┐                                  │
+Task 3 migration 009 ──► Task 4 repository ──┐                    │
+Task 5 GitHub client + config ───────────────┼──► Task 6 scenario + import (API + UI)
+                                             │        └──► Checkpoint B (Vercel preview)
+                                             └──► Task 7 evaluate API ──► Task 8 evaluate UI + progress
+                                                           └──► Task 9 report ──► Task 10 progression
+                                                                     └──► Task 11 browser suite ──► Task 12 handoff + rehearsal
+```
 
-`npm run check` (all existing tests unchanged + new ones), the HTTP parity harness against the 018ab17
-server (status, JSON body with ids/times normalised, security headers), all 8 native browser suites,
-the 3 demos; then a local commit verified in a clean worktree. Nothing is pushed or deployed.
+## Task list
+
+### Phase 0: Spike (highest risk)
+- [ ] Task 1: Workflow + progress reporter in prcheck-verifiers; three real runs measured
+
+### Checkpoint A: spike reviewed with the user
+- [ ] All three runs match the expected results; time per run recorded; go/no-go for the Qivvera side
+
+### Phase 1: Foundation
+- [ ] Task 2: Rules snapshot + pure decision logic (tested with the recorded evidence)
+- [ ] Task 3: Migration 009 (schema 9) wired into `npm run migrate`
+- [ ] Task 4: PR assurance repository (pulls, runs, progress, evidence) + PostgreSQL tests
+- [ ] Task 5: Fixed-path GitHub client + configuration (stub-fetch tests)
+
+### Phase 2: Vertical slices
+- [ ] Task 6: Slice "see and import the PRs" (API + wiring + timeline page)
+
+### Checkpoint B: hosting de-risked
+- [ ] `npm run check` green; the user deploys a Vercel preview with Neon, runs the migration, imports the three PRs
+
+- [ ] Task 7: Slice "evaluate" API (dispatch, advance, finalize, history)
+- [ ] Task 8: Slice "evaluate" UI (button, live progress, history)
+- [ ] Task 9: Slice "report" (all report sections from stored evidence)
+- [ ] Task 10: Slice "progression" (timeline counts + compare table)
+
+### Checkpoint C: end-to-end locally
+- [ ] Local server against real GitHub: import and evaluate all three PRs; results equal the table
+
+### Phase 3: Verification and handoff
+- [ ] Task 11: Native browser suite (stub GitHub) + all existing suites + `npm run check`
+- [ ] Task 12: Deployment notes, preview deploy by the user, rehearsal of all three PRs
+
+### Checkpoint D: complete
+- [ ] Spec success criteria 1–10 met and recorded
 
 ## Risks and mitigations
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Express defaults differ from the hand-written router (trailing slash, case, HEAD, ETag, query parsing) | High | Explicit settings; parity harness covers each case |
-| Moving ~49 endpoints in one day | High | Uniform endpoint template, groups committed one by one; the old router remains the fallback until the last group |
-| Tests that only passed on SQLite fail on PostgreSQL | Medium | Run the full suite on PostgreSQL before removing SQLite; fix code, never loosen tests silently; report anything unclear |
-| Test run time on PostgreSQL | Medium | One container per run; template database copied per test |
-| Vercel bundling of `dist/api` | Medium | `npm run build` produces it; check the function entry imports it; deployment owner verifies hosted |
+| A GitHub Actions run takes longer than 4 min or queues | High | Task 1 measures it first; cache npm and the browser; rehearsal Thursday; earlier real runs stay in the history as an honest fallback |
+| The team's UI tests are flaky on GitHub's machines | Medium | They are context only and never change the verdict; the report shows the real totals |
+| Finding the run that Qivvera just started (the dispatch API returns no id) | Medium | A unique correlation id in the run name; search the recent runs; tests cover "not found yet" |
+| Two browser tabs polling finalize the same run twice | Medium | Finalize in one database transaction with a row lock; PostgreSQL test with parallel calls |
+| First Vercel deployment of this branch (Express backend + Neon) fails | High | Checkpoint B deploys a preview on Thursday morning, not the evening |
+| Vercel does not bundle files read at runtime (the snapshot) | Medium | Add `fixtures/pr-assurance/**` and `backend/server/pr-assurance/**` to `vercel.json` includeFiles; verified at Checkpoint B |
+| Token missing a permission | Medium | The error names the missing permission; checked at Checkpoint B |
+| GitHub API rate limit | Low | About 200 calls per run against 5,000 per hour per token |
+| Cumulative gate: 4 recovery tests need `postgresql-client-17` (open from the backend plan) | Low | Not caused by this work; reported separately, as before |
 
-## Deferred (planned, after the demo)
+## Open questions
 
-| Item | Note |
-|---|---|
-| Zod request-body schemas for every endpoint | Today's validators keep exact messages until then |
-| OpenAPI 3.1 generated from the Zod schemas | After body schemas exist |
-| Repository rewrite (Kysely or Drizzle) and TypeScript repositories | Library choice open for the architect |
-| Background worker and lock rework (per-record locks / job queue) | Replaces the global advisory lock and polling worker |
-| Multitenancy | Tenancy model open for the architect |
-| PgBouncer / pooling and managed-database settings | Hosting work |
-
-## Open Questions
-
-None blocking. New decisions found while building are asked before acting.
+None.

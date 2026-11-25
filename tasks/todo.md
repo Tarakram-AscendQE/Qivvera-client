@@ -1,58 +1,219 @@
-# Backend platform foundation — task list
+# pr-assurance-demo — task list
 
-Plan: [tasks/plan.md](plan.md). Each task: implement → `npm run check` → parity harness → browser suites
-(where the UI is affected) → commit locally → verify in a clean worktree.
+Plan: [tasks/plan.md](plan.md). Spec: [spec/SPEC-pr-assurance-demo.md](../spec/SPEC-pr-assurance-demo.md).
+Every task: write the failing test first → implement → `npm run check` (plus the browser suites when the
+UI changes) → commit locally on `feat/pr-assurance-demo`.
 
-## Phase A — express-api
+PR head commits: #6 `af51c26`, #7 `ae50deb`, #8 `b62db00` (full SHAs are read from GitHub, never typed).
 
-### Task 1: Remove the old SQLite registry store
-**Acceptance:** `backend/server/repository.mjs`, `test/registry.test.mjs`, `test/registry-http.test.mjs` and
-the SQLite file-upgrade test in `test/workflow.test.mjs` are gone; the server always runs in workflow mode
-(the non-workflow branch in app.mjs is removed); all remaining tests pass.
-- [x] Task 1 (40 tests removed: 39 registry + 1 SQLite file-upgrade test; 654 remain, 0 failures)
+## Phase 0: Spike
 
-### Task 2: Express foundation + public and session routes
-**Acceptance:** express/zod/@types/express installed; `backend/api/` with `app.ts`, `routes.ts`,
-`common/` (security, session, body, validate, respond, errors, services) and `endpoints/system|session`;
-`createApplicationServer()` builds the Express app; health, assets and session routes served by Express,
-everything else by the old router as fallback; parity harness identical; all checks green.
-- [x] Task 2 (parity harness: 35 responses identical; 6 routing tests; 660 backend tests pass)
+### Task 1: Workflow + progress reporter in prcheck-verifiers; three real runs measured
+**Description:** Add the workflow that starts one PR commit of VendorPay on GitHub's machine, runs the
+14 checks and then the team's tests, and reports progress and evidence into a check run. Push it to
+prcheck-verifiers `main` (a manual-start workflow must be on the default branch). Start it once per PR
+commit with this machine's GitHub login and compare the results.
 
-### Task 3: Workspace, applications, changes, obligations, revisions, support info
-- [x] Task 3 (12 endpoints; parity 74 responses identical incl. review, revision and permission paths)
+**Acceptance:**
+- [ ] Only two new files; `verify.yml`, the checks and `evidence-reporter.ts` are unchanged. The
+  workflow only starts by hand/API (`workflow_dispatch`: `app_sha` must be 40 hex characters,
+  `correlation_id`), uses `contents: read` + `checks: write`, and needs no secrets.
+- [ ] For each of the three commits: the run finishes in ≤ 4 min; the check run shows progress while
+  running and ends with the evidence JSON + SHA-256 + team-test totals; the evidence states match the
+  spec's expected-results table; `expectedSha` and `/version` equal the commit.
+- [ ] Timings and results recorded in the plan (Checkpoint A).
 
-### Task 4: Assurance and resolution endpoints
-- [x] Task 4 (14 endpoints; parity 36 responses identical with a real assurance + resolution stack)
+**Verify:** a scratch script reads the three check runs through the GitHub API, re-computes the SHA-256,
+and prints obligation states next to the expected table.
+**Dependencies:** none.
+**Files (prcheck-verifiers):** `.github/workflows/qivvera-pr-assessment.yml`, `reporters/check-run-reporter.ts`.
+**Size:** M.
 
-### Task 5: Drafting, impact, verification templates, GitHub intake
-- [x] Task 5 (19 endpoints; parity identical: templates 27, impact 10, drafting 16, intake 10 responses)
+## Checkpoint A
+- [ ] Results and timings reviewed with the user; go/no-go for the Qivvera side.
 
-### Task 6: Delete the old router
-**Acceptance:** `backend/server/app.mjs` request handler removed; every request is answered by Express
-(unknown paths → today's 401/404); parity harness over all endpoints identical; 8 browser suites, 3 demos,
-8 PostgreSQL suites (Docker) pass.
-- [x] Task 6 (old router deleted; parity 173 responses identical; 8/8 browser suites; 3 demos; PostgreSQL suites 93/97 — 4 recovery tests need pg_dump/pg_restore, not installed)
+## Phase 1: Foundation
 
-### Checkpoint A
-- [x] All gates green; every endpoint is listed in `backend/api/routes.ts` (49 endpoints)
+### Task 2: Rules snapshot + pure decision logic
+**Description:** Generate the rules snapshot from vendorpay-policies @ `e408884` with its own
+`select --json` and check it in. Write the pure functions in `backend/core/pr-assurance.ts`: verify an
+evidence text (kind, SHA-256, expected commit, environment confirmed), obligation states, rule results,
+disposition (payments-critical rules, first match wins), report summary, comparison with the previous run.
 
-## Phase B — postgres-only
+**Acceptance:**
+- [ ] The snapshot holds 6 policies, 14 obligations with their checks, the profile, commit `e408884`,
+  each file's SHA-256 and the snapshot digest.
+- [ ] The three recorded evidence files give exactly the expected-results table (2 → 1 → 0, NOT READY,
+  NOT READY, READY).
+- [ ] V1 not confirmed → NOT_ASSESSED → INDETERMINATE; missing check → INSUFFICIENT; altered text,
+  wrong digest, wrong `kind` or another commit → rejected with a reason and no disposition.
 
-### Task 7: Docker PostgreSQL helper for tests and development
-**Acceptance:** one script starts a loopback `postgres:17-alpine` container, builds a migrated template
-database and hands out `qivvera_test_*` copies; the safety guard applies; containers are removed afterwards.
-- [x] Task 7 (scripts/postgres-container.mjs, scripts/with-postgres.mjs, test/postgres-test-database.mjs: one empty qivvera_test_* database per test, dropped after each file)
+**Verify:** `npm test` (new `test/pr-assurance.test.mjs`, imports from `dist/core/pr-assurance.js` like `test/disposition.test.mjs`).
+**Dependencies:** none (Task 1's real evidence is added to the fixtures when available).
+**Files:** `fixtures/pr-assurance/vendorpay-policies-e408884.json`, `fixtures/pr-assurance/evidence/*.json`,
+`backend/core/pr-assurance.ts`, `test/pr-assurance.test.mjs`.
+**Size:** M.
 
-### Task 8: Run every test on PostgreSQL; remove SQLite
-**Acceptance:** no `node:sqlite` anywhere; `DATABASE_URL` required; all backend tests, the 8 PostgreSQL
-suites (no longer skipped), browser suites, demos and offline checks pass on PostgreSQL.
-- [x] Task 8 (no SQLite left in backend/api/scripts/test; DATABASE_URL required; 745/749 backend tests on PostgreSQL — the 4 recovery tests wait for pg_dump/pg_restore 17; impact browser test race fixed)
+### Task 3: Migration 009 (schema 9)
+**Description:** Additive tables for imported pulls, runs (request key, correlation id, GitHub run id,
+status, timestamps, evidence text + SHA-256, disposition) and run progress entries.
 
-### Task 9: Developer workflow and docs
-**Acceptance:** `npm run dev` starts Docker PostgreSQL; README/AGENTS describe Express layout, common
-helpers and PostgreSQL-only setup.
-- [x] Task 9 (npm run dev starts a temporary Docker PostgreSQL; README backend + database sections; AGENTS.md updated)
+**Acceptance:**
+- [ ] `npm run migrate` applies it after migration 008; running it twice changes nothing.
+- [ ] `MAX_SUPPORTED_SCHEMA_VERSION` is 9; earlier migrations are byte-identical.
 
-### Final checkpoint
-- [x] code-review-and-quality review of the backend diff (CSRF-removal mutation caught by 5 tests; storage fallback simplified; createAuth and backend/schema.sql left for a decision)
-- [ ] All gates green — pending: 4 recovery-rehearsal tests need postgresql-client-17 (pg_dump/pg_restore) on this machine
+**Verify:** `npm run test:postgres` (migration test in the new PostgreSQL suite).
+**Dependencies:** none.
+**Files:** `backend/migrations/009_pr_assurance.sql`, `backend/server/pr-assurance/migration.mjs`,
+`backend/scripts/migrate.mjs`, `backend/server/release.mjs`.
+**Size:** S.
+
+### Task 4: PR assurance repository
+**Description:** PostgreSQL access for the feature: save an imported pull, create a run (at most once
+per request key), append progress, finalize a run exactly once, list history.
+
+**Acceptance:**
+- [ ] Same request key → the same run, no second dispatch.
+- [ ] Two parallel finalize calls store the evidence once (row lock in one transaction).
+- [ ] History keeps every run, newest first; a failed run has no disposition.
+
+**Verify:** `npm run test:postgres` (new `test/pr-assurance-postgres.test.mjs`, added to the script list).
+**Dependencies:** Task 3.
+**Files:** `backend/server/pr-assurance/repository.mjs`, `test/pr-assurance-postgres.test.mjs`, `package.json`.
+**Size:** M.
+
+### Task 5: Fixed-path GitHub client + configuration
+**Description:** Configuration from the environment (enabled flag, token; the fixed scenario: repos,
+PR numbers, workflow file). GitHub calls with fixed paths only: read a PR (reusing the intake module's
+validation), start the workflow, find the run by correlation id, read the run and its check run.
+
+**Acceptance:**
+- [ ] Only `https://api.github.com` with fixed paths; redirects are errors; 8 s timeouts; size limits.
+- [ ] 401/403/404/429/5xx give clear errors that name the missing permission where possible.
+- [ ] The token never appears in an error, log or return value.
+
+**Verify:** `npm test` (new `test/pr-assurance-github.test.mjs` with a stub `fetch`).
+**Dependencies:** none.
+**Files:** `backend/server/pr-assurance/config.mjs`, `backend/server/pr-assurance/github.mjs`, `test/pr-assurance-github.test.mjs`.
+**Size:** M.
+
+## Phase 2: Vertical slices
+
+### Task 6: Slice "see and import the PRs"
+**Description:** `GET /api/pr-assurance` and `POST /api/pr-assurance/pulls/:number/import`; the feature
+wired into the server, Vercel entry and workspace capabilities (`prAssurance`); a new route
+`#/pr-assurance` with the timeline of the three PRs, Import buttons and "GitHub token: configured".
+
+**Acceptance:**
+- [ ] Feature off → the route shows a disabled message and the API answers as disabled.
+- [ ] Author or Policy Authority can import #6, #7, #8; any other number is refused; Viewer reads only.
+- [ ] The imported head commit, title, branch and link show on each card; no response contains the token.
+- [ ] `vercel.json` includes `fixtures/pr-assurance/**` and `backend/server/pr-assurance/**`.
+
+**Verify:** `npm test` (new `test/pr-assurance-http.test.mjs`), `npm run test:frontend` (module tests).
+**Dependencies:** Tasks 2, 4, 5.
+**Files:** `backend/api/routes.ts`, `backend/api/endpoints/pr-assurance/{get-scenario,import-pull}.ts`,
+`backend/api/common/services.ts`, `backend/server/start.mjs`, `api/index.mjs`,
+`backend/api/endpoints/workspace/get-workspace.ts`, `vercel.json`, `frontend/src/app/routes.ts`,
+`frontend/src/pr-assurance/*`, tests. (Wiring lines are small; split into backend and frontend commits.)
+**Size:** L (two commits).
+
+## Checkpoint B: hosting de-risked
+- [ ] `npm run check` green; browser suites green.
+- [ ] The user deploys a Vercel preview with Neon, sets `QIVVERA_PR_ASSURANCE_ENABLED=true` and the
+  token, runs `npm run migrate`, and imports the three PRs on the preview.
+
+### Task 7: Slice "evaluate" (API)
+**Description:** `POST /api/pr-assurance/pulls/:number/runs` (`{requestKey}` → QUEUED run, workflow
+started with the imported head commit), `GET /api/pr-assurance/runs/:runId` (advances from GitHub:
+find run → progress → when complete, verify evidence, finalize, return the report),
+`GET /api/pr-assurance/pulls/:number/runs` (history).
+
+**Acceptance:**
+- [ ] The browser sends only the PR number and a request key; never a commit, URL or command.
+- [ ] Each GET makes at most a few short GitHub calls; parallel GETs finalize once.
+- [ ] Evidence for another commit, a digest mismatch, a failed or cancelled run, or a run past 15 min →
+  FAILED/TIMED_OUT with a reason and no disposition.
+
+**Verify:** `npm test` (HTTP tests with a stub GitHub), `npm run test:postgres`.
+**Dependencies:** Task 6 (and Task 1 for the check-run format).
+**Files:** `backend/api/endpoints/pr-assurance/{start-run,get-run,list-runs}.ts`, `backend/api/routes.ts`,
+`backend/server/pr-assurance/repository.mjs`, `test/pr-assurance-http.test.mjs`.
+**Size:** M.
+
+### Task 8: Slice "evaluate" (UI)
+**Description:** The PR page `#/pr-assurance/pulls/<n>`: Evaluate button, live progress (stages, then
+each check as it finishes; asks every 2 s only while the run is active), run history with dates.
+
+**Acceptance:**
+- [ ] Progress appears within about 2 s of the API reporting it; polling stops when the run ends.
+- [ ] A response for an older route, run or session never changes the newer view (AGENTS.md binding).
+- [ ] Clicking twice does not start two runs (same request key until the answer arrives).
+
+**Verify:** `npm run test:frontend`.
+**Dependencies:** Task 7.
+**Files:** `frontend/src/app/routes.ts`, `frontend/src/pr-assurance/{PullPage,RunProgress,api}.tsx`, tests.
+**Size:** M.
+
+### Task 9: Slice "report"
+**Description:** Render the report of a completed run from the API: result line, team tests, since the
+previous PR, one card per broken rule (failing obligations, check, expected vs observed, what would
+resolve it), all 14 obligations, proof, scope statement.
+
+**Acceptance:**
+- [ ] Every number comes from the run's stored evidence and the snapshot (none hard-coded).
+- [ ] PR #6 shows 2 broken rules with 3 failing obligations; #7 shows 1 with 2; #8 shows READY.
+
+**Verify:** `npm run test:frontend` (rendered with the three recorded evidence files).
+**Dependencies:** Task 8.
+**Files:** `frontend/src/pr-assurance/{Report,RuleCard,ProofPanel}.tsx`, tests.
+**Size:** M.
+
+### Task 10: Slice "progression"
+**Description:** Timeline counts from each PR's latest completed run (`#6 🔴 2 → #7 🟠 1 → #8 🟢 0`) and
+the table of 14 obligations × 3 PRs with "now supported" markers.
+
+**Acceptance:**
+- [ ] A PR without a completed run shows "not evaluated", never a guessed count.
+- [ ] A later READY never hides an earlier NOT READY in the history.
+
+**Verify:** `npm run test:frontend`, `npm test`.
+**Dependencies:** Task 9.
+**Files:** `backend/api/endpoints/pr-assurance/get-scenario.ts`, `frontend/src/pr-assurance/{Timeline,CompareTable}.tsx`, tests.
+**Size:** M.
+
+## Checkpoint C: end-to-end locally
+- [ ] Local server (`npm run dev`, token in `.env.local`) against real GitHub: import and evaluate all
+  three PRs; results equal the expected table; times recorded.
+
+## Phase 3: Verification and handoff
+
+### Task 11: Native browser suite
+**Description:** A browser suite for the whole flow against a local server with a stub GitHub, added
+to `test:browser`; then every existing suite and `npm run check`.
+
+**Acceptance:**
+- [ ] The suite imports, evaluates (stub run), watches progress and reads the report for each PR.
+- [ ] All existing PostgreSQL and browser suites still pass.
+
+**Verify:** `npm run check`; `npm run test:browser` (Node 22 + `.venv-browser`).
+**Dependencies:** Task 10.
+**Files:** `test/pr-assurance-browser.py`, `test/pr-assurance-browser-fixture.mjs`, `test/run-browser-suites.py`.
+**Size:** M.
+
+### Task 12: Deployment notes and rehearsal
+**Description:** A short handoff for the deployer and the senior: environment variables, the token's
+permissions, `npm run migrate`, the click path and what each screen shows. The user deploys the
+preview; three live runs are rehearsed and recorded.
+
+**Acceptance:**
+- [ ] The notes contain no secrets and match the code.
+- [ ] Rehearsal on the preview: three runs, results equal the table, times recorded.
+
+**Verify:** rehearsal results written into the notes.
+**Dependencies:** Task 11.
+**Files:** `docs/pr-assurance-demo.md`, `.env.example`.
+**Size:** S.
+
+## Checkpoint D: complete
+- [ ] Spec success criteria 1–10 met and recorded.

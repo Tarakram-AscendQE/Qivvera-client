@@ -135,7 +135,7 @@ export const getApplication = defineEndpoint({
 Repositories in `backend/server/` validate request bodies and return the exact error codes and
 messages clients rely on. Zod already checks every path id and query string; Zod schemas for request
 bodies, OpenAPI generation, a query-library rewrite, worker/lock rework and multitenancy are planned
-(see `tasks/plan.md`).
+(see `tasks/done/backend-plan.md`).
 
 ### Database
 
