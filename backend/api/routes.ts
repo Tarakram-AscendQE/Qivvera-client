@@ -8,7 +8,18 @@
  * Endpoints in an `onlyWhen(...)` group exist only when that feature is configured, so inside them the
  * feature's repository is always present (hence `services.assurance!`).
  */
-import { get, post, patch, del, onlyWhen, type Route } from './common/routing.js';
+import { get, post, patch, del, checkQuery, onlyWhen, type Route } from './common/routing.js';
+import { draftSuggestionAction } from './endpoints/drafting/draft-suggestion-action.js';
+import { draftingContext } from './endpoints/drafting/drafting-context.js';
+import { exportDraftingRun } from './endpoints/drafting/export-drafting-run.js';
+import { generateDrafts } from './endpoints/drafting/generate-drafts.js';
+import { getDraftingRun } from './endpoints/drafting/get-drafting-run.js';
+import { exportImpact } from './endpoints/impact/export-impact.js';
+import { getImpact } from './endpoints/impact/get-impact.js';
+import { importSource } from './endpoints/intake/import-source.js';
+import { listChangeSources } from './endpoints/intake/list-change-sources.js';
+import { listSourceRepositories } from './endpoints/intake/list-source-repositories.js';
+import { previewSource } from './endpoints/intake/preview-source.js';
 import { cancelAssessment } from './endpoints/assurance/cancel-assessment.js';
 import { exportAssessment } from './endpoints/assurance/export-assessment.js';
 import { getAssessment } from './endpoints/assurance/get-assessment.js';
@@ -37,6 +48,13 @@ import { currentSession } from './endpoints/session/current-session.js';
 import { signIn } from './endpoints/session/sign-in.js';
 import { signOut } from './endpoints/session/sign-out.js';
 import { supportInfo } from './endpoints/support/support-info.js';
+import { archiveTemplate } from './endpoints/templates/archive-template.js';
+import { createTemplate } from './endpoints/templates/create-template.js';
+import { exportTemplate } from './endpoints/templates/export-template.js';
+import { getTemplate } from './endpoints/templates/get-template.js';
+import { listTemplates } from './endpoints/templates/list-templates.js';
+import { reviseTemplate } from './endpoints/templates/revise-template.js';
+import { templateListQueryCheck, templateQueryCheck } from './endpoints/templates/template-query.js';
 import { health } from './endpoints/system/health.js';
 import { exportWorkspace } from './endpoints/workspace/export-workspace.js';
 import { getWorkspace } from './endpoints/workspace/get-workspace.js';
@@ -98,5 +116,41 @@ export const workspaceRoutes: readonly Route[] = [
     post('/api/resolutions/:resolutionId/actions', resolutionAction),
     get('/api/resolutions/:resolutionId', getResolution),
     get('/api/resolutions/:resolutionId/export', exportResolution)
+  ]),
+
+  // Verification templates (only when templates are configured). Their query rules apply to every
+  // method on these paths, before the endpoint is chosen.
+  ...onlyWhen(({ assurance }) => !!assurance?.templates, [
+    ...checkQuery(['/api/verification-templates'], templateListQueryCheck),
+    ...checkQuery(['/api/verification-templates/:templateId', '/api/verification-templates/:templateId/versions', '/api/verification-templates/:templateId/archive', '/api/verification-templates/:templateId/export'], templateQueryCheck),
+    get('/api/verification-templates', listTemplates),
+    get('/api/verification-templates/:templateId', getTemplate),
+    get('/api/verification-templates/:templateId/export', exportTemplate),
+    post('/api/verification-templates', createTemplate),
+    post('/api/verification-templates/:templateId/versions', reviseTemplate),
+    post('/api/verification-templates/:templateId/archive', archiveTemplate)
+  ]),
+
+  // Revision impact: read-only comparison with the parent revision (only when configured).
+  ...onlyWhen(({ repository }) => !!repository.impact, [
+    get('/api/changes/:changeId/impact', getImpact),
+    get('/api/changes/:changeId/impact/export', exportImpact)
+  ]),
+
+  // Source drafting: drafted candidates and human decisions (only when configured).
+  ...onlyWhen(({ repository }) => !!repository.drafting, [
+    get('/api/changes/:changeId/drafting', draftingContext),
+    post('/api/changes/:changeId/drafting-runs', generateDrafts),
+    post('/api/drafting-runs/:runId/suggestions/:suggestionId/actions', draftSuggestionAction),
+    get('/api/drafting-runs/:runId', getDraftingRun),
+    get('/api/drafting-runs/:runId/export', exportDraftingRun)
+  ]),
+
+  // GitHub intake: pull-request source context (only when configured). No GitHub writes.
+  ...onlyWhen(({ intake }) => !!intake, [
+    get('/api/source-repositories', listSourceRepositories),
+    post('/api/source-previews', previewSource),
+    post('/api/source-imports', importSource),
+    get('/api/changes/:changeId/source-imports', listChangeSources)
   ])
 ];

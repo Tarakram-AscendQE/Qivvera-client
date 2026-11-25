@@ -25,7 +25,7 @@ everything else by the old router as fallback; parity harness identical; all che
 - [x] Task 4 (14 endpoints; parity 36 responses identical with a real assurance + resolution stack)
 
 ### Task 5: Drafting, impact, verification templates, GitHub intake
-- [ ] Task 5
+- [x] Task 5 (19 endpoints; parity identical: templates 27, impact 10, drafting 16, intake 10 responses)
 
 ### Task 6: Delete the old router
 **Acceptance:** `backend/server/app.mjs` request handler removed; every request is answered by Express
