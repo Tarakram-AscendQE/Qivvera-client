@@ -25,3 +25,9 @@
 .pr-card h3{margin:0;font-size:15px;overflow-wrap:anywhere}.pr-card .button{align-self:flex-start;margin-top:auto}
 .pr-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.pr-number{font-weight:700;color:var(--navy)}
 @media(max-width:900px){.pr-timeline{grid-template-columns:1fr}.pr-arrow{display:none}}
+.pr-card .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pr-stages{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:6px}.pr-stages li{display:flex;gap:10px;align-items:center;color:var(--muted)}
+.pr-stages li.done{color:var(--ink)}.pr-stages li.current{color:var(--teal);font-weight:700}.pr-stages li span{width:18px;text-align:center}
+.pr-checks ul,.pr-history,.pr-events ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pr-checks li,.pr-history li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pr-checks h3{font-size:14px;margin:0 0 8px}
+.pr-summary{font-size:18px;font-weight:700;margin:0 0 12px}.pr-events{margin-top:16px}

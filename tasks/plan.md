@@ -81,8 +81,8 @@ Task 5 GitHub client + config ───────────────┼�
 ### Checkpoint B: hosting de-risked
 - [ ] `npm run check` green; the user deploys a Vercel preview with Neon, runs the migration, imports the three PRs
 
-- [ ] Task 7: Slice "evaluate" API (dispatch, advance, finalize, history)
-- [ ] Task 8: Slice "evaluate" UI (button, live progress, history)
+- [x] Task 7: Slice "evaluate" API (dispatch, sync, finalize, history)
+- [x] Task 8: Slice "evaluate" UI (button, live progress, history)
 - [ ] Task 9: Slice "report" (all report sections from stored evidence)
 - [ ] Task 10: Slice "progression" (timeline counts + compare table)
 

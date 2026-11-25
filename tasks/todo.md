@@ -146,20 +146,24 @@ wired into the server, Vercel entry and workspace capabilities (`prAssurance`); 
 
 ### Task 7: Slice "evaluate" (API)
 **Description:** `POST /api/pr-assurance/pulls/:number/runs` (`{requestKey}` → QUEUED run, workflow
-started with the imported head commit), `GET /api/pr-assurance/runs/:runId` (advances from GitHub:
-find run → progress → when complete, verify evidence, finalize, return the report),
-`GET /api/pr-assurance/pulls/:number/runs` (history).
+started with the imported head commit), `GET /api/pr-assurance/runs/:runId` (stored state only; never
+contacts GitHub), `POST /api/pr-assurance/runs/:runId/sync` (find run → progress → when complete, verify
+evidence, finalize, return the report), `GET /api/pr-assurance/pulls/:number/runs` (history).
 
 **Acceptance:**
-- [ ] The browser sends only the PR number and a request key; never a commit, URL or command.
-- [ ] Each GET makes at most a few short GitHub calls; parallel GETs finalize once.
-- [ ] Evidence for another commit, a digest mismatch, a failed or cancelled run, or a run past 15 min →
-  FAILED/TIMED_OUT with a reason and no disposition.
+- [x] The browser sends only the PR number and a request key; never a commit, URL or command.
+- [x] Reading never contacts GitHub; each sync makes at most two GitHub calls; parallel syncs finalize once.
+- [x] Evidence for another commit, a digest mismatch, a failed or cancelled run, or a run past 15 min →
+  FAILED/CANCELLED/TIMED_OUT with a reason and no disposition. Evidence altered in the database later is
+  reported on read (EVIDENCE_DIGEST_MISMATCH), never shown as a result.
+- [x] An unanswered start request keeps the run QUEUED and finds it by correlation id; it is never repeated.
+- [x] 17 run tests (stand-in GitHub, real recorded evidence): PR #6 → 2 broken rules, #7 → 1 (FIN-001 fixed),
+  #8 → READY.
 
 **Verify:** `npm test` (HTTP tests with a stub GitHub), `npm run test:postgres`.
 **Dependencies:** Task 6 (and Task 1 for the check-run format).
-**Files:** `backend/api/endpoints/pr-assurance/{start-run,get-run,list-runs}.ts`, `backend/api/routes.ts`,
-`backend/server/pr-assurance/repository.mjs`, `test/pr-assurance-http.test.mjs`.
+**Files:** `backend/api/endpoints/pr-assurance/{start-run,get-run,sync-run,list-runs}.ts`, `backend/api/routes.ts`,
+`backend/api/common/services.ts`, `backend/server/pr-assurance/service.mjs`, `test/pr-assurance-runs.test.mjs`.
 **Size:** M.
 
 ### Task 8: Slice "evaluate" (UI)
@@ -167,13 +171,15 @@ find run → progress → when complete, verify evidence, finalize, return the r
 each check as it finishes; asks every 2 s only while the run is active), run history with dates.
 
 **Acceptance:**
-- [ ] Progress appears within about 2 s of the API reporting it; polling stops when the run ends.
-- [ ] A response for an older route, run or session never changes the newer view (AGENTS.md binding).
-- [ ] Clicking twice does not start two runs (same request key until the answer arrives).
+- [x] Progress appears within about 2 s of the API reporting it; polling stops when the run ends (the page is then redrawn).
+- [x] A response for an older route, run or session never changes the newer view (AGENTS.md binding); a
+  visit that ended sends no further sync.
+- [x] Clicking twice does not start two runs (same request key until a definite answer; kept after a lost answer).
+- [x] Pages: `#/pr-assurance/pulls/<n>` (Evaluate, live run, history) and `#/pr-assurance/runs/<id>`. 9 tests.
 
 **Verify:** `npm run test:frontend`.
 **Dependencies:** Task 7.
-**Files:** `frontend/src/app/routes.ts`, `frontend/src/pr-assurance/{PullPage,RunProgress,api}.tsx`, tests.
+**Files:** `frontend/src/app/{routes,main}.ts(x)`, `frontend/src/pr-assurance/{PullPage,RunPanel,Report}.tsx`, tests.
 **Size:** M.
 
 ### Task 9: Slice "report"

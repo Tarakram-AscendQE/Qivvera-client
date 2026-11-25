@@ -211,6 +211,8 @@ async function show(target: Route, current: () => boolean): Promise<void> {
     case 'resolution': return resolution().showItem(target.id);
     case 'intake': return intake().show();
     case 'pr-assurance': return prAssurance().show();
+    case 'pr-assurance-pull': return prAssurance().showPull(target.number);
+    case 'pr-assurance-run': return prAssurance().showRun(target.runId);
     case 'applications': return workspace().showApplications();
     case 'application':
       if (!S.workspace!.applications.some(application => application.id === target.id)) return errorPage('Application not found.');

@@ -13,6 +13,8 @@ export type Route =
   | { readonly kind: 'resolution'; readonly id: string }
   | { readonly kind: 'intake' }
   | { readonly kind: 'pr-assurance' }
+  | { readonly kind: 'pr-assurance-pull'; readonly number: number }
+  | { readonly kind: 'pr-assurance-run'; readonly runId: string }
   | { readonly kind: 'applications' }
   | { readonly kind: 'application'; readonly id: string }
   | { readonly kind: 'changes' }
@@ -83,8 +85,10 @@ export function parseRoute(hash: string, workspace: RoutingWorkspace): Route {
   if (section === 'intake' && workspace.capabilities['githubIntake']) return { kind: 'intake' };
   if (section === 'pr-assurance') {
     if (!workspace.capabilities['prAssurance']) return { kind: 'error', message: 'PR assurance is not enabled in this workspace.' };
-    if (p.length !== 1) return { kind: 'error', message: 'This PR assurance link is incomplete. Open PR assurance from the navigation.' };
-    return { kind: 'pr-assurance' };
+    if (p.length === 1) return { kind: 'pr-assurance' };
+    if (p.length === 3 && first === 'pulls' && /^[1-9][0-9]{0,8}$/.test(second ?? '')) return { kind: 'pr-assurance-pull', number: Number(second) };
+    if (p.length === 3 && first === 'runs' && validId(second)) return { kind: 'pr-assurance-run', runId: second };
+    return { kind: 'error', message: 'This PR assurance link is incomplete. Open PR assurance from the navigation.' };
   }
   if (section === 'applications') return first ? { kind: 'application', id: first } : { kind: 'applications' };
   if (section === 'changes') return first ? { kind: 'change', id: first, revisionId: second === 'revisions' && third ? third : null } : { kind: 'changes' };

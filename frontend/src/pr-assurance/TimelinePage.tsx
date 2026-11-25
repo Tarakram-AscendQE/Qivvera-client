@@ -29,7 +29,7 @@ function PullCard({ entry, canImport, importing, error, onImport }: {
             <dt>Head commit</dt><dd className="mono">{short(field(pull, 'headSha'))}</dd>
             <dt>Imported</dt><dd>{formatDate(field(pull, 'importedAt'))} by {text(field(pull, 'importedBy'))}</dd>
           </dl>
-          <a className="link-button" href={text(field(pull, 'url'))} target="_blank" rel="noreferrer">Open on GitHub</a>
+          <div className="actions"><a className="button primary" href={`#/pr-assurance/pulls/${number}`}>Open</a><a className="link-button" href={text(field(pull, 'url'))} target="_blank" rel="noreferrer">Open on GitHub</a></div>
         </>
       ) : <p className="small muted">Not imported yet. Importing reads its title, branch and exact head commit from GitHub.</p>}
       <div className="form-error" role="alert">{error}</div>
