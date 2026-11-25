@@ -26,6 +26,16 @@ commit with this machine's GitHub login and compare the results.
 **Verify:** a scratch script reads the three check runs through the GitHub API, re-computes the SHA-256,
 and prints obligation states next to the expected table.
 **Dependencies:** none.
+
+**Progress 2026-11-25:**
+- [x] Both files written; `tsc -p .` passes in prcheck-verifiers.
+- [x] Local dry run of PR #6 (`af51c26`) with a stand-in GitHub: 3 VIOLATED (V2/bank-change-self-approval-blocked,
+  V3/scheduled-payments-held, V3/held-payment-visible), 11 SUPPORTED; team tests 25/25; 19 check-run
+  updates in order (0 → 14 checks); final text 12,058 characters; SHA-256 re-check matches; `fail` works.
+  Checks took ~10 s and team tests ~6 s locally.
+- [ ] Push to prcheck-verifiers `main`: **refused (HTTP 403)**: the GitHub account on this machine has no
+  write access to `prcheck-live/prcheck-verifiers`. The commit `ef0b4e7` is ready as a patch file.
+- [ ] Three real runs on GitHub Actions (needs the push, and a login that may start workflows).
 **Files (prcheck-verifiers):** `.github/workflows/qivvera-pr-assessment.yml`, `reporters/check-run-reporter.ts`.
 **Size:** M.
 
