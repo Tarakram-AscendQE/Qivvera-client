@@ -1,0 +1,401 @@
+{
+  "ok": true,
+  "disposition": "READY",
+  "dispositionReason": "All 14 obligations supported",
+  "summary": "READY · no rules broken · 14 of 14 obligations supported",
+  "counts": {
+    "obligations": 14,
+    "supported": 14,
+    "brokenRules": 0
+  },
+  "rules": [
+    {
+      "id": "CMP-001",
+      "title": "Every supplier and payment change is in the audit trail",
+      "owner": "@qivvra-demo/compliance",
+      "severity": "high",
+      "rule": "Every create, verify, change, approve, reject, schedule and release of a supplier, bank account or payment writes an audit event naming the actor, the record and what changed.",
+      "exceptionsAllowed": true,
+      "broken": false,
+      "obligations": [
+        {
+          "id": "CMP-001.1",
+          "statement": "Each bank account change step (request, approve, reject) writes an audit event with its actor.",
+          "check": "V5/bank-change-audited",
+          "checkDescription": "Request, approve and reject each write an audit event with the actor.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": [
+            "BANK_CHANGE_REJECTED:j.thomas",
+            "BANK_CHANGE_REQUESTED:ravi.kumar",
+            "BANK_CHANGE_APPROVED:m.fernandes",
+            "BANK_CHANGE_REQUESTED:ravi.kumar",
+            "BANK_ACCOUNT_VERIFIED:m.fernandes",
+            "BANK_ACCOUNT_ADDED:ravi.kumar",
+            "SUPPLIER_CREATED:ravi.kumar"
+          ],
+          "durationMs": 120
+        },
+        {
+          "id": "CMP-001.2",
+          "statement": "Each payment step (schedule, release, hold) writes an audit event with its actor.",
+          "check": "V5/payment-steps-audited",
+          "checkDescription": "Schedule, release and hold each write an audit event with the actor.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "relEvents": [
+              "PAYMENT_RELEASED:j.thomas",
+              "PAYMENT_SCHEDULED:neha.joshi"
+            ],
+            "heldStatus": "on_hold",
+            "heldEvents": [
+              "PAYMENT_HELD",
+              "PAYMENT_SCHEDULED"
+            ]
+          },
+          "durationMs": 176
+        }
+      ]
+    },
+    {
+      "id": "FIN-001",
+      "title": "A bank account change needs a second person",
+      "owner": "@qivvra-demo/finance-controls",
+      "severity": "critical",
+      "rule": "A change to a supplier's bank account takes effect only after a person other than the requester approves it. No role, combination of roles or admin path may let one person both request and approve the same change.",
+      "exceptionsAllowed": false,
+      "broken": false,
+      "obligations": [
+        {
+          "id": "FIN-001.1",
+          "statement": "The person who requested a bank account change cannot approve it.",
+          "check": "V2/bank-change-self-approval-blocked",
+          "checkDescription": "The requester of a bank change gets 403 when approving it; a second approver succeeds.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "requestId": "BCR-1001",
+            "requestedBy": "m.fernandes",
+            "selfApprovalStatus": 403,
+            "selfApprovalBody": {
+              "error": "SELF_APPROVAL_NOT_ALLOWED",
+              "message": "The person who requested a bank change cannot approve it"
+            }
+          },
+          "durationMs": 388
+        },
+        {
+          "id": "FIN-001.2",
+          "statement": "A proposed bank account cannot receive payments before it is approved.",
+          "check": "V2/proposed-account-not-payable",
+          "checkDescription": "A payment cannot be scheduled to, or released to, an account that is still proposed.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "previousAccountId": 6,
+            "proposedAccountId": 7,
+            "paymentDestinationId": 6
+          },
+          "durationMs": 161
+        },
+        {
+          "id": "FIN-001.3",
+          "statement": "The requester and the approver of every change are recorded.",
+          "check": "V5/bank-change-actors-recorded",
+          "checkDescription": "Bank change records hold distinct requester and approver.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "id": "BCR-1008",
+            "requestedBy": "ravi.kumar",
+            "decidedBy": "m.fernandes"
+          },
+          "durationMs": 106
+        }
+      ]
+    },
+    {
+      "id": "FIN-002",
+      "title": "Scheduled payments are held when the bank account changes",
+      "owner": "@qivvra-demo/finance-controls",
+      "severity": "critical",
+      "rule": "When a supplier's bank account changes, every payment already scheduled for that supplier and not yet released is put on hold for Finance review. It is neither silently paid to the old account nor silently redirected to the new one.",
+      "exceptionsAllowed": true,
+      "broken": false,
+      "obligations": [
+        {
+          "id": "FIN-002.1",
+          "statement": "After a bank change is approved, the supplier's scheduled payments are on hold and cannot be released.",
+          "check": "V3/scheduled-payments-held",
+          "checkDescription": "After an approved bank change, the supplier's scheduled payments are on hold and release is refused.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "paymentId": "PAY-7825",
+            "bankChange": "BCR-1003",
+            "statusAfterChange": "on_hold",
+            "destinationAccountId": 10,
+            "replacedAccountId": 10,
+            "releaseStatus": 409,
+            "releaseError": "PAYMENT_ON_HOLD"
+          },
+          "durationMs": 126
+        },
+        {
+          "id": "FIN-002.2",
+          "statement": "Scheduled payments are never redirected to the new account without a Finance decision.",
+          "check": "V3/no-silent-redirect",
+          "checkDescription": "No scheduled payment's destination changes without a recorded Finance decision.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "paymentId": "PAY-7826",
+            "destinationBefore": 12,
+            "destinationAfter": 12,
+            "newAccountId": 13,
+            "financeDecisionRecorded": false
+          },
+          "durationMs": 163
+        },
+        {
+          "id": "FIN-002.3",
+          "statement": "Each held payment is visible to Finance with the reason it was held.",
+          "check": "V3/held-payment-visible",
+          "checkDescription": "Held payments appear to Finance with a hold reason.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "paymentId": "PAY-7827",
+            "status": "on_hold",
+            "hold": {
+              "reason": "Supplier bank account changed (BCR-1005)",
+              "bankChangeRequestId": "BCR-1005",
+              "heldAt": "2026-11-01T05:18:07.228Z",
+              "resolution": null,
+              "resolvedBy": null,
+              "resolvedAt": null
+            }
+          },
+          "durationMs": 100
+        }
+      ]
+    },
+    {
+      "id": "FIN-003",
+      "title": "A payment is released by someone other than its scheduler",
+      "owner": "@qivvra-demo/finance-controls",
+      "severity": "critical",
+      "rule": "Only a Finance Approver releases a payment, never the person who scheduled it, and a payment is released at most once.",
+      "exceptionsAllowed": false,
+      "broken": false,
+      "obligations": [
+        {
+          "id": "FIN-003.1",
+          "statement": "The scheduler of a payment cannot release it.",
+          "check": "V2/payment-self-release-blocked",
+          "checkDescription": "The scheduler of a payment gets 403 when releasing it.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "paymentId": "PAY-7823",
+            "scheduler": "neha.joshi",
+            "releaseStatus": 403
+          },
+          "durationMs": 79
+        },
+        {
+          "id": "FIN-003.2",
+          "statement": "A payment cannot be released twice.",
+          "check": "V2/payment-single-release",
+          "checkDescription": "A second release of the same payment gets 409.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "paymentId": "PAY-7824",
+            "first": 200,
+            "second": 409
+          },
+          "durationMs": 71
+        }
+      ]
+    },
+    {
+      "id": "PLT-001",
+      "title": "Evidence comes from the exact commit under review",
+      "owner": "@qivvra-demo/platform-eng",
+      "severity": "critical",
+      "rule": "Verifiers run only against an environment whose /version reports the pull request's head commit. Evidence from any other build is discarded.",
+      "exceptionsAllowed": false,
+      "broken": false,
+      "obligations": [
+        {
+          "id": "PLT-001.1",
+          "statement": "The QE environment reports the pull request's head commit at /version before and after verification.",
+          "check": "V1/qe-runs-head-commit",
+          "checkDescription": "QE /version reports the PR head commit before and after the run.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "expected": "3f6e20d",
+            "version": {
+              "app": "vendorpay",
+              "version": "1.6.0",
+              "gitSha": "3f6e20d",
+              "builtAt": "2026-11-01T05:18:03.715Z",
+              "environment": "qe"
+            }
+          },
+          "durationMs": 89
+        }
+      ]
+    },
+    {
+      "id": "SEC-001",
+      "title": "Bank account numbers never leave the service unmasked",
+      "owner": "@qivvra-demo/security",
+      "severity": "high",
+      "rule": "A bank account number is shown only as its last four digits (\"**** 4421\") in screens, API responses, audit details and application logs.",
+      "exceptionsAllowed": false,
+      "broken": false,
+      "obligations": [
+        {
+          "id": "SEC-001.1",
+          "statement": "Screens show only the last four digits of any bank account.",
+          "check": "V4/ui-masked",
+          "checkDescription": "Every screen showing a bank account shows only the last four digits.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": [
+            {
+              "as": "neha.joshi",
+              "screen": "#suppliers",
+              "fullNumbers": 0,
+              "maskedShown": true
+            },
+            {
+              "as": "neha.joshi",
+              "screen": "#payments",
+              "fullNumbers": 0,
+              "maskedShown": true
+            },
+            {
+              "as": "neha.joshi",
+              "screen": "#supplier/SUP-0192",
+              "fullNumbers": 0,
+              "maskedShown": true
+            },
+            {
+              "as": "j.thomas",
+              "screen": "#changes",
+              "fullNumbers": 0,
+              "maskedShown": true
+            },
+            {
+              "as": "audit.viewer",
+              "screen": "#audit",
+              "fullNumbers": 0,
+              "maskedShown": true
+            }
+          ],
+          "durationMs": 4936
+        },
+        {
+          "id": "SEC-001.2",
+          "statement": "API responses never contain a full bank account number.",
+          "check": "V4/api-masked",
+          "checkDescription": "No API response body contains a 9 to 18 digit run.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": [
+            {
+              "as": "neha.joshi",
+              "path": "/api/suppliers",
+              "status": 200,
+              "fullNumbers": 0
+            },
+            {
+              "as": "neha.joshi",
+              "path": "/api/suppliers/SUP-0202",
+              "status": 200,
+              "fullNumbers": 0
+            },
+            {
+              "as": "neha.joshi",
+              "path": "/api/payments",
+              "status": 200,
+              "fullNumbers": 0
+            },
+            {
+              "as": "j.thomas",
+              "path": "/api/bank-change-requests",
+              "status": 200,
+              "fullNumbers": 0
+            },
+            {
+              "as": "ravi.kumar",
+              "path": "/api/bank-change-requests?supplierId=SUP-0202",
+              "status": 200,
+              "fullNumbers": 0
+            },
+            {
+              "as": "audit.viewer",
+              "path": "/api/audit-events?limit=500",
+              "status": 200,
+              "fullNumbers": 0
+            },
+            {
+              "as": "j.thomas",
+              "path": "/api/suppliers/SUP-0192",
+              "status": 200,
+              "fullNumbers": 0
+            }
+          ],
+          "durationMs": 140
+        },
+        {
+          "id": "SEC-001.3",
+          "statement": "Application logs and audit details never contain a full bank account number.",
+          "check": "V4/logs-masked",
+          "checkDescription": "The application log and audit details contain no 9 to 18 digit run.",
+          "state": "SUPPORTED",
+          "reason": null,
+          "observation": {
+            "logLines": 52,
+            "logFullNumbers": 0,
+            "auditFullNumbers": 0
+          },
+          "durationMs": 77
+        }
+      ]
+    }
+  ],
+  "proof": {
+    "commit": "3f6e20d",
+    "environmentConfirmed": true,
+    "verifiersCommit": "dfaa599",
+    "startedAt": "2026-11-01T05:18:05.044Z",
+    "finishedAt": "2026-11-01T05:18:13.133Z",
+    "rulesCommit": "e408884988ad27d6e0776700c4e268d4bf86ad9d",
+    "snapshotDigest": "sha256:f6b9d6ba45b87eb1319f011dcc2a2ac4e46b629499374428834ab0ce67ea4639",
+    "pullNumber": 8,
+    "headSha": "3f6e20da8e085a401d8c1ec67368fbeae3cc46b5",
+    "evidenceSha256": "db6b395d7ba49c4d0f6aebaccd9ccdef66eda3ef11829724443082914749e563",
+    "githubRunUrl": "https://github.com/prcheck-live/prcheck-verifiers/actions/runs/1008"
+  },
+  "teamTests": {
+    "total": 29,
+    "passed": 29,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0
+  },
+  "comparison": {
+    "previousPull": 7,
+    "fixed": [
+      "FIN-002"
+    ],
+    "stillBroken": [],
+    "newlyBroken": []
+  }
+}

@@ -83,7 +83,7 @@ Task 5 GitHub client + config ───────────────┼�
 
 - [x] Task 7: Slice "evaluate" API (dispatch, sync, finalize, history)
 - [x] Task 8: Slice "evaluate" UI (button, live progress, history)
-- [ ] Task 9: Slice "report" (all report sections from stored evidence)
+- [x] Task 9: Slice "report" (all report sections from stored evidence)
 - [ ] Task 10: Slice "progression" (timeline counts + compare table)
 
 ### Checkpoint C: end-to-end locally
