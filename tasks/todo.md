@@ -54,5 +54,5 @@ helpers and PostgreSQL-only setup.
 - [x] Task 9 (npm run dev starts a temporary Docker PostgreSQL; README backend + database sections; AGENTS.md updated)
 
 ### Final checkpoint
-- [ ] code-review-and-quality review of the backend diff
-- [ ] All gates green; report to the user (what changed, verified, not verified)
+- [x] code-review-and-quality review of the backend diff (CSRF-removal mutation caught by 5 tests; storage fallback simplified; createAuth and backend/schema.sql left for a decision)
+- [ ] All gates green — pending: 4 recovery-rehearsal tests need postgresql-client-17 (pg_dump/pg_restore) on this machine
