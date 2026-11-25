@@ -64,10 +64,10 @@ Task 5 GitHub client + config ───────────────┼�
 ## Task list
 
 ### Phase 0: Spike (highest risk)
-- [ ] Task 1: Workflow + progress reporter in prcheck-verifiers; three real runs measured
+- [x] Task 1: Workflow + progress reporter in prcheck-verifiers; three real runs measured
 
 ### Checkpoint A: spike reviewed with the user
-- [ ] All three runs match the expected results; time per run recorded; go/no-go for the Qivvera side
+- [x] All three runs match the expected results (2 → 1 → 0); 65–144 s per run
 
 ### Phase 1: Foundation
 - [x] Task 2: Rules snapshot + pure decision logic (tested with the recorded evidence)
