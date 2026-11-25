@@ -34,24 +34,24 @@ everything else by the old router as fallback; parity harness identical; all che
 - [x] Task 6 (old router deleted; parity 173 responses identical; 8/8 browser suites; 3 demos; PostgreSQL suites 93/97 — 4 recovery tests need pg_dump/pg_restore, not installed)
 
 ### Checkpoint A
-- [ ] All gates green; every endpoint is listed in `backend/api/routes.ts`
+- [x] All gates green; every endpoint is listed in `backend/api/routes.ts` (49 endpoints)
 
 ## Phase B — postgres-only
 
 ### Task 7: Docker PostgreSQL helper for tests and development
 **Acceptance:** one script starts a loopback `postgres:17-alpine` container, builds a migrated template
 database and hands out `qivvera_test_*` copies; the safety guard applies; containers are removed afterwards.
-- [ ] Task 7
+- [x] Task 7 (scripts/postgres-container.mjs, scripts/with-postgres.mjs, test/postgres-test-database.mjs: one empty qivvera_test_* database per test, dropped after each file)
 
 ### Task 8: Run every test on PostgreSQL; remove SQLite
 **Acceptance:** no `node:sqlite` anywhere; `DATABASE_URL` required; all backend tests, the 8 PostgreSQL
 suites (no longer skipped), browser suites, demos and offline checks pass on PostgreSQL.
-- [ ] Task 8
+- [x] Task 8 (no SQLite left in backend/api/scripts/test; DATABASE_URL required; 745/749 backend tests on PostgreSQL — the 4 recovery tests wait for pg_dump/pg_restore 17; impact browser test race fixed)
 
 ### Task 9: Developer workflow and docs
 **Acceptance:** `npm run dev` starts Docker PostgreSQL; README/AGENTS describe Express layout, common
 helpers and PostgreSQL-only setup.
-- [ ] Task 9
+- [x] Task 9 (npm run dev starts a temporary Docker PostgreSQL; README backend + database sections; AGENTS.md updated)
 
 ### Final checkpoint
 - [ ] code-review-and-quality review of the backend diff

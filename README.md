@@ -61,7 +61,8 @@ frontend/
   static/       index.html, stylesheets and logo, copied into public/ by the build
   public/       Build output served by the Node server and Vercel. Generated; do not edit by hand.
 backend/
-  server/       HTTP application, repositories, assurance/resolution/drafting/impact/templates modules
+  api/          Express 5 + TypeScript HTTP layer: routes.ts (every endpoint), endpoints/, common/ helpers
+  server/       Repositories and the assurance/resolution/drafting/impact/templates/intake modules
   verifiers/    Fixed verifier bundles run by the separate assurance worker
   migrations/   Published PostgreSQL migrations
   scripts/      Backend operator CLIs: worker, migrate, accounts, permission audit, recovery rehearsal
@@ -97,6 +98,56 @@ act through `data-action` / `data-resolution` attributes handled by the shell.
 Routing is a typed hash route table rather than React Router: the screen modules load their data and
 then draw, and moving them to route loaders is a separate refactor planned after the backend work.
 
+### Backend
+
+Every HTTP request goes through one Express 5 app written in TypeScript (`backend/api/`, compiled to
+`dist/api/` by `npm run build`). The layout is the same for every endpoint:
+
+- `backend/api/routes.ts` lists **every endpoint** (method, path, handler), grouped by the step of the
+  request pipeline it runs in. Optional features are wrapped in `onlyWhen(...)`, so their endpoints
+  exist only when the feature is configured.
+- `backend/api/endpoints/<area>/<name>.ts` holds **one endpoint per file**, declared with
+  `defineEndpoint({ params, query, handle })`. `handle` receives a context (services, checked params
+  and query, the session, `readBody()`) and returns a reply; it never writes to the response itself.
+- `backend/api/common/` holds the shared helpers: `routing.ts` (endpoint and route types),
+  `validate.ts` (Zod checks for ids, queries and pages), `respond.ts` (`reply`, `download`),
+  `errors.ts` (`InputError`, the error body and handler), `body.ts` (JSON body limits),
+  `security.ts` (headers, origin and CSRF), `session.ts`, `assets.ts`, `services.ts` (typed
+  repository interfaces) and `assessment-summary.ts`.
+- `backend/api/app.ts` shows the pipeline order: security headers → health → web files → origin check
+  → sign-in → session required → CSRF → endpoints → 404 → error handler.
+
+To add an endpoint, create its file and add one line to `routes.ts`:
+
+```ts
+// backend/api/endpoints/applications/get-application.ts
+export const getApplication = defineEndpoint({
+  params: idParams('applicationId'),            // Zod: a malformed id is simply not this route (404)
+  async handle({ services: { repository }, params }) {
+    const application = await repository.getApplication(params.applicationId);
+    if (!application) throw new InputError('APPLICATION_NOT_FOUND', 'Application not found.', 404);
+    return reply(application);
+  }
+});
+// backend/api/routes.ts:   get('/api/applications/:applicationId', getApplication),
+```
+
+Repositories in `backend/server/` validate request bodies and return the exact error codes and
+messages clients rely on. Zod already checks every path id and query string; Zod schemas for request
+bodies, OpenAPI generation, a query-library rewrite, worker/lock rework and multitenancy are planned
+(see `tasks/plan.md`).
+
+### Database
+
+PostgreSQL 17 is the only database. `DATABASE_URL` is required to start the server.
+
+- `npm run dev` starts a temporary local PostgreSQL in Docker when `.env.local` has no `DATABASE_URL`
+  (its data is removed when you stop). `node scripts/postgres-dev.mjs` starts one on its own and prints
+  the URL to use with `npm start`.
+- Tests, demos and browser suites run through `node scripts/with-postgres.mjs`, which starts a
+  throwaway `postgres:17-alpine` container bound to 127.0.0.1 and removes it afterwards. Each test gets
+  its own empty `qivvera_test_*` database (`test/postgres-test-database.mjs`).
+
 `backend/server/`, `backend/verifiers/` and `backend/migrations/` must stay sibling directories.
 Published verifier digests include the relative path strings `../../verifiers/…`, so moving one of
 them without the others changes the recorded verifier identity. Historical increment records in
@@ -106,7 +157,8 @@ them without the others changes the recorded verifier identity. Historical incre
 
 ## Engineering checks
 
-Use Node 22.16 or later within Node 22 and the locked dependencies:
+Use Node 22.16 or later within Node 22 and the locked dependencies. Docker is required: every
+backend test, demo and browser suite runs against a throwaway PostgreSQL 17 container.
 
 ```sh
 npm ci --ignore-scripts
@@ -117,9 +169,11 @@ npm run demo:resolution
 npm run demo:generalization
 ```
 
-`npm run check:release` requires a disposable, explicitly named loopback PostgreSQL database.
-All eight database suites must execute; missing execution fails the gate. Never reset working data.
-The operations suite also requires PostgreSQL 17-compatible `pg_dump` and `pg_restore` tools.
+`npm run check` runs all eight PostgreSQL suites on the Docker database. `npm run check:release`
+additionally requires an explicitly named disposable loopback database in `TEST_DATABASE_URL`, which
+the release suites then use. Never reset working data. The operations (recovery) suite also requires
+PostgreSQL 17 `pg_dump` and `pg_restore` on this machine (`postgresql-client-17` from the official
+PostgreSQL apt repository on Ubuntu).
 
 For genuine local HTTP browser journeys:
 
@@ -127,7 +181,7 @@ For genuine local HTTP browser journeys:
 python3 -m venv .venv-browser
 .venv-browser/bin/python3 -m pip install -r test/requirements-browser.txt
 .venv-browser/bin/python3 -m playwright install --with-deps chromium
-.venv-browser/bin/python3 test/run-browser-suites.py
+npm run test:browser       # runs test/run-browser-suites.py with a throwaway PostgreSQL
 ```
 
 After configuring the disposable database and pinned browser runtime, run the whole cumulative gate:

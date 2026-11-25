@@ -79,21 +79,22 @@ depend on their relative paths).
 ## Code Style
 
 ```ts
-// backend/http/routes/applications.ts
-export function applicationRoutes({ repository }: Services): Router {
-  const router = Router();
-  router.get('/api/applications/:id', async (req, res) => {
-    const { id } = parse(applicationParams, req.params);        // Zod; failure → same 404/400 as today
-    const application = await repository.getApplication(id);
+// backend/api/endpoints/applications/get-application.ts — one endpoint per file
+export const getApplication = defineEndpoint({
+  params: idParams('applicationId'),            // Zod; a malformed id means "not this route" (404)
+  async handle({ services: { repository }, params }) {
+    const application = await repository.getApplication(params.applicationId);
     if (!application) throw new InputError('APPLICATION_NOT_FOUND', 'Application not found.', 404);
-    res.status(200).json(application);
-  });
-  return router;
-}
+    return reply(application);
+  }
+});
+
+// backend/api/routes.ts — every endpoint listed in one place
+get('/api/applications/:applicationId', getApplication),
 ```
 
-Small route handlers that validate, call the existing repository and send JSON. No business logic in
-routes. Strict TypeScript, no `any`, no `@ts-ignore`. Comments explain why, not what.
+Endpoint functions validate, call the existing repository and return a reply; the router sends it.
+No business logic in endpoints. Strict TypeScript, no `any`, no `@ts-ignore`. Comments explain why.
 
 ## Testing Strategy
 
