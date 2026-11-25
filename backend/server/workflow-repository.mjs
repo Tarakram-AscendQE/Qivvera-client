@@ -51,7 +51,7 @@ export async function openWorkflowRepository(options = {}) {
     const listChanges = async (c) => { const all = (await c.query('SELECT id FROM changes ORDER BY created_at DESC,id')).rows; const result = []; for (const r of all) {
         const change = await getChange(c, r.id);
         const { obligations, ...rest } = change;
-        result.push({ ...rest, obligationCount: obligations.length, acceptedCount: obligations.filter(o => o.reviewStatus === 'ACCEPTED').length, inReviewCount: obligations.filter(o => o.reviewStatus === 'IN_REVIEW').length });
+        result.push({ ...rest, obligationCount: obligations.length, acceptedCount: obligations.filter(o => o.reviewStatus === 'ACCEPTED').length, inReviewCount: obligations.filter(o => o.reviewStatus === 'IN_REVIEW').length, draftCount: obligations.filter(o => o.reviewStatus === 'DRAFT' || o.reviewStatus === 'CLARIFICATION_REQUIRED').length });
     } return result; };
     const listActivity = async (c) => (await c.query('SELECT * FROM activity ORDER BY created_at DESC,id DESC LIMIT 100')).rows.map(r => ({ id: r.id, actor: r.actor, action: r.action, entityId: r.entity_id, detail: r.detail, createdAt: iso(r.created_at) }));
     const result = { workflow: true, driver: db.driver, reviewMode,

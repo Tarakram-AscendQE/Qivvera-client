@@ -45,7 +45,25 @@ export function AssuranceTab({ view }: { view: ChangeView }) {
 }
 
 /** Actual observations, tied to a frozen revision, scope, target and verifier; plans are not evidence. */
+/** The route from a failed check to Ready. A later pass on the same commit never clears the failure. */
+function FixPath({ resolution }: { resolution: boolean }) {
+  const steps: readonly [string, string][] = [
+    [resolution ? 'Track the fix' : 'Record what went wrong', resolution ? 'Open Resolutions and create an item from this result.' : 'Describe the failure so the developer can correct it.'],
+    ['Ship a corrected commit', 'Add it as a new revision of this change.'],
+    ['Check the new revision', 'Same requirement, same check, fresh evidence.'],
+    ['Independent verification', 'Someone who did not track, fix or own it confirms the correction.']
+  ];
+  return <aside className="fix-path" aria-labelledby="fix-path-title"><h2 id="fix-path-title">How to get to Ready</h2><ol>{steps.map(([title, copy], index) => <li key={title}><span className="fix-num" aria-hidden="true">{index + 1}</span><div><strong>{title}</strong><p>{copy}</p></div></li>)}</ol><p className="small">This failure stays on record for the checked commit. A later pass on the same commit does not hide it.</p></aside>;
+}
+
 export function EvidenceTab({ view }: { view: ChangeView }) {
   const runs = view.runs.filter(run => run.evidence || run.evidenceIntegrity === 'DIGEST_MISMATCH');
+  const latest = view.runs[0];
+  const failed = latest?.applicability === 'CURRENT' && latest.status === 'COMPLETED' && latest.disposition === 'NOT_READY';
+  const evidence = <EvidenceList runs={runs} />;
+  return failed ? <div className="evidence-layout">{evidence}<FixPath resolution={!!view.resolution} /></div> : evidence;
+}
+
+function EvidenceList({ runs }: { runs: ChangeView['runs'] }) {
   return <section className="panel"><div className="panel-head"><div><h2>Execution evidence</h2><p>Actual observations, tied to a frozen revision, scope, target, and verifier.</p></div></div><div className="panel-body">{runs.length ? runs.map(run => { const report = run.evidence?.report; return <article className="run-card" key={run.id}><div className="chip-row"><Badge text={run.evidenceIntegrity} /><Badge text={run.applicability} />{run.evidence ? <Badge text={report?.outcome ?? 'MULTIPLE FINDINGS'} kind={resultKind(report?.outcome)} /> : null}</div><p>{findingReason(report?.reason ?? (report?.reports ? 'Inspect the evidence for each mapped obligation.' : null) ?? 'Evidence failed its content-digest check. No disposition is accepted.')}</p><p className="small mono">{text(run.evidenceDigest ?? '')}</p><button className="button" data-action="open-assessment" data-id={run.id}>Inspect expected vs observed</button></article>; }) : <div className="empty"><h3>No execution evidence yet</h3><p>Accepted requirements and saved plans are not execution evidence.</p></div>}</div></section>;
 }

@@ -88,7 +88,7 @@ def write(page, fixture, path, data, method='post'):
 
 def open_assurance(page, fixture, change_id):
     page.goto(fixture.origin + '/#/changes/' + change_id, wait_until='networkidle')
-    page.get_by_role('button', name='Assurance', exact=True).click()
+    page.get_by_role('button', name='Plan & check', exact=True).click()
     expect(page.get_by_role('heading', name='Approved verification plan', exact=True)).to_be_visible()
 
 

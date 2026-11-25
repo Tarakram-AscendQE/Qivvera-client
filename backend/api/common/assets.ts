@@ -8,7 +8,8 @@ export type AssetMap = ReadonlyMap<string, readonly [Buffer, string]>;
 /** The web root files (built into frontend/public by `npm run build`). */
 const WEB_FILES: readonly (readonly [string, string])[] = [
   ['index.html', 'text/html'], ['app.js', 'text/javascript'], ['app.css', 'text/css'], ['workflow.css', 'text/css'],
-  ['assurance.css', 'text/css'], ['resolution.css', 'text/css'], ['logo.svg', 'image/svg+xml']
+  ['assurance.css', 'text/css'], ['resolution.css', 'text/css'], ['theme.css', 'text/css'], ['logo.svg', 'image/svg+xml'],
+  ['inter.woff2', 'font/woff2'], ['INTER-LICENSE.txt', 'text/plain']
 ];
 const REQUIRED = new Set(['index.html', 'app.js', 'app.css']);
 
@@ -17,7 +18,7 @@ export function loadAssets(webRoot: string): AssetMap {
   const assets = new Map<string, readonly [Buffer, string]>();
   for (const [name, type] of WEB_FILES) {
     try {
-      assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type + '; charset=utf-8']);
+      assets.set(name === 'index.html' ? '/' : '/' + name, [readFileSync(resolve(webRoot, name)), type.startsWith('font/') ? type : type + '; charset=utf-8']);
     } catch {
       if (REQUIRED.has(name)) throw new Error('REQUIRED_ASSET_MISSING');
     }

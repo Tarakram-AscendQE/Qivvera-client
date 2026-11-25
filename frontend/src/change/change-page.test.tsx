@@ -93,3 +93,33 @@ describe('change page', () => {
     expect(screen.getByRole('heading', { name: 'Findings to resolve' })).toBeTruthy();
   });
 });
+
+describe('change steps', () => {
+  const states = () => [...document.querySelectorAll('.flow-step')].map(step => [step.querySelector('button')!.textContent, step.className.split(' ')[1], step.querySelector('.flow-sub')!.textContent]);
+
+  it('shows the workflow as steps named for their section, with the first unfinished one current', () => {
+    show({ change: change({ obligations: [obligation('a', 'ACCEPTED'), obligation('b', 'IN_REVIEW')] }) }, ['POLICY_AUTHORITY']);
+    expect(states()).toEqual([['Describe', 'flow-done', 'Done'], ['2Requirements', 'flow-now', '1 in review'], ['3Plan & check', 'flow-todo', 'Plan needed'], ['4Result', 'flow-todo', 'No result yet']]);
+    const requirements = screen.getByRole('button', { name: 'Requirements' });
+    expect([requirements.dataset['action'], requirements.dataset['tab'], requirements.getAttribute('aria-current')]).toEqual(['tab', 'obligations', 'step']);
+    expect(screen.getByRole('button', { name: 'Plan & check' }).dataset['tab']).toBe('assurance');
+    expect(within(screen.getByRole('navigation', { name: 'Records' })).getAllByRole('button').map(b => b.dataset['tab'])).toEqual(['revisions', 'history']);
+  });
+
+  it('keeps a failed result red, never marks it done, and shows the route to Ready', () => {
+    const failed = { id: 'run-1', status: 'COMPLETED', applicability: 'CURRENT', disposition: 'NOT_READY', evidenceIntegrity: 'DIGEST_MATCH', queuedAt: '2026-11-01T10:00:00Z' };
+    show({ tab: 'evidence', change: change({ obligations: [obligation('a', 'ACCEPTED')] }), runs: [failed], workspace: { applications: [{ id: 'a1', name: 'VendorPay' }], changes: [], activity: [], capabilities: { resolutionWorkflow: true } } }, ['AUTHOR'], true);
+    expect(states().find(([name]) => String(name).endsWith('Result'))).toEqual(['Result', 'flow-bad', 'Not ready']);
+    expect(states().find(([name]) => String(name).endsWith('Resolutions'))).toEqual(['5Resolutions', 'flow-todo', 'Track the fix here']);
+    const path = screen.getByRole('heading', { name: 'How to get to Ready' }).closest('aside')!;
+    expect(within(path).getByText('Track the fix')).toBeTruthy();
+    expect(within(path).getByText(/A later pass on the same commit does not hide it/)).toBeTruthy();
+  });
+
+  it('marks Ready only from a current completed READY assessment', () => {
+    const stale = { id: 'run-1', status: 'COMPLETED', applicability: 'STALE_INPUTS', disposition: 'READY', queuedAt: '2026-11-01T10:00:00Z' };
+    show({ change: change({ obligations: [obligation('a', 'ACCEPTED')] }), runs: [stale] }, ['VIEWER']);
+    expect(states()[3]).toEqual(['4Result', 'flow-todo', 'No result yet']);
+    expect(screen.queryByRole('heading', { name: 'How to get to Ready' })).toBeNull();
+  });
+});

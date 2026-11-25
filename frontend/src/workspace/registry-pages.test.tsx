@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fakeShell, fakeWorkspaceServices } from '../test-utils';
 import { createWorkspaceUI, type WorkspaceUI } from './workspace-module';
@@ -27,7 +27,7 @@ describe('application registry', () => {
     setup(['AUTHOR'], { applications: [app], changes, activity: [] });
     ui.showApplication('a1');
     expect(shell).toHaveBeenCalledWith(expect.anything(), 'applications', 'VendorPay');
-    expect(screen.getByText('Not supplied')).toBeTruthy();
+    expect(within(document.querySelector<HTMLElement>('.details')!).getByText('Not supplied')).toBeTruthy();
     expect(screen.getByText('Reference only. Source access has not been verified.')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Mine' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Other' })).toBeNull();
@@ -46,7 +46,7 @@ describe('changes and activity', () => {
   it('lists every change and keeps the change dialog hook', () => {
     setup(['AUTHOR'], { applications: [app], changes, activity: [] });
     ui.showChanges();
-    expect(document.querySelectorAll('.row')).toHaveLength(2);
+    expect(document.querySelectorAll('tbody tr')).toHaveLength(2);
     expect(screen.getByRole('button', { name: '+ New change' }).dataset['action']).toBe('new-change');
   });
 

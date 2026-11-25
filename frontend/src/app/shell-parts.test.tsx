@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deferred } from '../test-utils';
 import { ErrorPage } from './ErrorPages';
@@ -39,11 +39,14 @@ describe('frame', () => {
 
   it('marks the current page, shows only enabled sections and names the roles', () => {
     host.render(<Frame active="changes" label="Changes" email="author@example.test" roles={['AUTHOR', 'POLICY_AUTHORITY', 'VIEWER']} workspace={workspace}><p>Body</p></Frame>);
-    const links = screen.getAllByRole('link').map(link => [link.textContent, link.getAttribute('aria-current')]);
-    expect(links).toEqual([['Workspace', null], ['Applications', null], ['Changes', 'page'], ['Resolutions', null], ['Verification templates', null], ['Activity', null], ['Guide', null], ['Support', null]]);
+    const links = within(screen.getByRole('navigation', { name: 'Main navigation' })).getAllByRole('link').map(link => [link.textContent, link.getAttribute('aria-current')]);
+    expect(links).toEqual([['Workspace', null], ['Applications', null], ['Changes', 'page'], ['Resolutions', null], ['Activity', null], ['Verification templates', null], ['Guide', null], ['Support', null]]);
+    expect([...document.querySelectorAll('.nav-label')].map(label => label.textContent)).toEqual(['Work', 'Connect', 'Help']);
+    expect(new Set([...document.querySelectorAll('.nav a svg')].map(svg => svg.innerHTML)).size).toBe(8);
     expect(screen.getByText('Author · Policy authority · Viewer')).toBeTruthy();
     expect(screen.getByText('AU')).toBeTruthy();
     expect(screen.getByText('Release 0.11.0 · PostgreSQL')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'How Qivvera decides' }).getAttribute('href')).toBe('#/guide');
     expect(document.querySelector('.breadcrumb')!.textContent).toBe('Qivvera   /   Changes');
     expect(document.querySelector('#main > p')!.textContent).toBe('Body');
   });

@@ -55,7 +55,7 @@ function bannerState({ runs, assuranceError }: ChangeView): { title: string; cop
 export function AssessmentBanner({ view }: { view: ChangeView }) {
   const latest = view.runs[0];
   const { title, copy, kind } = bannerState(view);
-  return <section className={`status-panel ${kind}`}><div><span className="field-label">{latest?.applicability === 'CURRENT' ? 'Current assessment' : 'Assessment status'}</span><h2>{title}</h2><p>{copy}</p><p className="small">Scope-bound behavioural assessment. Not universal safety or release certification.</p></div><div className="chip-row"><Badge text={view.change.obligations.filter(o => o.reviewStatus === 'ACCEPTED').length + ' ACCEPTED'} />{latest ? <Badge text={latest.status} /> : null}</div></section>;
+  return <section className={`status-panel ${kind}`} aria-label={latest?.applicability === 'CURRENT' ? 'Current assessment' : 'Assessment status'}><div><h2>{title}</h2><p>{copy}</p><p className="small">Scope-bound behavioural assessment. Not universal safety or release certification.</p></div><div className="chip-row"><Badge text={view.change.obligations.filter(o => o.reviewStatus === 'ACCEPTED').length + ' ACCEPTED'} />{latest ? <Badge text={latest.status} /> : null}</div></section>;
 }
 
 export function RunButton({ view }: { view: ChangeView }) {
