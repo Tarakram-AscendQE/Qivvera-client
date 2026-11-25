@@ -1,4 +1,4 @@
-import express, { type Express, type RequestHandler } from 'express';
+import express, { type Express } from 'express';
 import { handleErrors, notFound } from './common/errors.js';
 import { serveAssets } from './common/assets.js';
 import { routerFor } from './common/routing.js';
@@ -21,10 +21,8 @@ import { publicRoutes, sessionRoutes, signInRoutes, workspaceRoutes } from './ro
  *   9. workspace routes (everything else in routes.ts)
  *  10. not found                                              → 404 NOT_FOUND
  *  11. errors: InputError → its status and message; anything else → 500 INTERNAL_ERROR
- *
- * `fallback` replaces step 10 while endpoints are still moving from the old router.
  */
-export function createExpressApp(services: Services, { fallback }: { fallback?: RequestHandler } = {}): Express {
+export function createExpressApp(services: Services): Express {
   const app = express();
   // Same responses as before: no X-Powered-By or ETag headers; '/a/' is not '/a' and '/A' is not '/a'.
   // Settings: https://expressjs.com/en/5x/api/application#application-settings
@@ -42,7 +40,7 @@ export function createExpressApp(services: Services, { fallback }: { fallback?: 
   app.use(routerFor(sessionRoutes, services));
   app.use(requireCsrf(services.auth));
   app.use(routerFor(workspaceRoutes, services));
-  app.use(fallback ?? notFound);
+  app.use(notFound);
   app.use(handleErrors);
   return app;
 }

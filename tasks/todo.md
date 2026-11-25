@@ -31,7 +31,7 @@ everything else by the old router as fallback; parity harness identical; all che
 **Acceptance:** `backend/server/app.mjs` request handler removed; every request is answered by Express
 (unknown paths → today's 401/404); parity harness over all endpoints identical; 8 browser suites, 3 demos,
 8 PostgreSQL suites (Docker) pass.
-- [ ] Task 6
+- [x] Task 6 (old router deleted; parity 173 responses identical; 8/8 browser suites; 3 demos; PostgreSQL suites 93/97 — 4 recovery tests need pg_dump/pg_restore, not installed)
 
 ### Checkpoint A
 - [ ] All gates green; every endpoint is listed in `backend/api/routes.ts`

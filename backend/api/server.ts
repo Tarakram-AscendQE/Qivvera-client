@@ -1,6 +1,5 @@
 import http from 'node:http';
 import { fileURLToPath } from 'node:url';
-import { createLegacyRequestHandler } from '../../backend/server/app.mjs';
 import { createSupportReader } from '../../backend/server/support-info.mjs';
 import { createWorkspaceAuth } from '../../backend/server/workspace-auth.mjs';
 import { createExpressApp } from './app.js';
@@ -42,6 +41,5 @@ export function createApplicationServer(options: ApplicationServerOptions): http
     readSupport: createSupportReader({ repository, assurance, resolution, intake, accountDirectory, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies }),
     assets: loadAssets(webRoot)
   };
-  const fallback = createLegacyRequestHandler({ ...options, webRoot });
-  return http.createServer({ requestTimeout: 15000, headersTimeout: 10000, maxHeaderSize: 16384 }, createExpressApp(services, { fallback }));
+  return http.createServer({ requestTimeout: 15000, headersTimeout: 10000, maxHeaderSize: 16384 }, createExpressApp(services));
 }
