@@ -4,13 +4,14 @@ import { createSupportReader } from '../../backend/server/support-info.mjs';
 import { createWorkspaceAuth } from '../../backend/server/workspace-auth.mjs';
 import { createExpressApp } from './app.js';
 import { loadAssets } from './common/assets.js';
-import type { AssuranceRepository, IntakeRepository, ResolutionRepository, Services, WorkflowRepository } from './common/services.js';
+import type { AssuranceRepository, IntakeRepository, PrAssuranceService, ResolutionRepository, Services, WorkflowRepository } from './common/services.js';
 
 export interface ApplicationServerOptions {
   readonly repository: WorkflowRepository;
   readonly assurance?: AssuranceRepository | null;
   readonly resolution?: ResolutionRepository | null;
   readonly intake?: IntakeRepository | null;
+  readonly prAssurance?: PrAssuranceService | null;
   /** Static accounts (local review and tests) when no account directory is configured. */
   readonly accounts?: unknown;
   readonly accountDirectory?: unknown;
@@ -29,14 +30,14 @@ export interface ApplicationServerOptions {
  * service has always used. Used by `npm start`, the Vercel function (api/index.mjs) and the tests.
  */
 export function createApplicationServer(options: ApplicationServerOptions): http.Server {
-  const { repository, assurance = null, resolution = null, intake = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin,
+  const { repository, assurance = null, resolution = null, intake = null, prAssurance = null, accounts, accountDirectory = null, ownerEmail, passwordHash, publicOrigin,
     secureCookies = false, webRoot = fileURLToPath(new URL('../../frontend/public', import.meta.url)), releaseRevision = 'unrecorded' } = options;
   if (!publicOrigin || new URL(publicOrigin).origin !== publicOrigin) throw new Error('PUBLIC_ORIGIN must be an exact origin.');
   if (secureCookies && !publicOrigin.startsWith('https://')) throw new Error('HTTPS_REQUIRED');
   if (repository.workflow !== true) throw new Error('WORKFLOW_REPOSITORY_REQUIRED');
   const defaultOwner = [{ email: ownerEmail, passwordHash, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }];
   const services: Services = {
-    repository, assurance, resolution, intake, publicOrigin, secureCookies, releaseRevision,
+    repository, assurance, resolution, intake, prAssurance, publicOrigin, secureCookies, releaseRevision,
     auth: createWorkspaceAuth({ directory: accountDirectory ?? undefined, accounts: accountDirectory ? undefined : accounts ?? defaultOwner, repository, secureCookies }),
     readSupport: createSupportReader({ repository, assurance, resolution, intake, accountDirectory, accounts: accounts ?? [{ email: ownerEmail, roles: ['AUTHOR', 'POLICY_AUTHORITY'] }], releaseRevision, secureCookies }),
     assets: loadAssets(webRoot)

@@ -8,7 +8,7 @@ import { defineEndpoint } from '../../common/routing.js';
  * assessment), recent activity, which features are switched on, and the release.
  */
 export const getWorkspace = defineEndpoint({
-  async handle({ services: { repository, assurance, resolution, intake, releaseRevision } }) {
+  async handle({ services: { repository, assurance, resolution, intake, prAssurance, releaseRevision } }) {
     return reply({
       applications: await repository.listApplications(),
       changes: await Promise.all((await repository.listChanges()).map(change => withAssessmentSummary(change, assurance))),
@@ -17,7 +17,8 @@ export const getWorkspace = defineEndpoint({
         registry: true, authorityDecisions: true, changeRevisions: true,
         verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled,
         assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake,
-        obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates
+        obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates,
+        prAssurance: !!prAssurance
       },
       storage: repository.driver, release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available'
     });

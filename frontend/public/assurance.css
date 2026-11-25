@@ -18,3 +18,10 @@
 .status-panel p{max-width:700px}
 .tabs{overflow-x:auto}
 @media(max-width:650px){.observation-grid{grid-template-columns:1fr}.boundary{grid-template-columns:1fr;gap:4px}.boundary dd{margin-bottom:12px}.run-card .chip-row{flex-wrap:wrap}.status-panel{display:block}.status-panel .chip-row{margin-top:16px}}
+/* PR assurance (demo add-on): the three pull requests in order */
+.pr-timeline{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);gap:14px;align-items:stretch;margin:22px 0}
+.pr-arrow{align-self:center;color:var(--muted);font-size:22px}
+.pr-card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pr-card h3{margin:0;font-size:15px;overflow-wrap:anywhere}.pr-card .button{align-self:flex-start;margin-top:auto}
+.pr-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.pr-number{font-weight:700;color:var(--navy)}
+@media(max-width:900px){.pr-timeline{grid-template-columns:1fr}.pr-arrow{display:none}}

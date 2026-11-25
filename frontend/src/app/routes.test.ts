@@ -7,6 +7,12 @@ const id = (n: number) => `${n}`.padStart(8, '0') + '-0000-4000-8000-00000000000
 const [a, b, c, d] = [id(1), id(2), id(3), id(4)];
 
 describe('routes', () => {
+  it('opens PR assurance only when the add-on is switched on, and only at its exact address', () => {
+    const on = { capabilities: { prAssurance: true } };
+    expect(parseRoute('#/pr-assurance', on)).toEqual({ kind: 'pr-assurance' });
+    expect(parseRoute('#/pr-assurance', none)).toEqual({ kind: 'error', message: 'PR assurance is not enabled in this workspace.' });
+    expect(parseRoute('#/pr-assurance/extra', on)).toMatchObject({ kind: 'error' });
+  });
   it.each([
     ['', { kind: 'overview' }], ['#/', { kind: 'overview' }], ['#/nowhere', { kind: 'overview' }],
     ['#/guide', { kind: 'guide' }], ['#/support', { kind: 'support' }], ['#/activity', { kind: 'activity' }],

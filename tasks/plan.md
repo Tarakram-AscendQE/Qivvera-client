@@ -76,7 +76,7 @@ Task 5 GitHub client + config ───────────────┼�
 - [x] Task 5: Fixed-path GitHub client + configuration (stub-fetch tests)
 
 ### Phase 2: Vertical slices
-- [ ] Task 6: Slice "see and import the PRs" (API + wiring + timeline page)
+- [x] Task 6: Slice "see and import the PRs" (API + wiring + timeline page)
 
 ### Checkpoint B: hosting de-risked
 - [ ] `npm run check` green; the user deploys a Vercel preview with Neon, runs the migration, imports the three PRs

@@ -5,6 +5,7 @@ import { createDraftingUI, type DraftingUI } from '../drafting/drafting-module';
 import { createGuideUI, type GuideUI } from '../guide/guide-module';
 import { createImpactUI, type ImpactUI } from '../impact/impact-module';
 import { createIntakeUI, type IntakeUI } from '../intake/intake-module';
+import { createPrAssuranceUI, type PrAssuranceUI } from '../pr-assurance/pr-assurance-module';
 import type { SessionInfo, ShellState, WorkspaceInfo } from '../shell-contract';
 import { createResolutionUI, type ResolutionUI } from '../resolution/resolution-module';
 import type { ResolutionPage } from '../resolution/parts';
@@ -88,11 +89,13 @@ async function refresh(): Promise<void> {
 // Screen modules start on first use in each session and are discarded when the session ends.
 let guideUI: GuideUI | null = null, intakeUI: IntakeUI | null = null, draftingUI: DraftingUI | null = null, impactUI: ImpactUI | null = null;
 let templatesUI: TemplatesUI | null = null, resolutionUI: ResolutionUI | null = null, workspaceUI: WorkspaceUI | null = null;
+let prAssuranceUI: PrAssuranceUI | null = null;
 const dialogServices = { toast, refresh, route, closeDialog, viewContext, dialogGeneration: () => dialogGeneration };
 const guide = () => (guideUI ??= createGuideUI({ S, api, shell }));
 const intake = () => (intakeUI ??= createIntakeUI({ S, api, shell, can, ...dialogServices }));
 const drafting = () => (draftingUI ??= createDraftingUI({ S, api, shell, can, route, refresh }));
 const impact = () => (impactUI ??= createImpactUI({ S, api, shell, route }));
+const prAssurance = () => (prAssuranceUI ??= createPrAssuranceUI({ S, api, shell, route, toast }));
 const templates = () => (templatesUI ??= createTemplatesUI({ S, api, shell, can, route, refresh }));
 const workspace = () => (workspaceUI ??= createWorkspaceUI({ S, api, shell, can, ...dialogServices, nextDialog: () => ++dialogGeneration, resolutionEnabled: () => !!resolutionUI }));
 function resolution(): ResolutionUI {
@@ -103,13 +106,13 @@ function resolution(): ResolutionUI {
   return resolutionUI;
 }
 function invalidateVisits(): void {
-  for (const ui of [draftingUI, impactUI, templatesUI, resolutionUI, intakeUI]) ui?.invalidate();
+  for (const ui of [draftingUI, impactUI, templatesUI, resolutionUI, intakeUI, prAssuranceUI]) ui?.invalidate();
 }
 
 function clearSessionView(): void {
   Object.assign(S, { session: null, workspace: null, change: null, assuranceContext: null, runs: [], resolutions: null, sources: [], assuranceError: null, sourceError: null });
   invalidateVisits();
-  guideUI = intakeUI = draftingUI = impactUI = templatesUI = resolutionUI = workspaceUI = null;
+  guideUI = intakeUI = draftingUI = impactUI = templatesUI = resolutionUI = workspaceUI = prAssuranceUI = null;
   clearTimeout(pollTimer);
   clearTimeout(toastTimer);
   ++routeGeneration;
@@ -207,6 +210,7 @@ async function show(target: Route, current: () => boolean): Promise<void> {
     case 'resolution-inbox': return resolution().showInbox();
     case 'resolution': return resolution().showItem(target.id);
     case 'intake': return intake().show();
+    case 'pr-assurance': return prAssurance().show();
     case 'applications': return workspace().showApplications();
     case 'application':
       if (!S.workspace!.applications.some(application => application.id === target.id)) return errorPage('Application not found.');

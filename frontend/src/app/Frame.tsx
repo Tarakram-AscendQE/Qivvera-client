@@ -6,7 +6,8 @@ const ICONS: Record<string, ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
   applications: <><rect x="4" y="4" width="16" height="16" rx="3" /><path d="M8 9h8M8 13h8M8 17h4" /></>,
   changes: <><path d="M6 3v12a5 5 0 0 0 5 5h7M6 7h12M15 4l3 3-3 3" /><circle cx="6" cy="3" r="1" /></>,
-  activity: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l4 2" /></>
+  activity: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l4 2" /></>,
+  'pr-assurance': <><circle cx="6" cy="6" r="2" /><circle cx="6" cy="18" r="2" /><circle cx="18" cy="18" r="2" /><path d="M6 8v8M18 16V9a3 3 0 0 0-3-3h-4M13 4l-2 2 2 2" /></>
 };
 
 function NavIcon({ name }: { name: string }) {
@@ -38,6 +39,7 @@ export function Frame({ active, label, email, roles, workspace, children }: Fram
     ['overview', 'Workspace'], ['applications', 'Applications'], ['changes', 'Changes'],
     ...(workspace?.capabilities['resolutionWorkflow'] ? [['resolutions', 'Resolutions'] as [string, string]] : []),
     ...(workspace?.capabilities['githubIntake'] ? [['intake', 'GitHub intake'] as [string, string]] : []),
+    ...(workspace?.capabilities['prAssurance'] ? [['pr-assurance', 'PR assurance'] as [string, string]] : []),
     ...(workspace?.capabilities['verificationTemplates'] ? [['verification-templates', 'Verification templates'] as [string, string]] : []),
     ['activity', 'Activity'], ['guide', 'Guide'], ['support', 'Support']
   ];

@@ -115,12 +115,19 @@ export interface IntakeRepository {
   list(changeId: string): Promise<unknown>;
 }
 
+/** backend/server/pr-assurance/service.mjs: the PR assurance demo add-on (GitHub Actions runs). */
+export interface PrAssuranceService {
+  scenario(session: Session): Promise<unknown>;
+  importPull(pullNumber: number, session: Session): Promise<unknown>;
+}
+
 export interface Services {
   readonly repository: WorkflowRepository;
   /** Optional features: null when not configured, and then their routes do not exist (404). */
   readonly assurance: AssuranceRepository | null;
   readonly resolution: ResolutionRepository | null;
   readonly intake: IntakeRepository | null;
+  readonly prAssurance: PrAssuranceService | null;
   readonly auth: WorkspaceAuth;
   readonly readSupport: SupportReader;
   readonly assets: AssetMap;

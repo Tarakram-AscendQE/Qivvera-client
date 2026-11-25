@@ -4,7 +4,7 @@
   "outputDirectory": "frontend/public",
   "functions": {
     "api/index.mjs": {
-      "includeFiles": "{frontend/public/**,backend/migrations/**,backend/verifiers/**,backend/server/assurance/**,backend/server/resolution/**,backend/server/drafting/**,backend/server/impact/**,backend/server/templates/**}"
+      "includeFiles": "{frontend/public/**,backend/migrations/**,backend/verifiers/**,backend/server/assurance/**,backend/server/resolution/**,backend/server/drafting/**,backend/server/impact/**,backend/server/templates/**,backend/server/pr-assurance/**,fixtures/pr-assurance/vendorpay-policies-e408884.json}"
     }
   },
   "rewrites": [

@@ -124,10 +124,12 @@ wired into the server, Vercel entry and workspace capabilities (`prAssurance`); 
 `#/pr-assurance` with the timeline of the three PRs, Import buttons and "GitHub token: configured".
 
 **Acceptance:**
-- [ ] Feature off → the route shows a disabled message and the API answers as disabled.
-- [ ] Author or Policy Authority can import #6, #7, #8; any other number is refused; Viewer reads only.
-- [ ] The imported head commit, title, branch and link show on each card; no response contains the token.
-- [ ] `vercel.json` includes `fixtures/pr-assurance/**` and `backend/server/pr-assurance/**`.
+- [x] Feature off → the route shows a disabled message and the API answers as disabled.
+- [x] Author or Policy Authority can import #6, #7, #8; any other number is refused; Viewer reads only.
+- [x] The imported head commit, title, branch and link show on each card; no response contains the token.
+- [x] `vercel.json` includes the rules snapshot and `backend/server/pr-assurance/**`.
+- [x] Done 2026-11-25: 7 HTTP tests, 10 frontend tests (147 frontend in total); `npm run check` 798/802 backend
+  (only the 4 known recovery tests fail). `.env.example` documents the two settings.
 
 **Verify:** `npm test` (new `test/pr-assurance-http.test.mjs`), `npm run test:frontend` (module tests).
 **Dependencies:** Tasks 2, 4, 5.

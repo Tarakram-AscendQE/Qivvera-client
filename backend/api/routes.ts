@@ -58,6 +58,8 @@ import { templateListQueryCheck, templateQueryCheck } from './endpoints/template
 import { health } from './endpoints/system/health.js';
 import { exportWorkspace } from './endpoints/workspace/export-workspace.js';
 import { getWorkspace } from './endpoints/workspace/get-workspace.js';
+import { getPrAssurance } from './endpoints/pr-assurance/get-scenario.js';
+import { importPull } from './endpoints/pr-assurance/import-pull.js';
 
 /** No sign-in, any origin (GET only). */
 export const publicRoutes: readonly Route[] = [
@@ -152,5 +154,12 @@ export const workspaceRoutes: readonly Route[] = [
     post('/api/source-previews', previewSource),
     post('/api/source-imports', importSource),
     get('/api/changes/:changeId/source-imports', listChangeSources)
+  ]),
+
+  // PR assurance demo add-on (only when switched on). The browser sends only a PR number: the
+  // repositories, the workflow and every commit are pinned or read from GitHub by the server.
+  ...onlyWhen(({ prAssurance }) => !!prAssurance, [
+    get('/api/pr-assurance', getPrAssurance),
+    post('/api/pr-assurance/pulls/:pullNumber/import', importPull)
   ])
 ];

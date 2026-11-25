@@ -1,0 +1,127 @@
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { deferred, fakeShell } from '../test-utils';
+import type { Api, SessionInfo, ShellState } from '../shell-contract';
+import { createPrAssuranceUI, type PrAssuranceUI } from './pr-assurance-module';
+
+const shell = fakeShell();
+const pull6 = {
+  pullNumber: 6, title: '<img src=x onerror=alert(1)>', headRef: 'feature/VP-184-v1-initial', headSha: 'af51c26b0b9f94894cccfaa5b0fb893221952c65',
+  url: 'https://github.com/prcheck-live/vendorpay-app/pull/6', importedAt: '2026-11-26T09:00:00Z', importedBy: 'author@example.test'
+};
+const scenario = (overrides: Record<string, unknown> = {}) => ({
+  application: 'VendorPay', repository: 'prcheck-live/vendorpay-app', change: 'VP-184 · Bank change',
+  githubTokenConfigured: true, canEvaluate: true,
+  rules: { repository: 'prcheck-live/vendorpay-policies', commit: 'e408884988ad27d6e0776700c4e268d4bf86ad9d', snapshotDigest: 'sha256:' + 'f'.repeat(64), profile: { id: 'payments-critical', title: 'Payments: critical financial controls' }, policies: 6, obligations: 14 },
+  pulls: [{ number: 6, pull: pull6, latestRun: null }, { number: 7, pull: null, latestRun: null }, { number: 8, pull: null, latestRun: null }],
+  ...overrides
+});
+
+let state: { session: SessionInfo | null };
+let ui: PrAssuranceUI;
+let api: ReturnType<typeof vi.fn<Api>>;
+let toast: ReturnType<typeof vi.fn<(text: string) => void>>;
+let route: ReturnType<typeof vi.fn<() => Promise<void>>>;
+
+function setup(answer: (path: string) => Promise<unknown>) {
+  api = vi.fn<Api>(path => answer(path));
+  toast = vi.fn();
+  route = vi.fn(async () => {});
+  ui = createPrAssuranceUI({ S: state as ShellState, api, shell, toast, route });
+}
+const card = (number: number) => document.querySelector<HTMLElement>(`[data-pull="${number}"]`)!;
+
+beforeEach(() => {
+  state = { session: { email: 'author@example.test', roles: ['AUTHOR'] } };
+  document.body.innerHTML = '<div id="root"></div>';
+  shell.mockClear();
+  location.hash = '#/pr-assurance';
+});
+afterEach(() => shell.reset());
+
+describe('PR assurance timeline', () => {
+  it('shows the three pull requests in order and the rules they are assured against', async () => {
+    setup(async () => scenario());
+    await ui.show();
+    expect(shell).toHaveBeenCalledWith(expect.anything(), 'pr-assurance', 'PR assurance');
+    expect([...document.querySelectorAll('[data-pull]')].map(e => e.getAttribute('data-pull'))).toEqual(['6', '7', '8']);
+    expect(screen.getByText(/6 rules · 14 obligations/)).toBeTruthy();
+    expect(within(card(7)).getByText('Not imported')).toBeTruthy();
+  });
+
+  it('shows an imported pull request as text, with its branch, short commit and GitHub link', async () => {
+    setup(async () => scenario());
+    await ui.show();
+    expect(within(card(6)).getByRole('heading').textContent).toBe('<img src=x onerror=alert(1)>');
+    expect(document.querySelector('img')).toBeNull();
+    expect(within(card(6)).getByText('af51c26')).toBeTruthy();
+    const link = within(card(6)).getByRole('link', { name: 'Open on GitHub' });
+    expect([link.getAttribute('href'), link.getAttribute('rel')]).toEqual([pull6.url, 'noreferrer']);
+  });
+
+  it('imports a pull request by number only, then redraws the page', async () => {
+    setup(async path => (path === '/api/pr-assurance' ? scenario() : { pullNumber: 7 }));
+    await ui.show();
+    fireEvent.click(within(card(7)).getByRole('button', { name: 'Import from GitHub' }));
+    await waitFor(() => expect(route).toHaveBeenCalledTimes(1));
+    expect(api).toHaveBeenCalledWith('/api/pr-assurance/pulls/7/import', { method: 'POST' });
+    expect(toast).toHaveBeenCalledWith('PR #7 imported from GitHub. Nothing has been evaluated yet.');
+  });
+
+  it('a second click while an import is in flight sends nothing more', async () => {
+    const pending = deferred<unknown>();
+    setup(path => (path === '/api/pr-assurance' ? Promise.resolve(scenario()) : pending.promise));
+    await ui.show();
+    const button = within(card(7)).getByRole('button', { name: 'Import from GitHub' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    pending.resolve({});
+    await waitFor(() => expect(route).toHaveBeenCalledTimes(1));
+    expect(api.mock.calls.filter(([path]) => path !== '/api/pr-assurance')).toHaveLength(1);
+  });
+
+  it('a failed import is explained on that card and nothing is redrawn', async () => {
+    setup(async path => {
+      if (path === '/api/pr-assurance') return scenario();
+      throw new Error('GitHub refused this request. The token needs Pull requests: read.');
+    });
+    await ui.show();
+    fireEvent.click(within(card(8)).getByRole('button', { name: 'Import from GitHub' }));
+    await waitFor(() => expect(within(card(8)).getByRole('alert').textContent).toMatch(/Pull requests: read/));
+    expect(route).not.toHaveBeenCalled();
+  });
+
+  it('an import answer that arrives after the visit ended changes nothing', async () => {
+    const pending = deferred<unknown>();
+    setup(path => (path === '/api/pr-assurance' ? Promise.resolve(scenario()) : pending.promise));
+    await ui.show();
+    fireEvent.click(within(card(7)).getByRole('button', { name: 'Import from GitHub' }));
+    ui.invalidate();
+    pending.resolve({});
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect([toast.mock.calls.length, route.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  it('a viewer sees the pull requests but no import button', async () => {
+    setup(async () => scenario({ canEvaluate: false }));
+    await ui.show();
+    expect(screen.queryByRole('button', { name: /Import/ })).toBeNull();
+  });
+
+  it('without a GitHub token the page says so and offers no import', async () => {
+    setup(async () => scenario({ githubTokenConfigured: false }));
+    await ui.show();
+    expect(screen.getByText('No GitHub token is configured.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Import/ })).toBeNull();
+  });
+
+  it('an answer for a page the user already left is not drawn', async () => {
+    const pending = deferred<unknown>();
+    setup(() => pending.promise);
+    const showing = ui.show();
+    location.hash = '#/changes';
+    pending.resolve(scenario());
+    await showing;
+    expect(shell).not.toHaveBeenCalled();
+  });
+});
