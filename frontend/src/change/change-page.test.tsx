@@ -42,6 +42,24 @@ describe('change page', () => {
     expect(screen.getByRole('button', { name: 'Record decision' })).toBeTruthy();
   });
 
+  it('does not offer a review request for an imported draft and tells the author how to claim it', () => {
+    show({ change: change({ obligations: [obligation('old', 'DRAFT', { imported: true, proposedBy: 'legacy-import' }), obligation('new', 'DRAFT', { proposedBy: me })] }) }, ['AUTHOR']);
+    const imported = document.querySelector<HTMLElement>(`[data-obligation-id="${'old'.padEnd(36, '0')}"]`)!;
+    const normal = document.querySelector<HTMLElement>(`[data-obligation-id="${'new'.padEnd(36, '0')}"]`)!;
+    expect(within(imported).queryByRole('button', { name: 'Request review' })).toBeNull();
+    expect(within(imported).getByRole('button', { name: 'Edit draft' }).dataset['action']).toBe('edit-obligation');
+    expect(within(imported).getByText('No author yet')).toBeTruthy();
+    expect(within(imported).getByText(/Click Edit draft, check the wording, fill in Source reference and Source version, then click Save new draft\. After that you can request review\./)).toBeTruthy();
+    expect(within(normal).getByRole('button', { name: 'Request review' }).dataset['action']).toBe('review-submit');
+  });
+
+  it('explains an imported draft to someone who cannot edit it without giving edit steps', () => {
+    show({ change: change({ obligations: [obligation('old', 'DRAFT', { imported: true, proposedBy: 'legacy-import' })] }) }, ['VIEWER']);
+    expect(screen.getByText('No author yet')).toBeTruthy();
+    expect(screen.getByText(/An author must check and save it before it can be reviewed\./)).toBeTruthy();
+    expect(screen.queryByText(/Click Edit draft/)).toBeNull();
+  });
+
   it('keeps an earlier revision read-only and points to the current one', () => {
     show({ change: change({ isCurrentRevision: false, obligations: [obligation('a', 'DRAFT')] }) }, ['AUTHOR']);
     expect(screen.getByText('Historical revision · read-only')).toBeTruthy();
