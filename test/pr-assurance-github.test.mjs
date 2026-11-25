@@ -125,3 +125,12 @@ test('pr-assurance github / importing a PR reads only the pinned repository and 
   assert.equal(calls[0].url, 'https://api.github.com/repos/prcheck-live/vendorpay-app/pulls/6');
   await assert.rejects(client.readPull(5), { code: 'PULL_NOT_IN_SCENARIO' });
 });
+
+test('pr-assurance github / a run link that is not the pinned GitHub Actions address is dropped', async () => {
+  for (const html_url of ['javascript:alert(1)', 'https://evil.example/actions/runs/42', 'https://github.com/someone/else/actions/runs/42']) {
+    const { client } = github(reply(200, workflowRun({ html_url })));
+    assert.equal((await client.getRun(42, CORRELATION)).url, null);
+  }
+  const { client } = github(reply(200, workflowRun()));
+  assert.equal((await client.getRun(42, CORRELATION)).url, 'https://github.com/prcheck-live/prcheck-verifiers/actions/runs/42');
+});

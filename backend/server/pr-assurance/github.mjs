@@ -22,6 +22,8 @@ const PERMISSION = {
   checks: 'Checks: read on prcheck-verifiers',
 };
 const RUN_TITLE = correlationId => `qivvera ${correlationId}`;
+/** The run link is shown to people, so only the pinned repository's Actions address is kept. */
+const RUN_URL = new RegExp(`^https://github\\.com/${owner}/${repo}/actions/runs/\\d+$`);
 const CHECK_NAME = correlationId => `qivvera-evidence ${correlationId}`;
 
 const fail = (code, message, status = 503) => { throw new InputError(code, message, status); };
@@ -36,7 +38,8 @@ function toRun(raw, correlationId) {
   if (!raw || raw.repository?.id !== repositoryId || raw.display_title !== RUN_TITLE(correlationId) || !Number.isSafeInteger(raw.id)) {
     fail('GITHUB_UNEXPECTED_RUN', 'GitHub returned a run that Qivvera did not start.', 502);
   }
-  return { id: raw.id, status: raw.status, conclusion: raw.conclusion ?? null, url: raw.html_url, headSha: raw.head_sha };
+  const url = typeof raw.html_url === 'string' && RUN_URL.test(raw.html_url) ? raw.html_url : null;
+  return { id: raw.id, status: raw.status, conclusion: raw.conclusion ?? null, url, headSha: raw.head_sha };
 }
 
 export function createGitHubClient({ secretEnv = process.env, fetchFn = fetch, timeoutMs = 6000 } = {}) {
