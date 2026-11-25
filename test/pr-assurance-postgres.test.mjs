@@ -182,3 +182,31 @@ test('pr-assurance repository / two parallel requests with the same key create o
   assert.deepEqual(results.map(r => r.created).sort(), [false, true]);
   assert.equal(results[0].run.id, results[1].run.id);
 });
+
+// ---- Demo reset (operator command, outside the app) ----------------------------------------------
+const { resetDemoData, countDemoData } = await import('../backend/server/pr-assurance/reset.mjs');
+
+test('pr-assurance reset / empties only the demo tables, even finished runs, and keeps the history rules', async t => {
+  const db = await freshDatabase(t);
+  await migratePrAssurance(db);
+  const id = await insertPullAndRun(db);
+  await query(db, "INSERT INTO pr_assurance_run_events VALUES ($1, 1, 'queued', 'Waiting', $2)", [id, new Date().toISOString()]);
+  await query(db, "UPDATE pr_assurance_runs SET status = 'FAILED', failure_code = 'X', finished_at = $2 WHERE id = $1", [id, new Date().toISOString()]);
+  await query(db, 'CREATE TABLE unrelated_table (id INT)');
+  await query(db, 'INSERT INTO unrelated_table VALUES (1)');
+
+  assert.deepEqual(await countDemoData(db), { pulls: 1, runs: 1, events: 1 });
+  assert.deepEqual(await resetDemoData(db), { pulls: 1, runs: 1, events: 1 });
+  assert.deepEqual(await countDemoData(db), { pulls: 0, runs: 0, events: 0 });
+  assert.equal((await query(db, 'SELECT count(*)::int AS n FROM unrelated_table')).rows[0].n, 1);
+  await requirePrAssurance(db);
+
+  const again = await insertPullAndRun(db);
+  await query(db, "UPDATE pr_assurance_runs SET status = 'FAILED', failure_code = 'X', finished_at = $2 WHERE id = $1", [again, new Date().toISOString()]);
+  await assert.rejects(query(db, 'DELETE FROM pr_assurance_runs WHERE id = $1', [again]), /PR_ASSURANCE_HISTORY_KEPT/);
+});
+
+test('pr-assurance reset / refuses a database without the demo tables', async t => {
+  const db = await freshDatabase(t);
+  await assert.rejects(resetDemoData(db), /PR_ASSURANCE_MIGRATION_REQUIRED/);
+});

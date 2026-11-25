@@ -19,11 +19,15 @@ Already done on 2026-11-26:
 
 To run it:
 1. Stop any dev server that was started before these changes (old code does not have the feature).
-2. `npm run dev` (Node 22), then open **http://127.0.0.1:3000**.
-3. Sign in with a Neon account: `admin@qivvera.com` (Author and Policy Authority) or `author@qivvera.com`
+2. **Start from a clean slate:** `npm run demo:reset` shows what demo data exists (changes nothing);
+   `npm run demo:reset -- --yes` empties only the demo tables (imported PRs, runs, run events). Neon's
+   schema, accounts, applications and changes are never touched. Do this after every rehearsal and right
+   before each demo, so the audience sees nothing imported and results appear live.
+3. `npm run dev` (Node 22), then open **http://127.0.0.1:3000**.
+4. Sign in with a Neon account: `admin@qivvera.com` (Author and Policy Authority) or `author@qivvera.com`
    can import and evaluate; `viewer@qivvera.com` can only watch. (`OWNER_*` in `.env.local` is not used
    for sign-in since schema 8.)
-4. Follow section 3. Each evaluation takes about a minute.
+5. Follow section 3. Each evaluation takes about a minute.
 
 Fallback if Neon cannot be reached: `npm run dev:temporary-db` starts a throwaway local database on
 http://127.0.0.1:3100 (Docker must be running). It starts empty; sign in with `OWNER_EMAIL` and its password

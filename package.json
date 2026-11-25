@@ -19,6 +19,7 @@
     "start": "node backend/server/start.mjs",
     "start:registry": "node backend/server/start.mjs",
     "migrate": "node backend/scripts/migrate.mjs",
+    "demo:reset": "node --env-file=.env.local backend/scripts/pr-assurance-reset.mjs",
     "accounts": "node backend/scripts/accounts.mjs",
     "accounts:local": "node --env-file=.env.local backend/scripts/accounts.mjs",
     "check:release": "node scripts/verify-release.mjs",
