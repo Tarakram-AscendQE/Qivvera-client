@@ -227,8 +227,12 @@ the table of 14 obligations × 3 PRs with "now supported" markers.
 to `test:browser`; then every existing suite and `npm run check`.
 
 **Acceptance:**
-- [ ] The suite imports, evaluates (stub run), watches progress and reads the report for each PR.
-- [ ] All existing PostgreSQL and browser suites still pass.
+- [x] The suite imports, evaluates (stand-in GitHub replaying the recorded evidence), watches progress and reads
+  the report for each PR: 11 checks passed in 47 s (2 → 1 → 0, comparison table, run links, sync stops after
+  leaving, no overflow at 390 px, viewer cannot import or evaluate, no page errors). Screenshots reviewed.
+- [x] All existing PostgreSQL and browser suites still pass: all nine native browser suites passed
+  (`npm run test:browser` with Node 22 + `.venv-browser`); `npm run check` 817/821 backend (the 4 known
+  recovery tests need postgresql-client-17).
 
 **Verify:** `npm run check`; `npm run test:browser` (Node 22 + `.venv-browser`).
 **Dependencies:** Task 10.
@@ -241,12 +245,14 @@ permissions, `npm run migrate`, the click path and what each screen shows. The u
 preview; three live runs are rehearsed and recorded.
 
 **Acceptance:**
-- [ ] The notes contain no secrets and match the code.
-- [ ] Rehearsal on the preview: three runs, results equal the table, times recorded.
+- [x] The notes contain no secrets and match the code: `docs/pr-assurance-demo.md` (setup, click path,
+  troubleshooting, rehearsal record, scope). `.env.example` documents the two settings.
+- [ ] Rehearsal on the preview: three runs, results equal the table, times recorded (needs the workflow pushed
+  to prcheck-verifiers, the token and the deployment).
 
 **Verify:** rehearsal results written into the notes.
 **Dependencies:** Task 11.
-**Files:** `docs/pr-assurance-demo.md`, `.env.example`.
+**Files:** `docs/pr-assurance-demo.md`, `.env.example` (done in Task 6).
 **Size:** S.
 
 ## Checkpoint D: complete

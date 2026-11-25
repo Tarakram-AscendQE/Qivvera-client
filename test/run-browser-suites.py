@@ -22,7 +22,7 @@ if not env.get('CHROMIUM_EXECUTABLE'):
     bundled = asyncio.run(bundled_chromium_path())
     env['CHROMIUM_EXECUTABLE'] = str(bundled if bundled.is_file() else Path('/usr/bin/chromium'))
 
-suites = ['browser-workflow.py', 'browser-assurance.py', 'browser-resolution.py', 'first-release-browser.py', 'drafting-browser.py', 'impact-browser.py', 'templates-browser.py', 'navigation-browser.py']
+suites = ['browser-workflow.py', 'browser-assurance.py', 'browser-resolution.py', 'first-release-browser.py', 'drafting-browser.py', 'impact-browser.py', 'templates-browser.py', 'navigation-browser.py', 'pr-assurance-browser.py']
 report = {
     'passed': False,
     'method': 'Native Chromium navigation against real local HTTP and disposable SQLite fixtures.',

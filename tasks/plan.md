@@ -88,10 +88,11 @@ Task 5 GitHub client + config ───────────────┼�
 
 ### Checkpoint C: end-to-end locally
 - [ ] Local server against real GitHub: import and evaluate all three PRs; results equal the table
+  (blocked 2026-11-25: needs write access to prcheck-verifiers for the workflow, and the token)
 
 ### Phase 3: Verification and handoff
-- [ ] Task 11: Native browser suite (stub GitHub) + all existing suites + `npm run check`
-- [ ] Task 12: Deployment notes, preview deploy by the user, rehearsal of all three PRs
+- [x] Task 11: Native browser suite (stub GitHub) + all existing suites + `npm run check`
+- [ ] Task 12: Deployment notes (done: docs/pr-assurance-demo.md), preview deploy by the user, rehearsal of all three PRs
 
 ### Checkpoint D: complete
 - [ ] Spec success criteria 1–10 met and recorded
