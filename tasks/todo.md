@@ -38,6 +38,10 @@ and prints obligation states next to the expected table.
   core logic: PR #6 `af51c26` NOT READY, 2 rules broken (FIN-001, FIN-002), team 25/25, 68 s; PR #7 `ae50deb`
   NOT READY, 1 rule broken (FIN-002), team 26/26, 144 s; PR #8 `b62db00` READY, team 29/29, 65 s.
   GitHub runs 45670931475, 45670939045, 45670946644.
+- [x] Checkpoint C (2026-11-25): the whole server (HTTP, sessions, service, repository) on a throwaway database
+  against real GitHub: 2 → 1 → 0, PR #7 "FIN-001 fixed, FIN-002 still broken", team tests 25/26/29 all passed.
+- [x] One run took 285 s: 'Install the browser' spent 14–229 s in apt (`--with-deps`). prcheck-verifiers `8b2f699`
+  installs system packages only when the browser cannot start. Re-measured: install 6–9 s, runs 53–56 s, same results.
 **Files (prcheck-verifiers):** `.github/workflows/qivvera-pr-assessment.yml`, `reporters/check-run-reporter.ts`.
 **Size:** M.
 

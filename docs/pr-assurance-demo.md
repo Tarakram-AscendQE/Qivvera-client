@@ -29,7 +29,8 @@ Never put the token in Git, in chat or in a screenshot. The app never shows it; 
 | One run | `#/pr-assurance/runs/<id>` | The same run panel, by its own link |
 
 While a run is going, the panel shows the stages (waiting for GitHub → starting VendorPay → Qivvera's checks →
-the team's own tests → done) and each of the 14 checks as it finishes. One run takes about 2–3 minutes.
+the team's own tests → done) and each of the 14 checks as it finishes. One run takes about 1 minute
+(53–56 s measured on GitHub on 2026-11-25).
 
 ## 3. The demo, click by click
 

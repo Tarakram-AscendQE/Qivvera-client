@@ -87,8 +87,7 @@ Task 5 GitHub client + config ───────────────┼�
 - [x] Task 10: Slice "progression" (timeline counts + compare table)
 
 ### Checkpoint C: end-to-end locally
-- [ ] Local server against real GitHub: import and evaluate all three PRs; results equal the table
-  (blocked 2026-11-25: needs write access to prcheck-verifiers for the workflow, and the token)
+- [x] Local server against real GitHub: import and evaluate all three PRs; results equal the table (2026-11-25)
 
 ### Phase 3: Verification and handoff
 - [x] Task 11: Native browser suite (stub GitHub) + all existing suites + `npm run check`
