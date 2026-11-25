@@ -3,12 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
 import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 
 const author = { email: 'draft-author@example.test', roles: ['AUTHOR'] };
 const other = { email: 'draft-other@example.test', roles: ['AUTHOR'] };
@@ -18,9 +16,8 @@ const viewer = { email: 'draft-viewer@example.test', roles: ['VIEWER'] };
 const sourceText = 'The requester must not approve their own request.\nThe application must preserve the original request identity.';
 
 async function fixture(t, { enabled = true, draftingConfig = {} } = {}) {
-    const dir = mkdtempSync(join(tmpdir(), 'qivvera-drafting-http-'));
     const repository = await openWorkflowRepository({
-        path: join(dir, 'workspace.sqlite'), migrate: true, reviewMode: 'independent',
+        ...await testDatabase(), migrate: true, reviewMode: 'independent',
         drafting: { enabled, openaiEnabled: false, ...draftingConfig },
     });
     const application = await repository.createApplication({ name: 'Drafting HTTP ' + randomUUID() }, author);
@@ -38,7 +35,6 @@ async function fixture(t, { enabled = true, draftingConfig = {} } = {}) {
     t.after(async () => {
         await new Promise(resolve => server.close(resolve));
         await repository.close();
-        rmSync(dir, { recursive: true, force: true });
     });
     const base = `http://127.0.0.1:${server.address().port}`;
     async function call(path, { method = 'GET', data, session, from = origin, csrf } = {}) {

@@ -11,6 +11,7 @@ import { canonical, digest } from '../backend/server/assurance/contracts.mjs';
 import { CHECKS, PROFILE_V2 } from '../backend/server/assurance/generalization.mjs';
 import { setupMulti, separateWorker } from './generalization-helpers.mjs';
 import { workOnce } from '../backend/server/assurance/worker.mjs';
+import { failActivityInsert } from './postgres-test-database.mjs';
 
 const rejects = (promise, code) => assert.rejects(promise, error => error.code === code);
 const archiveInput = (template, overrides = {}) => ({ requestKey: randomUUID(), expectedVersion: template.version.number, expectedStateVersion: template.family.stateVersion, rationale, ...overrides });
@@ -190,7 +191,7 @@ test('templates / absent version mutation provenance is not silently accepted', 
 });
 test('templates / failed audit insert rolls back family version and retry receipt together', async t => {
     const h = await setupTemplates(t);
-    await h.sql(c => c.exec("CREATE TRIGGER fail_template_audit BEFORE INSERT ON activity WHEN NEW.action='VERIFICATION_TEMPLATE_CREATED' BEGIN SELECT RAISE(ABORT,'test-audit-fault'); END"));
+    await h.sql(c => c.exec(failActivityInsert('fail_template_audit', 'VERIFICATION_TEMPLATE_CREATED', 'test-audit-fault')));
     await assert.rejects(h.save(), /test-audit-fault/);
     const counts = await h.sql(async c => Promise.all(['verification_templates','verification_template_versions','verification_template_mutations'].map(async table => Number((await c.query(`SELECT COUNT(*) AS n FROM ${table}`)).rows[0].n))));
     assert.deepEqual(counts, [0,0,0]);
@@ -273,7 +274,7 @@ test('templates / a missing or damaged use receipt cannot silently become an ord
 });
 test('templates / failing provenance audit rolls back the new plan and use receipt', async t => {
     const h = await setupTemplates(t), saved = await h.save();
-    await h.sql(c => c.exec("CREATE TRIGGER fail_template_use BEFORE INSERT ON activity WHEN NEW.action='VERIFICATION_TEMPLATE_USED' BEGIN SELECT RAISE(ABORT,'test-use-fault'); END"));
+    await h.sql(c => c.exec(failActivityInsert('fail_template_use', 'VERIFICATION_TEMPLATE_USED', 'test-use-fault')));
     await assert.rejects(h.service.approvePlan(h.destination.id, await h.useInput(saved), authority), /test-use-fault/);
     assert.equal((await h.service.getContext(h.destination.id, h.destination.revision.id)).plan, null);
     assert.equal(await h.sql(async c => Number((await c.query('SELECT COUNT(*) AS n FROM verification_template_uses')).rows[0].n)), 0);

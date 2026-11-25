@@ -15,7 +15,7 @@ let active=false,child,closing=false;
 const timer=setInterval(async()=>{
  if(active||closing)return;active=true;
  try{
-  child=spawn(process.execPath,['backend/scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([fixed.target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',QIVVERA_LOCAL_SQLITE:'true',DATABASE_PATH:h.db.path,QIVVERA_WORKER_ID:'browser-resolution-worker',MAKER_TEST_TOKEN:h.makerToken,CHECKER_TEST_TOKEN:h.checkerToken},stdio:['ignore','ignore','ignore']});await once(child,'exit');
+  child=spawn(process.execPath,['backend/scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([fixed.target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',ASSURANCE_DATABASE_URL:h.db.connectionString,DATABASE_SSL_MODE:'disable',QIVVERA_WORKER_ID:'browser-resolution-worker',MAKER_TEST_TOKEN:h.makerToken,CHECKER_TEST_TOKEN:h.checkerToken},stdio:['ignore','ignore','ignore']});await once(child,'exit');
  }finally{active=false;}
 },500);
 process.on('SIGTERM',async()=>{closing=true;clearInterval(timer);if(child&&child.exitCode===null){const exit=once(child,'exit');child.kill('SIGTERM');await exit;}await new Promise(r=>server.close(r));for(const f of cleanup)await f();process.exit(0);});

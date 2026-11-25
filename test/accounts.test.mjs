@@ -4,7 +4,6 @@ import { once } from 'node:events';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
 import { openDatabase, migrateDatabase } from '../backend/server/workflow-store.mjs';
 import { openAccountRepository, openWorkspaceAccounts, accountSql, hashAccountPassword } from '../backend/server/accounts/repository.mjs';
@@ -13,6 +12,7 @@ import { openResolutionRepository } from '../backend/server/resolution/repositor
 import { createWorkspaceAuth, staticAccountDirectory } from '../backend/server/workspace-auth.mjs';
 import { createApplicationServer } from '../dist/api/server.js';
 import { hashPassword } from '../backend/server/auth.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 
 const password = 'correct-horse-battery-2026', operator = 'operator:test';
 const quietLog = { log() {}, warn() {} };
@@ -20,26 +20,26 @@ const req = cookie => ({ headers: { cookie: cookie.split(';')[0] } });
 
 async function setup(t) {
     const dir = mkdtempSync(join(tmpdir(), 'qivvera-accounts-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-    const path = join(dir, 'workspace.sqlite');
-    const workflow = await openWorkflowRepository({ path, migrate: true }); t.after(() => workflow.close());
-    const accounts = await openAccountRepository({ path, migrate: true }); t.after(() => accounts.close());
+    const db = await testDatabase();
+    const workflow = await openWorkflowRepository({ ...db, migrate: true }); t.after(() => workflow.close());
+    const accounts = await openAccountRepository({ ...db, migrate: true }); t.after(() => accounts.close());
     const auth = () => createWorkspaceAuth({ directory: accounts, repository: workflow, secureCookies: false });
-    return { dir, path, workflow, accounts, auth };
+    return { dir, db, workflow, accounts, auth };
 }
 const add = (h, email, roles = ['AUTHOR']) => h.accounts.create({ email, roles, password }, operator);
 
 test('accounts / schema 8 migration is idempotent, recorded and checksum-verified', async t => {
     const h = await setup(t);
-    const again = await openAccountRepository({ path: h.path, migrate: true }); await again.close();
-    const d = new DatabaseSync(h.path); t.after(() => d.close());
-    assert.equal(d.prepare('SELECT checksum FROM qivvera_migrations WHERE version=8').get().checksum, accountsChecksum);
-    d.prepare("UPDATE qivvera_migrations SET checksum='damaged' WHERE version=8").run();
-    await assert.rejects(openAccountRepository({ path: h.path, migrate: true }), /ACCOUNTS_MIGRATION_CHECKSUM_MISMATCH/);
-    await assert.rejects(openAccountRepository({ path: h.path, migrate: false }), /ACCOUNTS_MIGRATION_REQUIRED/);
+    const again = await openAccountRepository({ ...h.db, migrate: true }); await again.close();
+    const d = await openDatabase(h.db); t.after(() => d.close());
+    assert.equal((await d.transaction(c => c.query('SELECT checksum FROM qivvera_migrations WHERE version=8'))).rows[0].checksum, accountsChecksum);
+    await d.transaction(c => c.query("UPDATE qivvera_migrations SET checksum='damaged' WHERE version=8"));
+    await assert.rejects(openAccountRepository({ ...h.db, migrate: true }), /ACCOUNTS_MIGRATION_CHECKSUM_MISMATCH/);
+    await assert.rejects(openAccountRepository({ ...h.db, migrate: false }), /ACCOUNTS_MIGRATION_REQUIRED/);
 });
 
 test('accounts / runtime refuses a database without schema 8', async t => {
-    const db = await openDatabase({}); t.after(() => db.close());
+    const db = await openDatabase(await testDatabase()); t.after(() => db.close());
     await migrateDatabase(db);
     await assert.rejects(requireAccounts(db), /MIGRATION_REQUIRED/);
     await migrateAccounts(db); await requireAccounts(db);
@@ -54,8 +54,8 @@ test('accounts / create stores a normalized email, scrypt hash and roles but nev
     const found = await h.accounts.find('NEW.PERSON@example.test');
     assert.match(found.passwordHash, /^scrypt:[a-f0-9]{32}:[a-f0-9]{128}$/);
     assert.ok(!JSON.stringify(found).includes(password));
-    const d = new DatabaseSync(h.path); t.after(() => d.close());
-    assert.equal(d.prepare("SELECT COUNT(*) AS n FROM activity WHERE action='ACCOUNT_CREATED'").get().n, 1);
+    const d = await openDatabase(h.db); t.after(() => d.close());
+    assert.equal(Number((await d.transaction(c => c.query("SELECT COUNT(*) AS n FROM activity WHERE action='ACCOUNT_CREATED'"))).rows[0].n), 1);
 });
 
 test('accounts / invalid input is rejected without creating anything', async t => {
@@ -144,12 +144,12 @@ test('accounts / configured accounts import once, keep their passwords and exist
 
 test('accounts / runtime wiring seeds only empty LOCAL storage and requires an active account', async t => {
     const h = await setup(t), configured = [{ email: 'owner@example.test', passwordHash: hashPassword('synthetic-long-test-password-2026'), roles: ['AUTHOR'] }];
-    await assert.rejects(openWorkspaceAccounts({ database: { path: h.path, migrate: false }, accounts: configured }, { log: quietLog }), /NAMED_ACCOUNTS_REQUIRED/);
+    await assert.rejects(openWorkspaceAccounts({ database: { ...h.db, migrate: false }, accounts: configured }, { log: quietLog }), /NAMED_ACCOUNTS_REQUIRED/);
     assert.equal(await h.accounts.countAll(), 0, 'hosted/non-migrating runtime must never write accounts');
-    const local = await openWorkspaceAccounts({ database: { path: h.path, migrate: true }, accounts: configured }, { log: quietLog }); await local.close();
+    const local = await openWorkspaceAccounts({ database: { ...h.db, migrate: true }, accounts: configured }, { log: quietLog }); await local.close();
     assert.equal(await h.accounts.countAll(), 1);
     const warnings = [];
-    const later = await openWorkspaceAccounts({ database: { path: h.path, migrate: true }, accounts: configured }, { log: { log() {}, warn: m => warnings.push(m) } }); await later.close();
+    const later = await openWorkspaceAccounts({ database: { ...h.db, migrate: true }, accounts: configured }, { log: { log() {}, warn: m => warnings.push(m) } }); await later.close();
     assert.equal(await h.accounts.countAll(), 1); assert.match(warnings[0], /ACCOUNT_CONFIGURATION_IGNORED/);
 });
 
@@ -157,13 +157,13 @@ test('accounts / printed SQL creates a working account, escapes text and never c
     const h = await setup(t);
     const sql = await accountSql('add', { email: 'sql@example.test', roles: ['VIEWER'], displayName: "O'Brien", password }, { actor: operator });
     assert.ok(!sql.includes(password)); assert.match(sql, /O''Brien/);
-    const d = new DatabaseSync(h.path); t.after(() => d.close()); d.exec(sql);
+    const d = await openDatabase(h.db); t.after(() => d.close()); await d.transaction(c => c.exec(sql));
     const auth = h.auth(), l = await auth.login('sql@example.test', password);
     assert.deepEqual(l.session.roles, ['VIEWER']);
-    d.exec(await accountSql('set-password', { email: 'sql@example.test', password: 'replacement-password-2026' }, { actor: operator }));
+    await d.transaction(async c => c.exec(await accountSql('set-password', { email: 'sql@example.test', password: 'replacement-password-2026' }, { actor: operator })));
     assert.equal(await auth.session(req(l.cookie)), null);
     assert.ok((await auth.login('sql@example.test', 'replacement-password-2026')).session);
-    assert.equal(d.prepare("SELECT COUNT(*) AS n FROM activity WHERE action IN ('ACCOUNT_CREATED','ACCOUNT_PASSWORD_CHANGED')").get().n, 2);
+    assert.equal(Number((await d.transaction(c => c.query("SELECT COUNT(*) AS n FROM activity WHERE action IN ('ACCOUNT_CREATED','ACCOUNT_PASSWORD_CHANGED')"))).rows[0].n), 2);
 });
 
 test('accounts / hashes use the shared scrypt format accepted by configuration', async () => {
@@ -173,7 +173,7 @@ test('accounts / hashes use the shared scrypt format accepted by configuration',
 
 test('accounts / resolution assignees follow the live account table', async t => {
     const h = await setup(t); await add(h, 'author@example.test'); await add(h, 'viewer@example.test', ['VIEWER']);
-    const resolution = await openResolutionRepository({ path: h.path, migrate: false, directory: h.accounts, targets: [] }); t.after(() => resolution.close());
+    const resolution = await openResolutionRepository({ ...h.db, migrate: false, directory: h.accounts, targets: [] }); t.after(() => resolution.close());
     assert.deepEqual((await resolution.listAssignees()).map(a => a.email), ['author@example.test']);
     await add(h, 'reviewer@example.test', ['POLICY_AUTHORITY']);
     assert.deepEqual((await resolution.listAssignees()).map(a => a.email).sort(), ['author@example.test', 'reviewer@example.test']);

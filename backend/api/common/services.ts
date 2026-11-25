@@ -42,7 +42,8 @@ export interface PageOptions {
 /** backend/server/workflow-repository.mjs: applications, changes, obligations, revisions. */
 export interface WorkflowRepository {
   readonly workflow: true;
-  readonly driver?: string;
+  /** Always 'postgres': PostgreSQL is the only database. */
+  readonly driver: 'postgres';
   readonly reviewMode?: string;
   readonly impact?: ImpactReader;
   readonly drafting?: DraftingService;

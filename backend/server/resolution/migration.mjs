@@ -6,7 +6,7 @@ export const resolutionChecksum=digest(sql);
 export async function migrateResolution(db){
   await requireAssurance(db);
   return db.transaction(async c=>{
-    if(db.driver==='postgres')await c.query('SELECT pg_advisory_xact_lock(78124422)');
+    await c.query('SELECT pg_advisory_xact_lock(78124422)');
     const versions=(await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
     if(versions.some(v=>Number(v.version)>8))throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
     const old=versions.find(v=>Number(v.version)===4);

@@ -25,7 +25,7 @@ export function createSupportReader({ repository, assurance, resolution, intake,
     const identities = list => list.map(a => ({ email: typeof a.email === 'string' ? a.email.trim().toLowerCase() : '', roles: Array.isArray(a.roles) ? a.roles : [] }));
     const configuredAccounts = identities(accounts);
     const revision = typeof releaseRevision === 'string' && /^[a-f0-9]{40}$/i.test(releaseRevision) ? releaseRevision.toLowerCase() : 'unrecorded';
-    const storage = ['postgres', 'sqlite'].includes(repository.driver) ? repository.driver : 'unknown';
+    const storage = repository.driver === 'postgres' ? 'postgres' : 'unknown';
     const reviewMode = ['independent', 'founder-review'].includes(repository.reviewMode) ? repository.reviewMode : 'not-available';
 
     return async (session, requestId) => {
@@ -52,7 +52,6 @@ export function createSupportReader({ repository, assurance, resolution, intake,
         else if (workflow && schemaVersion === null) warnings.push(warning('SCHEMA_UNAVAILABLE', 'The applied schema version could not be observed.', 'Ask the deployment owner to verify the migration record. This page does not apply migrations.'));
         else if (schemaVersion > MAX_SUPPORTED_SCHEMA_VERSION) warnings.push(warning('SCHEMA_TOO_NEW', 'The database schema is newer than this application supports.', 'Ask the deployment owner to use the compatible reviewed application. Do not roll back the database from this page.'));
         else if (requiredSchemaVersion !== null && schemaVersion !== null && schemaVersion < requiredSchemaVersion) warnings.push(warning('SCHEMA_TOO_OLD', 'An enabled feature needs a later database schema.', 'Ask the deployment owner to verify the approved migration and configuration before using that feature.'));
-        if (storage === 'sqlite') warnings.push(warning('LOCAL_REVIEW_STORAGE', 'This workspace uses local review storage.', 'The deployment owner must validate the approved PostgreSQL deployment before hosted early access.'));
         if (revision === 'unrecorded') warnings.push(warning('REVISION_UNRECORDED', 'The deployed source revision is not recorded as a full Git commit.', 'Ask the deployment owner to record the exact deployed commit in protected release configuration.'));
         if (reviewMode === 'founder-review') warnings.push(warning('FOUNDER_REVIEW_MODE', 'This workspace permits founder review and does not establish independent human approval.', 'Keep this limitation visible. Use the approved independent-review configuration when a different reviewer is required.'));
         if (!directoryAvailable) warnings.push(warning('ACCOUNT_DIRECTORY_UNAVAILABLE', 'The account directory could not be read.', 'Give this support reference to the deployment owner. Reviewer availability was not checked.'));

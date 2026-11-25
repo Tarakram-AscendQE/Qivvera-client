@@ -14,6 +14,6 @@ export const health = defineEndpoint<Record<string, never>, undefined, null>({
     } catch {
       // An unreachable database is reported as not ready, not as a server error.
     }
-    return reply({ service: 'qivvera-registry', version: PRODUCT_VERSION, process: 'running', storage: repository.driver ?? 'local-review', ready: healthy, revision: releaseRevision, assuranceExecution: false }, healthy ? 200 : 503);
+    return reply({ service: 'qivvera-registry', version: PRODUCT_VERSION, process: 'running', storage: repository.driver, ready: healthy, revision: releaseRevision, assuranceExecution: false }, healthy ? 200 : 503);
   }
 });

@@ -7,10 +7,11 @@ import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs'
 import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
 import {createApprovalTarget,artifactDigest} from '../fixtures/approval-target/server.mjs';
 import {workOnce} from '../backend/server/assurance/worker.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 export const author={email:'author@example.test',roles:['AUTHOR']},authority={email:'policy@example.test',roles:['POLICY_AUTHORITY']},viewer={email:'viewer@example.test',roles:['VIEWER']};
 export async function setup(t,{mode='correct',extraObligation=false,clock,postgresURL}={}){
  const dir=mkdtempSync(join(tmpdir(),'qivvera-assurance-'));
- const db=postgresURL?{driver:'postgres',connectionString:postgresURL,sslMode:'disable'}:{path:join(dir,'workspace.sqlite')};
+ const db=postgresURL?{driver:'postgres',connectionString:postgresURL,sslMode:'disable'}: await testDatabase();
  const workflow=await openWorkflowRepository({...db,migrate:true});
  const app=await workflow.createApplication({name:'Reference approval '+randomUUID()},author);
  const change=await workflow.createChange({applicationId:app.id,title:'Approval change',sourceRevision:'a'.repeat(40),intent:'Maintain distinct requester and approver'},author);

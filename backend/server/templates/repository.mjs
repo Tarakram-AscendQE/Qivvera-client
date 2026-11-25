@@ -48,7 +48,7 @@ export function createTemplateRepository({ db, model, catalogue, now = Date.now,
     const read = fn => db.transaction(fn, true);
     // Every template mutation/use acquires this lock BEFORE any source/destination change lock.
     // Reads use a repeatable-read snapshot; neither worker nor ordinary plan approval needs this lock.
-    const lock = async c => { if (db.driver === 'postgres') await c.query('SELECT pg_advisory_xact_lock(78124430)'); };
+    const lock = async c => { await c.query('SELECT pg_advisory_xact_lock(78124430)'); };
     const audit = (c, actor, action, id, detail) => c.query('INSERT INTO activity(id,actor,action,entity_id,detail,created_at) VALUES($1,$2,$3,$4,$5,$6)', [randomUUID(), actor, action, id, detail, iso(now())]);
     const familyView = row => ({ id: row.id, state: row.state, stateVersion: Number(row.state_version), createdBy: row.created_by, createdAt: row.created_at,
         archivedBy: row.archived_by, archivedAt: row.archived_at, archiveRationale: row.archive_rationale });
@@ -57,7 +57,7 @@ export function createTemplateRepository({ db, model, catalogue, now = Date.now,
     async function ensureReadBudget(c,ids,extra=0){
         if(!ids.length)return 0;
         const selected='('+ids.map((_,i)=>'$'+(i+1)).join(',')+')';
-        const bytes=column=>db.driver==='postgres'?`octet_length(${column})`:`length(CAST(${column} AS BLOB))`;
+        const bytes=column=>`octet_length(${column})`;
         const sql=`SELECT COALESCE((SELECT SUM(${bytes('snapshot')}) FROM verification_template_versions WHERE template_id IN ${selected}),0)
             +COALESCE((SELECT SUM(${bytes('snapshot')}) FROM assurance_plans WHERE id IN (SELECT DISTINCT source_plan_id FROM verification_template_versions WHERE template_id IN ${selected})),0)
             +COALESCE((SELECT SUM(${bytes('receipt_snapshot')}+${bytes('input_snapshot')}) FROM verification_template_mutations WHERE operation='ARCHIVE' AND template_id IN ${selected}),0) AS bytes`;

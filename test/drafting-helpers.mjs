@@ -1,10 +1,8 @@
-import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
 import { generateDrafts } from '../backend/server/drafting/generator.mjs';
 import { PROMPT_DIGEST, PROMPT_VERSION } from '../backend/server/drafting/contracts.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 
 export const author = { email: 'draft-author@example.test', roles: ['AUTHOR'] };
 export const otherAuthor = { email: 'other-draft-author@example.test', roles: ['AUTHOR'] };
@@ -23,9 +21,7 @@ export async function modelResult(sourceText, method = 'openai', config = {}) {
 }
 
 export async function setupDrafting(t, { postgresURL, drafting = {} } = {}) {
-    const dir = mkdtempSync(join(tmpdir(), 'qivvera-drafting-'));
-    t.after(() => rmSync(dir, { recursive: true, force: true }));
-    const db = postgresURL ? { driver: 'postgres', connectionString: postgresURL, sslMode: 'disable' } : { path: join(dir, 'workspace.sqlite') };
+    const db = postgresURL ? { driver: 'postgres', connectionString: postgresURL, sslMode: 'disable' } : await testDatabase();
     const options = { ...db, migrate: true, drafting: { enabled: true, openaiEnabled: false, ...drafting } };
     const workflow = await openWorkflowRepository(options); t.after(() => workflow.close());
     const app = await workflow.createApplication({ name: 'Drafting ' + randomUUID(), description: 'Synthetic drafting verification workspace.' }, author);

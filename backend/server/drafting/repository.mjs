@@ -163,7 +163,7 @@ export function createDraftingRepository({ db, config, helpers }) {
             const requestDigest = digest({ changeId, actor: email, input });
             const reserved = await db.transaction(async c => {
                 // This short reservation lock serializes actor/workspace limits across processes.
-                if (db.driver === 'postgres') await c.query('SELECT pg_advisory_xact_lock(78124429)');
+                await c.query('SELECT pg_advisory_xact_lock(78124429)');
                 const existing = (await c.query('SELECT * FROM drafting_runs WHERE created_by=$1 AND request_id=$2', [email, input.requestId])).rows[0];
                 if (existing) {
                     if (existing.request_digest !== requestDigest) fail('DRAFTING_REQUEST_CONFLICT', 'This request identifier was already used with different drafting inputs.');

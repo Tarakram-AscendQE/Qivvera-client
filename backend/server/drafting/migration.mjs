@@ -8,7 +8,7 @@ export const draftingChecksum = digest(sql);
 export async function migrateDrafting(db) {
     await migrateIntake(db);
     return db.transaction(async c => {
-        if (db.driver === 'postgres') await c.query('SELECT pg_advisory_xact_lock(78124422)');
+        await c.query('SELECT pg_advisory_xact_lock(78124422)');
         const rows = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
         if (rows.some(r => Number(r.version) > 8)) throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
         const prior = rows.find(r => Number(r.version) === 6);

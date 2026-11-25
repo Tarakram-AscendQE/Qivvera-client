@@ -10,7 +10,7 @@ export const ACCOUNTS_SCHEMA_VERSION = 8;
 export async function migrateAccounts(db) {
     await migrateTemplates(db);
     return db.transaction(async c => {
-        if (db.driver === 'postgres') await c.query('SELECT pg_advisory_xact_lock(78124422)');
+        await c.query('SELECT pg_advisory_xact_lock(78124422)');
         const rows = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
         if (rows.some(r => Number(r.version) > ACCOUNTS_SCHEMA_VERSION)) throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
         const prior = rows.find(r => Number(r.version) === ACCOUNTS_SCHEMA_VERSION);

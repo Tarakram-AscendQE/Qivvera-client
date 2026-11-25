@@ -198,7 +198,7 @@ export async function openAccountRepository(options = {}) {
         async importAccounts(accounts, actor) {
             const who = operator(actor), list = [...normalizeAccounts(accounts).values()];
             return db.transaction(async c => {
-                if (db.driver === 'postgres') await c.query('SELECT pg_advisory_xact_lock(78124425)');
+                await c.query('SELECT pg_advisory_xact_lock(78124425)');
                 if (Number((await c.query('SELECT COUNT(*) AS n FROM workspace_users')).rows[0].n) > 0) fail('ACCOUNTS_ALREADY_PRESENT', 'The account table already contains accounts; nothing was imported.', 409);
                 for (const a of list) await insertAccount(c, randomUUID(), { email: a.email, displayName: null, roles: a.roles, passwordHash: a.passwordHash }, who);
                 return list.map(a => ({ email: a.email, roles: a.roles }));

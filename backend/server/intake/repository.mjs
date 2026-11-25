@@ -44,7 +44,7 @@ export async function openIntakeRepository(options={}){
    const config=getConfig(saved.repository_key),source=fresh(saved,config),live=await fetchSource(config,source.pullNumber);
    if(live.fingerprint!==source.fingerprint)fail('SOURCE_CHANGED','Pull-request source or metadata changed after preview. Preview again.');
    return db.transaction(async c=>{
-    if(db.driver==='postgres')await c.query('SELECT pg_advisory_xact_lock(78124424)');
+    await c.query('SELECT pg_advisory_xact_lock(78124424)');
     const row=await previewRow(c,id,email);
     if(row.import_id){if(row.request_digest!==requestDigest)fail('IMPORT_CONFLICT','Preview was already used differently.');return {...record((await c.query('SELECT * FROM source_imports WHERE id=$1',[row.import_id])).rows[0]),replayed:true};}
     fresh(row,config);

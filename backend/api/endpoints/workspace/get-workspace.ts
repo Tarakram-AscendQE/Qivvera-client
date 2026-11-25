@@ -19,7 +19,7 @@ export const getWorkspace = defineEndpoint({
         assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake,
         obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates
       },
-      storage: repository.driver ?? 'local-review', release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available'
+      storage: repository.driver, release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available'
     });
   }
 });

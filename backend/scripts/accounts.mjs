@@ -24,7 +24,7 @@ Commands that only PRINT reviewed SQL (no database connection), e.g. for a hoste
   sql import-env
 
 Roles: AUTHOR, POLICY_AUTHORITY, VIEWER
-Database: DATABASE_URL (PostgreSQL), or QIVVERA_LOCAL_SQLITE=true with DATABASE_PATH.
+Database: DATABASE_URL (PostgreSQL).
 Operator identity recorded in the activity log: QIVVERA_OPERATOR, else the OS user name.`;
 
 class UsageError extends Error {}
@@ -75,9 +75,7 @@ function configuredAccounts() {
 }
 function databaseOptions() {
     if (process.env.DATABASE_URL) return { driver: 'postgres', connectionString: process.env.DATABASE_URL, sslMode: process.env.DATABASE_SSL_MODE ?? 'verify-full', ca: process.env.DATABASE_CA };
-    if (process.env.QIVVERA_LOCAL_SQLITE === 'true' && process.env.NODE_ENV !== 'production' && process.env.VERCEL !== '1')
-        return { driver: 'sqlite', path: process.env.DATABASE_PATH ?? 'data/qivvera.sqlite' };
-    throw new UsageError('Set DATABASE_URL, or QIVVERA_LOCAL_SQLITE=true with DATABASE_PATH for local review storage.');
+    throw new UsageError('Set DATABASE_URL to the PostgreSQL database.');
 }
 const show = a => `${a.status === 'ACTIVE' ? 'ACTIVE  ' : 'DISABLED'}  ${a.email.padEnd(36)} ${a.roles.join(',').padEnd(32)} last sign-in: ${a.lastLoginAt ?? 'never'}`;
 

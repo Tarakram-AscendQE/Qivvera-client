@@ -1,6 +1,5 @@
 /** Shared parameterized adapter. No network connection is made without an explicit URL. */
-import { readFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 const here = new URL('../', import.meta.url);
 const legacySql = `
@@ -52,55 +51,33 @@ export function postgresOptions(raw, { sslMode = 'verify-full', ca, max = 3 } = 
         throw new Error('INVALID_POOL_SIZE');
     return { connectionString: u.toString(), ssl: sslMode === 'disable' ? false : { rejectUnauthorized: true, ...(ca ? { ca } : {}) }, enableChannelBinding: channelBinding === 'require' || channelBinding === 'prefer', max, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000, query_timeout: 15000, statement_timeout: 15000 };
 }
-export async function openDatabase({ driver = 'sqlite', path = ':memory:', connectionString, sslMode, ca } = {}) {
-    if (driver === 'postgres') {
-        const { default: pg } = await import('pg');
-        const pool = new pg.Pool(postgresOptions(connectionString, { sslMode: sslMode ?? 'verify-full', ca }));
-        pool.on('error', () => console.error('DATABASE_POOL_ERROR'));
-        return { driver, lock: ' FOR UPDATE', async transaction(fn, readOnly = false) { const c = await pool.connect(); try {
-                await c.query(readOnly ? 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY' : 'BEGIN');
-                const v = await fn({ query: (q, p = []) => c.query(q, p), exec: q => c.query(q) });
-                await c.query('COMMIT');
-                return v;
-            }
-            catch (e) {
-                try {
-                    await c.query('ROLLBACK');
-                }
-                catch { }
-                throw e;
-            }
-            finally {
-                c.release();
-            } }, async healthy() { return (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1; }, close: () => pool.end() };
-    }
-    if (driver !== 'sqlite')
-        throw new Error('UNSUPPORTED_DATABASE');
-    const { DatabaseSync } = await import('node:sqlite');
-    if (path !== ':memory:')
-        mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    const d = new DatabaseSync(path);
-    d.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
-    const query = async (q, params = []) => { const values = []; const sql = q.replace(/\$(\d+)/g, (_, i) => { values.push(params[Number(i) - 1]); return '?'; }); const st = d.prepare(sql); if (/^\s*(SELECT|WITH|PRAGMA)/i.test(sql) || /\bRETURNING\b/i.test(sql))
-        return { rows: st.all(...values) }; const r = st.run(...values); return { rows: [], rowCount: Number(r.changes) }; };
-    let queue = Promise.resolve();
-    return { driver, lock: '', transaction(fn, readOnly = false) { const work = queue.then(async () => { d.exec(readOnly ? 'BEGIN' : 'BEGIN IMMEDIATE'); try {
-            const v = await fn({ query, exec: async (q) => d.exec(q) });
-            d.exec('COMMIT');
+/** Opens the PostgreSQL database named by `connectionString` (DATABASE_URL). PostgreSQL is the only store. */
+export async function openDatabase({ connectionString, sslMode, ca } = {}) {
+    if (!connectionString)
+        throw new Error('DATABASE_URL_REQUIRED');
+    const { default: pg } = await import('pg');
+    const pool = new pg.Pool(postgresOptions(connectionString, { sslMode: sslMode ?? 'verify-full', ca }));
+    pool.on('error', () => console.error('DATABASE_POOL_ERROR'));
+    return { driver: 'postgres', lock: ' FOR UPDATE', async transaction(fn, readOnly = false) { const c = await pool.connect(); try {
+            await c.query(readOnly ? 'BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY' : 'BEGIN');
+            const v = await fn({ query: (q, p = []) => c.query(q, p), exec: q => c.query(q) });
+            await c.query('COMMIT');
             return v;
         }
         catch (e) {
             try {
-                d.exec('ROLLBACK');
+                await c.query('ROLLBACK');
             }
             catch { }
             throw e;
-        } }); queue = work.catch(() => { }); return work; }, async healthy() { await queue; return d.prepare('SELECT 1 AS ok').get().ok === 1; }, async close() { await queue; d.close(); } };
+        }
+        finally {
+            c.release();
+        } }, async healthy() { return (await pool.query('SELECT 1 AS ok')).rows[0].ok === 1; }, close: () => pool.end() };
 }
 export async function migrateDatabase(db) {
     return db.transaction(async (c) => {
-        if (db.driver === 'postgres')
-            await c.query('SELECT pg_advisory_xact_lock(78124422)');
+        await c.query('SELECT pg_advisory_xact_lock(78124422)');
         await c.exec(legacySql);
         await c.exec(workflowSql);
         const versions = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;

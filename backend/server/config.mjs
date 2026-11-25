@@ -65,13 +65,11 @@ export function loadConfig(env = process.env) {
     const reviewMode = env.QIVVERA_REVIEW_MODE ?? 'independent';
     if (!['independent', 'founder-review'].includes(reviewMode))
         throw new Error('INVALID_REVIEW_MODE');
-    const driver = env.DATABASE_URL ? 'postgres' : 'sqlite';
-    if (hosted && driver !== 'postgres')
-        throw new Error('HOSTED_POSTGRES_REQUIRED');
-    if (!hosted && driver === 'sqlite' && env.QIVVERA_LOCAL_SQLITE !== 'true')
-        throw new Error('EXPLICIT_LOCAL_SQLITE_REQUIRED');
+    // PostgreSQL is the only database, locally and hosted. `node scripts/postgres-dev.mjs` starts one locally.
+    if (!env.DATABASE_URL)
+        throw new Error('DATABASE_URL_REQUIRED');
     const host = hosted ? '0.0.0.0' : env.HOST ?? '127.0.0.1';
     if (!hosted && !['localhost', '127.0.0.1', '::1'].includes(host))
         throw new Error('LOCAL_BIND_MUST_BE_LOOPBACK');
-    return { hosted, host, port, publicOrigin, accounts, reviewMode, releaseRevision: env.VERCEL_GIT_COMMIT_SHA ?? env.QIVVERA_RELEASE_SHA ?? 'unrecorded', database: { driver, path: env.DATABASE_PATH ?? 'data/qivvera.sqlite', connectionString: env.DATABASE_URL, sslMode: env.DATABASE_SSL_MODE ?? 'verify-full', ca: env.DATABASE_CA, migrate: !hosted && env.QIVVERA_MIGRATE_LOCAL === 'true', reviewMode } };
+    return { hosted, host, port, publicOrigin, accounts, reviewMode, releaseRevision: env.VERCEL_GIT_COMMIT_SHA ?? env.QIVVERA_RELEASE_SHA ?? 'unrecorded', database: { driver: 'postgres', connectionString: env.DATABASE_URL, sslMode: env.DATABASE_SSL_MODE ?? 'verify-full', ca: env.DATABASE_CA, migrate: !hosted && env.QIVVERA_MIGRATE_LOCAL === 'true', reviewMode } };
 }

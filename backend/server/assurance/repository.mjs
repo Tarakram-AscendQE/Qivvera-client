@@ -26,7 +26,7 @@ export async function openAssuranceRepository(options={}) {
   // fixed at BEGIN, so use clock_timestamp() for the final acceptance predicate.
   // Only explicit test fixtures substitute a controllable clock.
   const testClock=typeof options.now==='function';
-  const databaseClock=db.driver==='postgres'?'FLOOR(EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::bigint':"CAST(unixepoch('subsec') * 1000 AS INTEGER)";
+  const databaseClock='FLOOR(EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::bigint';
   const currentTime=async c=>testClock?now():Number((await c.query(`SELECT ${databaseClock} AS now_ms`)).rows[0].now_ms);
   const acceptanceClock=parameter=>testClock?parameter:databaseClock;
   const read=f=>db.transaction(f,true);
@@ -98,7 +98,7 @@ export async function openAssuranceRepository(options={}) {
       fields(input,['revisionId','planId','requestKey']);identifier(input.revisionId);identifier(input.planId);identifier(input.requestKey);
       const email=actorEmail(actor), requestDigest=digest({changeId,...input,actor:email});
       return db.transaction(async c=>{
-        if(db.driver==='postgres')await c.query('SELECT pg_advisory_xact_lock(78124423)');
+        await c.query('SELECT pg_advisory_xact_lock(78124423)');
         const ctx=await context(c,changeId,input.revisionId,true);
         const replay=(await c.query('SELECT * FROM assurance_runs WHERE request_key=$1',[input.requestKey])).rows[0];
         if(replay){if(replay.request_digest!==requestDigest)fail('IDEMPOTENCY_CONFLICT','This request key belongs to another request.');return viewRun(c,replay,ctx);}
@@ -134,7 +134,7 @@ export async function openAssuranceRepository(options={}) {
   if(!options.worker) return publicAPI;
   return {...publicAPI,
     async claim(workerId){text(workerId,'Worker identity',100);return db.transaction(async c=>{
-      if(db.driver==='postgres')await c.query('SELECT pg_advisory_xact_lock(78124423)');
+      await c.query('SELECT pg_advisory_xact_lock(78124423)');
       await expire(c);
       const row=(await c.query("SELECT * FROM assurance_runs WHERE status='QUEUED' ORDER BY queued_at,id LIMIT 1")).rows[0];if(!row)return null;
       // Worker never needs UPDATE privilege on producer/authority records.

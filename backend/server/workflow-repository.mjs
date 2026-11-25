@@ -54,7 +54,7 @@ export async function openWorkflowRepository(options = {}) {
         result.push({ ...rest, obligationCount: obligations.length, acceptedCount: obligations.filter(o => o.reviewStatus === 'ACCEPTED').length, inReviewCount: obligations.filter(o => o.reviewStatus === 'IN_REVIEW').length });
     } return result; };
     const listActivity = async (c) => (await c.query('SELECT * FROM activity ORDER BY created_at DESC,id DESC LIMIT 100')).rows.map(r => ({ id: r.id, actor: r.actor, action: r.action, entityId: r.entity_id, detail: r.detail, createdAt: iso(r.created_at) }));
-    const result = { workflow: true, isAsync: db.driver === 'postgres', driver: db.driver, reviewMode,
+    const result = { workflow: true, driver: db.driver, reviewMode,
         close: () => db.close(), healthy: () => db.healthy(), listApplications: () => read(listApps), listChanges: () => read(listChanges), listActivity: () => read(listActivity),
         getSchemaVersion: () => read(async (c) => { const value = (await c.query('SELECT MAX(version) AS version FROM qivvera_migrations')).rows[0]?.version; return value === null || value === undefined ? null : Number(value); }),
         getApplication: id => read(async (c) => appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0])), getChange: (id, rev) => read(c => getChange(c, id, rev)),
@@ -62,7 +62,7 @@ export async function openWorkflowRepository(options = {}) {
             return await db.transaction(async (c) => { const id = randomUUID(), now = new Date().toISOString(); await c.query('INSERT INTO applications (id,name,normalized_name,description,repository_url,created_at) VALUES ($1,$2,$3,$4,$5,$6)', [id, a.name, a.name.toLocaleLowerCase('en-US'), a.description, a.repositoryUrl, now]); await audit(c, email, 'APPLICATION_CREATED', id, `Registered ${a.name}`); return appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0]); });
         }
         catch (e) {
-            if (e.code === '23505' || e.code === 'ERR_SQLITE_ERROR' && String(e.message).includes('UNIQUE'))
+            if (e.code === '23505')
                 throw new InputError('DUPLICATE_APPLICATION', 'An application with this name already exists.', 409);
             throw e;
         } },
