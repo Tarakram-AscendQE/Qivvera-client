@@ -9,17 +9,25 @@ shows the result. The expected outcome is **2 broken rules → 1 → 0**.
 
 ## 0. Local demo (internal team demo, before deployment)
 
-Runs Qivvera on this laptop with a **throwaway local database**. It never uses the Neon database in
-`.env.local`, because the command blanks `DATABASE_URL`. The checks still run for real on GitHub Actions.
+Runs Qivvera on this laptop against the **Neon database** in `.env.local`. The checks run for real on
+GitHub Actions, and imports and runs stay in Neon's history.
 
-1. Docker must be running. Use Node 22 (`nvm use 22`).
-2. `.env.local` must contain `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN`, a token that can read prcheck-live and
-   start workflows in prcheck-verifiers.
-3. Start it: `npm run demo:pr-assurance`. Open **http://127.0.0.1:3100**. (Port 3100, so it does not
-   clash with your usual `npm run dev` on 3000.)
-4. Sign in with the owner account from `.env.local` (`OWNER_EMAIL` and its password).
-5. Follow section 3 below. Each evaluation takes about a minute.
-6. Stop with Ctrl+C. The local database is removed, so the next start begins with nothing imported.
+Already done on 2026-11-26:
+- `npm run migrate` was run against Neon. It added only the `pr_assurance_*` tables; schema 8, the four
+  accounts and the existing data were unchanged.
+- `.env.local` contains `QIVVERA_PR_ASSURANCE_ENABLED=true` and `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN`.
+
+To run it:
+1. Stop any dev server that was started before these changes (old code does not have the feature).
+2. `npm run dev` (Node 22), then open **http://127.0.0.1:3000**.
+3. Sign in with a Neon account: `admin@qivvera.com` (Author and Policy Authority) or `author@qivvera.com`
+   can import and evaluate; `viewer@qivvera.com` can only watch. (`OWNER_*` in `.env.local` is not used
+   for sign-in since schema 8.)
+4. Follow section 3. Each evaluation takes about a minute.
+
+Fallback if Neon cannot be reached: `npm run dev:temporary-db` starts a throwaway local database on
+http://127.0.0.1:3100 (Docker must be running). It starts empty; sign in with `OWNER_EMAIL` and its password
+from `.env.local`.
 
 Rehearsed on 2026-11-25 against real GitHub: PR #6 NOT READY (2 rules broken) in 53 s, PR #7 NOT READY
 (1 rule broken) in 48 s, PR #8 READY in 57 s; timeline 2 → 1 → 0; no page errors.
@@ -34,7 +42,7 @@ Someone with write access to vendorpay-app can rename them; **Re-import from Git
 | 1 | The workflow and its reporter are on `main` in `prcheck-live/prcheck-verifiers` (`.github/workflows/qivvera-pr-assessment.yml`, `reporters/check-run-reporter.ts`). | Someone with write access to that repository | The **Actions** tab lists "Qivvera PR assessment" |
 | 2 | Create a **fine-grained token**. Resource owner: `prcheck-live`. Repositories: `vendorpay-app` and `prcheck-verifiers` only. Permissions: vendorpay-app → Contents **read**, Pull requests **read**; prcheck-verifiers → Actions **read and write**, Checks **read**, Contents **read**. | Deployer | Token created and stored somewhere safe |
 | 3 | In Vercel → Project → Settings → Environment Variables, add `QIVVERA_PR_ASSURANCE_ENABLED` = `true` and `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN` = the token. Redeploy. | Deployer | The navigation shows **PR assurance** |
-| 4 | Run the migration against Neon from this repository: `DATABASE_URL=<Neon connection string> npm run migrate` | Deployer | It prints "Schema 8 is current, and so are the PR assurance add-on tables." |
+| 4 | Run the migration against the deployment's database: `DATABASE_URL=<connection string> npm run migrate` (already done for the Neon database in `.env.local` on 2026-11-26) | Deployer | It prints "Schema 8 is current, and so are the PR assurance add-on tables." |
 | 5 | **Do not merge or close PRs #6, #7 or #8.** Only open pull requests can be imported. | Everyone | All three stay open |
 | 6 | Rehearse once on the deployed URL (section 3) and write the times in section 5. | Presenter | Three results match the table below |
 
