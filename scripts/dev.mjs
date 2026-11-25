@@ -1,4 +1,11 @@
 /** Local development launcher: loads .env.local, starts the app, prints the URL once it is ready. */
+import { setDefaultAutoSelectFamilyAttemptTimeout } from 'node:net';
+
+// Node gives each resolved address only 250 ms to connect before trying the next. A remote database
+// (for example Neon in the US) can take longer from here, so every address fails together with
+// AggregateError [ETIMEDOUT]. Allow 1 s per address for local runs only; hosted runtimes are unchanged.
+setDefaultAutoSelectFamilyAttemptTimeout(1000);
+
 try { process.loadEnvFile('.env.local'); }
 catch { console.error('DEV_SETUP_REQUIRED: create .env.local (local settings) next to package.json.'); process.exit(1); }
 
