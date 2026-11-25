@@ -4,10 +4,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { setupImpact, author } from './impact-helpers.mjs';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
-import { createImpactReader } from '../server/impact/reader.mjs';
-import { migrateDrafting } from '../server/drafting/migration.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
+import { createImpactReader } from '../backend/server/impact/reader.mjs';
+import { migrateDrafting } from '../backend/server/drafting/migration.mjs';
 
 const url = process.env.TEST_DATABASE_URL;
 if (!url) test('IMPACT POSTGRES NOT EXECUTED: disposable database required', { skip: process.env.REQUIRE_POSTGRES !== 'true' }, () => {

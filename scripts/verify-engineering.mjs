@@ -41,8 +41,8 @@ const stages = [
   ['assurance-reference', 'npm', ['run', 'demo:assurance']],
   ['resolution-reference', 'npm', ['run', 'demo:resolution']],
   ['two-application-reference', 'npm', ['run', 'demo:generalization']],
-  ['native-browser-journeys', browserPython, ['test/run-browser-suites.py']],
-  ['canonical-public-assets', 'git', ['diff', '--exit-code', '--', 'public/']]
+  ['native-browser-journeys', process.execPath, ['scripts/with-postgres.mjs', browserPython, 'test/run-browser-suites.py']],
+  ['canonical-public-assets', 'git', ['diff', '--exit-code', '--', 'frontend/public/']]
 ];
 let databaseSafetyError = null;
 try { requireDisposablePostgresURL(process.env.TEST_DATABASE_URL); }

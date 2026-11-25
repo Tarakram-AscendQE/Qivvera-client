@@ -2,10 +2,11 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openAssuranceRepository } from '../server/assurance/repository.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
-import { CHECKS } from '../server/assurance/generalization.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
+import { CHECKS } from '../backend/server/assurance/generalization.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 export const author = { email: 'author@example.test', roles: ['AUTHOR'] };
 export const authority = { email: 'policy@example.test', roles: ['POLICY_AUTHORITY'] };
 export const otherAuthority = { email: 'other-policy@example.test', roles: ['POLICY_AUTHORITY'] };
@@ -14,7 +15,7 @@ export const rationale = 'A named authority has reviewed this exact requirement 
 
 export async function setupTemplates(t, { postgresURL, adapter = 'approval-v1', reviewMode = 'independent', clock } = {}) {
     const dir = mkdtempSync(join(tmpdir(), 'qivvera-templates-'));
-    const db = postgresURL ? { driver: 'postgres', connectionString: postgresURL, sslMode: 'disable' } : { path: join(dir, 'workspace.sqlite') };
+    const db = postgresURL ? { driver: 'postgres', connectionString: postgresURL, sslMode: 'disable' } : await testDatabase();
     let workflow, service;
     t.after(async () => { await service?.close(); await workflow?.close(); rmSync(dir, { recursive: true, force: true }); });
     workflow = await openWorkflowRepository({ ...db, migrate: true, reviewMode });

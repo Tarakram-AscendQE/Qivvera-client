@@ -4,9 +4,9 @@ import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
-import { TABLES, databaseConfig, safeFailure, releaseIdentity } from '../server/operations/common.mjs';
-import { validatePermissionInputs } from '../server/operations/permissions.mjs';
-import { validateRecoveryInputs, rehearseRecovery } from '../server/operations/recovery.mjs';
+import { TABLES, databaseConfig, safeFailure, releaseIdentity } from '../backend/server/operations/common.mjs';
+import { validatePermissionInputs } from '../backend/server/operations/permissions.mjs';
+import { validateRecoveryInputs, rehearseRecovery } from '../backend/server/operations/recovery.mjs';
 
 const revision = 'a'.repeat(40);
 const recovery = overrides => ({ sourceConnectionString: 'postgresql://reader:private-synthetic@127.0.0.1:5432/qivvera_test_source',
@@ -15,7 +15,7 @@ const recovery = overrides => ({ sourceConnectionString: 'postgresql://reader:pr
 const expectCode = (fn, code) => assert.throws(fn, error => error.code === code && error.message === code);
 
 test('operations / backup inventory covers every currently created application table', () => {
-    const texts = [readFileSync('server/workflow-store.mjs', 'utf8'), ...readdirSync('migrations').filter(n => n.endsWith('.sql')).map(n => readFileSync(join('migrations', n), 'utf8'))];
+    const texts = [readFileSync('backend/server/workflow-store.mjs', 'utf8'), ...readdirSync('backend/migrations').filter(n => n.endsWith('.sql')).map(n => readFileSync(join('backend/migrations', n), 'utf8'))];
     const found = [...new Set(texts.flatMap(text => [...text.matchAll(/CREATE TABLE IF NOT EXISTS (\w+)/g)].map(match => match[1])))].sort();
     assert.deepEqual(TABLES, found);
 });
@@ -74,7 +74,7 @@ test('operations / identity and error helpers never promote truncated revisions 
 test('operations / CLI safety rejection emits a failed record without exposing connection secrets', () => {
     const dir = mkdtempSync(join(tmpdir(), 'qivvera-operations-output-'));
     try {
-        const result = spawnSync(process.execPath, ['scripts/rehearse-recovery.mjs'], { encoding: 'utf8', env: {
+        const result = spawnSync(process.execPath, ['backend/scripts/rehearse-recovery.mjs'], { encoding: 'utf8', env: {
             PATH: process.env.PATH, QIVVERA_RELEASE_SHA: revision, QIVVERA_TEST_OUTPUT: dir,
             QIVVERA_RECOVERY_SOURCE_DATABASE_URL: 'postgresql://private-user:private-password@remote-secret.example.test/qivvera_test_a',
             QIVVERA_RECOVERY_ADMIN_DATABASE_URL: recovery().destinationAdminConnectionString,

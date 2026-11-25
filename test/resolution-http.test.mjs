@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
-import {createApplicationServer} from '../server/app.mjs';
-import {hashPassword} from '../server/auth.mjs';
-import {PRODUCT_VERSION} from '../server/release.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
+import {hashPassword} from '../backend/server/auth.mjs';
+import {PRODUCT_VERSION} from '../backend/server/release.mjs';
 import {resolutionSetup,author,authority,viewer,accounts,note} from './resolution-helpers.mjs';
 async function httpSetup(t){
  const h=await resolutionSetup(t);const corrected=await h.correct();const password=randomUUID()+randomUUID();

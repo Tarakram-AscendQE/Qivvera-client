@@ -21,7 +21,7 @@ user-provided URL, universal obligation discovery, or production release certifi
 - Target identity matching is operator-pinned + target-reported, not an independently trusted attestation.
 - SHA-256 identity is not a signature, trusted timestamp, or protection from database administrators.
 - Synthetic reference faults are deliberate tests, not authentic AI-generated defects.
-- No secrets/default accounts in Git or assets. Hosted storage cannot fall back to SQLite.
+- No secrets/default accounts in Git or assets. PostgreSQL is the only storage (SQLite was removed).
 - Preserve deployment holds and require all mandatory PostgreSQL/browser/recovery checks before release.
 
 ## Delivery
@@ -126,3 +126,19 @@ credentials, databases, account settings or costs without the appropriate author
   hosted permissions/HTTPS/recovery or independent human QE/customer acceptance.
 - Run npm run check:engineering with all eight PostgreSQL suites and all eight native browser suites.
   Source publication, hosted deployment and product scope completion remain separate recorded outcomes.
+
+## Repository layout
+- Frontend: React 19 + TypeScript in frontend/src (Vite, TanStack Query, Vitest), built into one
+  frontend/public/app.js that the Node server and Vercel serve; static files live in frontend/static.
+  Routing is a typed hash route table (frontend/src/app/routes.ts); React Router is deferred until the
+  screen modules become route loaders. Keep the strict CSP, query retry off, visit/session/dialog
+  binding of results, and prove UI changes with the native browser suites. api/index.mjs stays at
+  the root for Vercel.
+- Backend HTTP: Express 5 + TypeScript in backend/api (compiled to dist/api). backend/api/routes.ts lists
+  every endpoint; one endpoint per file in backend/api/endpoints/<area>/; shared helpers in
+  backend/api/common/. Keep client-visible behaviour (status, body, error codes/messages, headers)
+  unchanged unless a change is agreed. Repositories stay in backend/server.
+- Database: PostgreSQL 17 only; DATABASE_URL is required. Tests, demos and browser suites run through
+  scripts/with-postgres.mjs (throwaway Docker container on 127.0.0.1, one qivvera_test_* database per test).
+- Keep backend/server, backend/verifiers and backend/migrations as siblings: verifier digests include
+  the relative path strings, so moving one without the others changes published verifier identity.

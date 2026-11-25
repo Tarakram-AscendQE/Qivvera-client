@@ -21,7 +21,7 @@ so deploy the schema-8 application before (or together with) recording migration
 - Unknown emails and wrong passwords return the same response and take the same time.
 - Every account change writes an `activity` row (`ACCOUNT_CREATED`, `ACCOUNT_PASSWORD_CHANGED`,
   `ACCOUNT_ROLES_CHANGED`, `ACCOUNT_DISABLED`, `ACCOUNT_ENABLED`) naming the operator.
-- The web runtime only reads accounts and updates `last_login_at` (see `ops/accounts-permissions.sql`).
+- The web runtime only reads accounts and updates `last_login_at` (see `backend/ops/accounts-permissions.sql`).
 - A runtime with no active account refuses to start (`NAMED_ACCOUNTS_REQUIRED`). No default account exists.
 
 ## Operator commands
@@ -51,7 +51,7 @@ npm run accounts -- sql import-env      # converts QIVVERA_ACCOUNTS_JSON / OWNER
 
 Steps 1–2 are safe at any time: earlier builds ignore these tables.
 
-1. Create the two tables (`migrations/008_workspace_accounts.sql`) if they do not exist yet.
+1. Create the two tables (`backend/migrations/008_workspace_accounts.sql`) if they do not exist yet.
 2. Insert the existing accounts (`npm run accounts -- sql import-env`, run with the current account
    settings) and at least one Policy Authority distinct from each Author for independent review.
    Check them with `SELECT email,status FROM workspace_users;`.
@@ -62,7 +62,7 @@ for example by deploying without automatic promotion and promoting immediately a
 
 3. Deploy the schema-8 application build.
 4. Record migration 8: `npm run migrate`, or insert version 8 with the checksum exported as
-   `accountsChecksum` from `server/accounts/migration.mjs`.
+   `accountsChecksum` from `backend/server/accounts/migration.mjs`.
 5. Sign in, then optionally remove `QIVVERA_ACCOUNTS_JSON` / `OWNER_*`; the runtime logs
    `ACCOUNT_CONFIGURATION_IGNORED` while they remain set.
 

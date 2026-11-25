@@ -1,13 +1,11 @@
 /** Disposable local browser fixture. Never imported by a deployment entrypoint. */
-import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openAssuranceRepository } from '../server/assurance/repository.mjs';
-import { openResolutionRepository } from '../server/resolution/repository.mjs';
-import { openIntakeRepository } from '../server/intake/repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
+import { openResolutionRepository } from '../backend/server/resolution/repository.mjs';
+import { openIntakeRepository } from '../backend/server/intake/repository.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
+import { hashPassword } from '../backend/server/auth.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 
 const password = process.env.FIRST_RELEASE_TEST_PASSWORD;
 if (typeof password !== 'string' || password.length < 24)
@@ -19,8 +17,7 @@ const mode = process.env.FIRST_RELEASE_TEST_CAPABILITIES ?? 'configured';
 if (!['configured', 'disabled'].includes(mode))
     throw new Error('Unknown browser-fixture capability mode.');
 
-const dir = mkdtempSync(join(tmpdir(), 'qivvera-first-release-'));
-const db = { path: join(dir, 'workspace.sqlite'), migrate: true };
+const db = { ...await testDatabase(), migrate: true };
 const passwordHash = hashPassword(password);
 const accounts = [
     { email: 'author@example.test', passwordHash, roles: ['AUTHOR'] },
@@ -75,7 +72,7 @@ server.on('request', (req, res) => {
     void handler(req, res);
 });
 server.listen(port, '127.0.0.1', () => {
-    console.log(JSON.stringify({ origin, mode, storage: 'sqlite', schemaVersion: 5 }));
+    console.log(JSON.stringify({ origin, mode, storage: 'postgres', schemaVersion: 5 }));
 });
 let closing = false;
 async function stop() {
@@ -83,7 +80,6 @@ async function stop() {
     closing = true;
     await new Promise(resolve => server.close(resolve));
     for (const service of [intake, resolution, assurance, repository]) await service.close();
-    rmSync(dir, { recursive: true, force: true });
     process.exit(0);
 }
 process.on('SIGTERM', stop);

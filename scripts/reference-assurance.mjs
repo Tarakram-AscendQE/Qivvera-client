@@ -1,20 +1,20 @@
 /** Complete local demonstration using an actual HTTP application and a SEPARATE worker process.
  * Test-only, loopback, disposable data. Does not call customer systems or claim an authentic AI defect.
  */
-import {mkdtempSync,rmSync,mkdirSync,writeFileSync} from 'node:fs';
-import {tmpdir} from 'node:os';
-import {join,resolve} from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {randomUUID,randomBytes} from 'node:crypto';
-import {openWorkflowRepository} from '../server/workflow-repository.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
-import {hashPassword} from '../server/auth.mjs';
-import {createApplicationServer} from '../server/app.mjs';
+import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
+import {hashPassword} from '../backend/server/auth.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
+import { testDatabase } from '../test/postgres-test-database.mjs';
 const out=resolve(process.env.QIVVERA_TEST_OUTPUT??'review-test-results');mkdirSync(out,{recursive:true});
 const results=[];
 for(const mode of ['correct','self-approval-defect','reject-all']){
- const dir=mkdtempSync(join(tmpdir(),'qivvera-assurance-')),db={path:join(dir,'workspace.sqlite')};
+ const db=await testDatabase();
  const maker=randomBytes(24).toString('hex'),checker=randomBytes(24).toString('hex');
  const targetProcess=spawn(process.execPath,['fixtures/approval-target/server.mjs'],{env:{...process.env,FIXTURE_MODE:mode,FIXTURE_MAKER_TOKEN:maker,FIXTURE_CHECKER_TOKEN:checker,PORT:'0'},stdio:['ignore','pipe','pipe']});
  let workflow,assurance,server;
@@ -51,14 +51,14 @@ for(const mode of ['correct','self-approval-defect','reject-all']){
   const plan=await api(`/api/changes/${change.id}/assurance-plan`,'POST',{revisionId:change.revision.id,scopeDigest:ctx.scopeDigest,expectedPlanVersion:0,obligationId:o.id,targetId:target.id,rationale:'The configured oracle checks self-approval and a different-person positive control.',acknowledgeLimits:true});
   const run=await api(`/api/changes/${change.id}/assessments`,'POST',{revisionId:change.revision.id,planId:plan.id,requestKey:randomUUID()});
   if(run.status!=='QUEUED'||run.disposition!==null)throw new Error('QUEUE_STATE_INVALID');
-  const worker=spawn(process.execPath,['scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',QIVVERA_LOCAL_SQLITE:'true',DATABASE_PATH:db.path,QIVVERA_WORKER_ID:'reference-worker-process',REF_MAKER:maker,REF_CHECKER:checker},stdio:['ignore','pipe','pipe']});
+  const worker=spawn(process.execPath,['backend/scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',ASSURANCE_DATABASE_URL:db.connectionString,DATABASE_SSL_MODE:'disable',QIVVERA_WORKER_ID:'reference-worker-process',REF_MAKER:maker,REF_CHECKER:checker},stdio:['ignore','pipe','pipe']});
   let workerOutput='';worker.stdout.on('data',b=>workerOutput+=b);const [code]=await once(worker,'exit');if(code!==0)throw new Error('WORKER_FAILED');
   const completed=await api(`/api/assessments/${run.id}`);const expected={correct:'READY','self-approval-defect':'NOT_READY','reject-all':'INDETERMINATE'}[mode];if(completed.disposition!==expected)throw new Error('UNEXPECTED_DISPOSITION');
   writeFileSync(join(out,`case-${mode}.json`),JSON.stringify(completed,null,2));
   const c=await api(`/api/changes/${change.id}`),w=await api('/api/workspace'),context=await api(`/api/changes/${change.id}/assurance-context?revision=${change.revision.id}`);
   writeFileSync(join(out,`ui-${mode}.json`),JSON.stringify({workspace:w,change:c,context,runs:[completed],session:{email:policy.email,roles:policy.roles,csrfToken:'component-only',reviewMode:'independent'}},null,2));
   results.push({mode,expected,actual:completed.disposition,observations:completed.evidence.report.observations.length,evidenceDigest:completed.evidenceDigest,transport:'real local HTTP',targetProcess:'separate Node process',workerProcess:'separate Node process',worker:JSON.parse(workerOutput.trim()).status});
- }finally{if(server)await new Promise(r=>server.close(r));await assurance?.close();await workflow?.close();if(targetProcess.exitCode===null){const ended=once(targetProcess,'exit');targetProcess.kill('SIGTERM');await ended.catch(()=>{});}rmSync(dir,{recursive:true,force:true});}
+ }finally{if(server)await new Promise(r=>server.close(r));await assurance?.close();await workflow?.close();if(targetProcess.exitCode===null){const ended=once(targetProcess,'exit');targetProcess.kill('SIGTERM');await ended.catch(()=>{});}}
 }
 writeFileSync(join(out,'reference-execution-report.json'),JSON.stringify({date:new Date().toISOString(),results,limitations:['Synthetic fixtures with deliberately seeded fault modes; not authentic AI-generated failures.','SQLite review store; no PostgreSQL or hosted deployment verification.','HTTP tests are real, but not native browser/HTTPS end-to-end tests.']},null,2));
 console.log(JSON.stringify(results,null,2));

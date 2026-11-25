@@ -14,8 +14,8 @@
     "verbatimModuleSyntax": true,
     "declaration": true,
     "sourceMap": true,
-    "rootDir": "src",
+    "rootDir": "backend",
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts"]
+  "include": ["backend/core/**/*.ts"]
 }

@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {setup} from './assurance-helpers.mjs';
-import {executeApprovalSeparation} from '../verifiers/approval-separation.mjs';
-import {permittedAddress} from '../verifiers/transport.mjs';
-import {digest} from '../server/assurance/contracts.mjs';
+import {executeApprovalSeparation} from '../backend/verifiers/approval-separation.mjs';
+import {permittedAddress} from '../backend/verifiers/transport.mjs';
+import {digest} from '../backend/server/assurance/contracts.mjs';
 for(const [mode,state,disposition] of [['correct','SUPPORTED','READY'],['self-approval-defect','VIOLATED','NOT_READY'],['deny-but-mutate','VIOLATED','NOT_READY'],['reject-all','INSUFFICIENT','INDETERMINATE'],['unavailable','INSUFFICIENT','INDETERMINATE'],['malformed','INSUFFICIENT','INDETERMINATE'],['redirect','INSUFFICIENT','INDETERMINATE'],['changing-identity','INSUFFICIENT','INDETERMINATE']]){
  test(`real HTTP target ${mode}: ${state}, ${disposition}`,async t=>{const h=await setup(t,{mode});const r=await h.run();assert.equal(r.status,'COMPLETED');assert.equal(r.evidence.report.outcome,state);assert.equal(r.disposition,disposition);assert.equal(r.evidenceIntegrity,'DIGEST_MATCH');assert.equal(r.evidenceDigest,digest(r.evidence));assert.ok(!JSON.stringify(r).includes(h.makerToken));assert.ok(!JSON.stringify(r).includes(h.checkerToken));});
 }

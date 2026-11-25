@@ -113,7 +113,14 @@ def view_impact(page, fixture, change_id, revision_id):
 
 
 def create_revision(page, fixture, change_id, source, copy=True):
-    page.goto(fixture.origin + '/#/changes/' + change_id, wait_until='networkidle')
+    target = fixture.origin + '/#/changes/' + change_id
+    if page.url != target:
+        # A hash route reads the change and then replaces the whole page. Wait for that redraw before
+        # clicking: the app deliberately ignores clicks on a page drawn for an earlier route.
+        previous = page.locator('#root > *').first.element_handle()
+        page.goto(target, wait_until='networkidle')
+        if previous:
+            page.wait_for_function('element => !element.isConnected', arg=previous)
     page.get_by_role('button', name='+ New revision', exact=True).first.click()
     page.get_by_label('New source commit reference').fill(source)
     page.get_by_label('Business intent').fill('Preserve approval controls while reviewing a new declared implementation.')

@@ -1,8 +1,8 @@
 /** Test harness only. Loopback and disposable state; never a deployment entrypoint. */
 import {setup,author,authority} from './assurance-helpers.mjs';
-import {createApplicationServer} from '../server/app.mjs';
-import {hashPassword} from '../server/auth.mjs';
-import {workOnce} from '../server/assurance/worker.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
+import {hashPassword} from '../backend/server/auth.mjs';
+import {workOnce} from '../backend/server/assurance/worker.mjs';
 const cleanup=[];
 const h=await setup({after:f=>cleanup.push(f)},{mode:'self-approval-defect'});
 const port=Number(process.env.TEST_PORT??3138);

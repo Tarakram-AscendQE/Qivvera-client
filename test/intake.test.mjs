@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
 import {setupIntake,author,other,authority,viewer,pull} from './intake-helpers.mjs';
-import {openIntakeRepository} from '../server/intake/repository.mjs';import {openDatabase} from '../server/workflow-store.mjs';
-import {validateRepositories} from '../server/intake/github.mjs';
+import {openIntakeRepository} from '../backend/server/intake/repository.mjs';import {openDatabase} from '../backend/server/workflow-store.mjs';
+import {validateRepositories} from '../backend/server/intake/github.mjs';
 test('intake / preview alone creates no change or obligations',async t=>{const h=await setupIntake(t),p=await h.preview();assert.equal(p.source.headSha,'a'.repeat(40));assert.equal((await h.workflow.listChanges()).length,0);assert.ok(!JSON.stringify(p).includes(h.token));});
 test('intake / imported exact head remains unassessed',async t=>{const h=await setupIntake(t),p=await h.preview(),i=await h.intake.importPreview(h.request(p),author),c=await h.workflow.getChange(i.changeId);assert.equal(c.sourceRevision,p.source.headSha);assert.equal(c.disposition,null);assert.equal(c.obligations.length,0);assert.equal(c.producer,'UNSPECIFIED');assert.equal((await h.intake.list(c.id))[0].source.headSha,p.source.headSha);assert.equal(h.requests.length,2);assert.ok(h.requests.every(r=>r.method==='GET'&&r.redirect==='manual'&&r.url.startsWith('https://api.github.com/repos/example/testrepo/pulls/')));});
 test('intake / same preview request is idempotent without refetch',async t=>{const h=await setupIntake(t),p=await h.preview(),req=h.request(p),a=await h.intake.importPreview(req,author),b=await h.intake.importPreview(req,author);assert.equal(a.id,b.id);assert.equal(b.replayed,true);assert.equal(h.requests.length,2);});

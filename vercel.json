@@ -1,10 +1,10 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "public",
+  "outputDirectory": "frontend/public",
   "functions": {
     "api/index.mjs": {
-      "includeFiles": "{web/**,migrations/**,verifiers/**,server/assurance/**,server/resolution/**,server/drafting/**,server/impact/**,server/templates/**}"
+      "includeFiles": "{frontend/public/**,backend/migrations/**,backend/verifiers/**,backend/server/assurance/**,backend/server/resolution/**,backend/server/drafting/**,backend/server/impact/**,backend/server/templates/**}"
     }
   },
   "rewrites": [

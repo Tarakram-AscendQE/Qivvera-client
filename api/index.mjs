@@ -1,15 +1,15 @@
-import {loadIntakeConfig} from '../server/intake/github.mjs';
-import {openIntakeRepository} from '../server/intake/repository.mjs';
+import {loadIntakeConfig} from '../backend/server/intake/github.mjs';
+import {openIntakeRepository} from '../backend/server/intake/repository.mjs';
 /** Requests only. Never runs verification inside a Vercel invocation. */
-import {loadConfig} from '../server/config.mjs';
-import {loadAssuranceConfig} from '../server/assurance/config.mjs';
-import {openWorkflowRepository} from '../server/workflow-repository.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
-import {openResolutionRepository} from '../server/resolution/repository.mjs';
-import {createApplicationServer} from '../server/app.mjs';
+import {loadConfig} from '../backend/server/config.mjs';
+import {loadAssuranceConfig} from '../backend/server/assurance/config.mjs';
+import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
+import {openResolutionRepository} from '../backend/server/resolution/repository.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
 import {fileURLToPath} from 'node:url';
-import {loadDraftingConfig} from '../server/drafting/generator.mjs';
-import {openWorkspaceAccounts} from '../server/accounts/repository.mjs';
+import {loadDraftingConfig} from '../backend/server/drafting/generator.mjs';
+import {openWorkspaceAccounts} from '../backend/server/accounts/repository.mjs';
 let initialising;
 async function getHandler(){
  if(!initialising)initialising=(async()=>{
@@ -19,7 +19,7 @@ async function getHandler(){
    if(ac.enabled)assurance=await openAssuranceRepository({...cfg.database,...ac,migrate:false});
    if(process.env.QIVVERA_RESOLUTION_ENABLED==='true'){if(!assurance)throw new Error('RESOLUTION_REQUIRES_ASSURANCE');resolution=await openResolutionRepository({...cfg.database,...ac,directory:accounts,reviewMode:cfg.reviewMode,migrate:false});}
  const ic=loadIntakeConfig();if(ic.enabled)intake=await openIntakeRepository({...cfg.database,...ic,migrate:false});
-   const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../web',import.meta.url))});
+   const server=createApplicationServer({repository,assurance,resolution,intake,accountDirectory:accounts,publicOrigin:cfg.publicOrigin,secureCookies:true,releaseRevision:cfg.releaseRevision,webRoot:fileURLToPath(new URL('../frontend/public',import.meta.url))});
    return server.listeners('request')[0];
   }catch(e){await intake?.close();await resolution?.close();await assurance?.close();await accounts?.close();await repository.close();throw e;}
  })().catch(e=>{initialising=undefined;throw e;});

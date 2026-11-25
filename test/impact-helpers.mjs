@@ -2,12 +2,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
 import { setup } from './assurance-helpers.mjs';
 import { setupMulti } from './generalization-helpers.mjs';
 export { author, authority, viewer } from './assurance-helpers.mjs';
 import { author, authority } from './assurance-helpers.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 
 export async function setupImpact(t, { postgresURL, assurance = false, generalization = false, mode = 'correct', clock } = {}) {
     let h;
@@ -19,7 +20,7 @@ export async function setupImpact(t, { postgresURL, assurance = false, generaliz
         h = { ...h, impact: readerWorkflow.impact, readerWorkflow, readerOptions };
     } else {
         const dir = mkdtempSync(join(tmpdir(), 'qivvera-impact-'));
-        const db = postgresURL ? { driver: 'postgres', connectionString: postgresURL, sslMode: 'disable' } : { path: join(dir, 'workspace.sqlite') };
+        const db = postgresURL ? { driver: 'postgres', connectionString: postgresURL, sslMode: 'disable' } : await testDatabase();
         const readerOptions = { ...db, migrate: true, impact: { ...(clock ? { now: clock } : {}) } };
         const workflow = await openWorkflowRepository(readerOptions);
         t.after(async () => { await workflow.close(); rmSync(dir, { recursive: true, force: true }); });

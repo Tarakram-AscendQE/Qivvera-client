@@ -1,5 +1,5 @@
 /** Real local HTTP resolution journey with a separate verifier worker process.
- * Synthetic reference applications and isolated SQLite only; never a deployment entry point.
+ * Synthetic reference applications and a disposable PostgreSQL database only; never a deployment entry point.
  */
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
@@ -7,8 +7,8 @@ import {randomUUID,randomBytes} from 'node:crypto';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {resolutionSetup,author,authority,accounts,note} from '../test/resolution-helpers.mjs';
-import {createApplicationServer} from '../server/app.mjs';
-import {hashPassword} from '../server/auth.mjs';
+import {createApplicationServer} from '../dist/api/server.js';
+import {hashPassword} from '../backend/server/auth.mjs';
 const out=resolve(process.env.QIVVERA_TEST_OUTPUT??'review-test-results');mkdirSync(out,{recursive:true});
 const cleanup=[];let server;const checks=[];
 try{
@@ -36,7 +36,7 @@ try{
  await login(author);const queued=await api(`/api/changes/${h.change.id}/assessments`,'POST',{revisionId:corrected.change.revision.id,planId:plan.id,requestKey:randomUUID()});
  await act('LINK_ASSESSMENT',{runId:queued.id});
  if(item.comparison.eligible)throw new Error('QUEUED_RUN_MUST_NOT_VERIFY_CORRECTION');checks.push('A queued reassessment cannot verify the correction.');
- const worker=spawn(process.execPath,['scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([corrected.target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',QIVVERA_LOCAL_SQLITE:'true',DATABASE_PATH:h.db.path,QIVVERA_WORKER_ID:'resolution-reference-worker',MAKER_TEST_TOKEN:h.makerToken,CHECKER_TEST_TOKEN:h.checkerToken},stdio:['ignore','pipe','pipe']});
+ const worker=spawn(process.execPath,['backend/scripts/assurance-worker.mjs','--once'],{env:{...process.env,NODE_ENV:'test',QIVVERA_ASSURANCE_ENABLED:'true',QIVVERA_TARGETS_JSON:JSON.stringify([corrected.target]),QIVVERA_ALLOW_LOOPBACK_TARGETS:'true',ASSURANCE_DATABASE_URL:h.db.connectionString,DATABASE_SSL_MODE:'disable',QIVVERA_WORKER_ID:'resolution-reference-worker',MAKER_TEST_TOKEN:h.makerToken,CHECKER_TEST_TOKEN:h.checkerToken},stdio:['ignore','pipe','pipe']});
  const deadline=setTimeout(()=>worker.kill('SIGTERM'),15000);const [code]=await once(worker,'exit');clearTimeout(deadline);if(code!==0)throw new Error('REFERENCE_WORKER_FAILED');
  item=await api('/api/resolutions/'+item.id);if(!item.comparison.eligible)throw new Error(JSON.stringify(item.comparison.blockers));checks.push('Separate worker executed real HTTP verification of the corrected target; linked finding is SUPPORTED.');
  await login(authority);await capture('review');await act('VERIFY');

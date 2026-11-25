@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { setupImpact, author, authority } from './impact-helpers.mjs';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openAssuranceRepository } from '../server/assurance/repository.mjs';
-import { digest } from '../server/assurance/contracts.mjs';
-import { MAX_IMPACT_OBLIGATIONS } from '../server/impact/reader.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
+import { digest } from '../backend/server/assurance/contracts.mjs';
+import { MAX_IMPACT_OBLIGATIONS } from '../backend/server/impact/reader.mjs';
 const code = expected => e => e.code === expected;
 
 test('impact / first revision and empty scope produce no invented readiness or baseline', async t => {

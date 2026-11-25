@@ -2,18 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
-import { PRODUCT_VERSION, MAX_SUPPORTED_SCHEMA_VERSION } from '../server/release.mjs';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openAssuranceRepository } from '../server/assurance/repository.mjs';
-import { openResolutionRepository } from '../server/resolution/repository.mjs';
-import { openIntakeRepository } from '../server/intake/repository.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
+import { hashPassword } from '../backend/server/auth.mjs';
+import { PRODUCT_VERSION, MAX_SUPPORTED_SCHEMA_VERSION } from '../backend/server/release.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
+import { openResolutionRepository } from '../backend/server/resolution/repository.mjs';
+import { openIntakeRepository } from '../backend/server/intake/repository.mjs';
 import { setup as setupAssurance } from './assurance-helpers.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
 
 const author = { email: 'support-author@example.test', roles: ['AUTHOR'] };
 const authority = { email: 'support-policy@example.test', roles: ['POLICY_AUTHORITY'] };
@@ -53,8 +51,7 @@ async function serve(t, options) {
 }
 
 async function fixture(t, options = {}) {
-    const directory = mkdtempSync(join(tmpdir(), 'qivvera-support-'));
-    const db = { path: join(directory, 'workspace.sqlite'), migrate: true };
+    const db = { ...await testDatabase(), migrate: true };
     const repository = await openWorkflowRepository({ ...db, reviewMode: options.reviewMode ?? 'independent' });
     const resources = [repository];
     const accounts = options.accounts ?? namedAccounts;
@@ -85,7 +82,7 @@ async function fixture(t, options = {}) {
         resources.push(intake);
     }
     const http = await serve(t, { repository, assurance, resolution, intake, accounts, releaseRevision: options.releaseRevision ?? releaseRevision, secureCookies: options.secureCookies === true });
-    t.after(async () => { for (const resource of resources.reverse()) await resource.close(); rmSync(directory, { recursive: true, force: true }); });
+    t.after(async () => { for (const resource of resources.reverse()) await resource.close(); });
     return { ...http, repository, assurance, resolution, intake, target, db, providerRequests };
 }
 
@@ -113,7 +110,7 @@ test('support HTTP / signed-in author gets observed schema and explicit disabled
     assert.equal(r.body.workspace.secureSession, false);
     assert.deepEqual(r.body.roles, ['AUTHOR']);
     assert.deepEqual(r.body.actions, { createChange: true, reviewObligations: false, approvePlans: false, requestAssessment: false, importSource: false, manageResolution: false, draftObligations: false, manageVerificationTemplates: false });
-    for (const code of ['LOCAL_REVIEW_STORAGE', 'ASSURANCE_DISABLED', 'RESOLUTION_DISABLED', 'GITHUB_INTAKE_DISABLED']) assert.ok(warningCodes(r.body).includes(code), code);
+    for (const code of ['ASSURANCE_DISABLED', 'RESOLUTION_DISABLED', 'GITHUB_INTAKE_DISABLED']) assert.ok(warningCodes(r.body).includes(code), code);
     assert.ok(r.body.warnings.every(w => w.message.length && w.nextStep.length));
 });
 
@@ -230,24 +227,24 @@ test('support HTTP / unexpected schema errors are sanitized into fixed recovery 
 
 test('support HTTP / a removed required migration is reported without applying or repairing it', async t => {
     const h = await fixture(t, { assurance: true, multi: true }), session = await h.login();
-    const d = new DatabaseSync(h.db.path); t.after(() => d.close());
-    d.exec('DELETE FROM qivvera_migrations WHERE version=5');
+    const d = await openDatabase(h.db); t.after(() => d.close());
+    await d.transaction(c => c.query('DELETE FROM qivvera_migrations WHERE version=5'));
     const r = await h.call(undefined, { session });
     assert.equal(r.body.workspace.schemaVersion, 4);
     assert.equal(r.body.workspace.requiredSchemaVersion, 5);
     assert.ok(warningCodes(r.body).includes('SCHEMA_TOO_OLD'));
-    assert.equal(d.prepare('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=5').get().n, 0);
+    assert.equal(Number((await d.transaction(c => c.query('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=5'))).rows[0].n), 0);
 });
 
 test('support HTTP / an unsupported newer schema is reported without rollback', async t => {
     const h = await fixture(t), session = await h.login();
-    const d = new DatabaseSync(h.db.path); t.after(() => d.close());
+    const d = await openDatabase(h.db); t.after(() => d.close());
     const future = MAX_SUPPORTED_SCHEMA_VERSION + 1;
-    d.prepare('INSERT INTO qivvera_migrations(version,checksum,applied_at) VALUES(?,?,?)').run(future, 'test-future-schema', new Date().toISOString());
+    await d.transaction(c => c.query('INSERT INTO qivvera_migrations(version,checksum,applied_at) VALUES($1,$2,$3)', [future, 'test-future-schema', new Date().toISOString()]));
     const r = await h.call(undefined, { session });
     assert.equal(r.body.workspace.schemaVersion, future);
     assert.ok(warningCodes(r.body).includes('SCHEMA_TOO_NEW'));
-    assert.equal(d.prepare('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=?').get(future).n, 1);
+    assert.equal(Number((await d.transaction(c => c.query('SELECT COUNT(*) AS n FROM qivvera_migrations WHERE version=$1', [future]))).rows[0].n), 1);
 });
 
 test('support HTTP / missing schema observation remains unknown instead of a pass', async t => {
@@ -293,14 +290,20 @@ test('support HTTP / support reads do not mutate records, expire queued work or 
     const queued = await h.queue();
     now += 700000;
     const http = await serve(t, { repository: h.workflow, assurance: h.service, accounts: namedAccounts });
-    const session = await http.login(), d = new DatabaseSync(h.db.path); t.after(() => d.close());
-    const dump = () => d.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(({ name }) => ({ name, rows: d.prepare('SELECT * FROM "' + name.replaceAll('"', '""') + '" ORDER BY rowid').all() }));
-    const before = dump();
+    const session = await http.login(), d = await openDatabase(h.db); t.after(() => d.close());
+    // Every table and every row, each table sorted by the full row text so the comparison is exact.
+    const dump = () => d.transaction(async c => {
+        const tables = (await c.query("SELECT tablename AS name FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename")).rows;
+        const out = [];
+        for (const { name } of tables) out.push({ name, rows: (await c.query('SELECT * FROM "' + name.replaceAll('"', '""') + '" AS r ORDER BY r::text')).rows });
+        return out;
+    });
+    const before = await dump();
     assert.equal((await http.call(undefined, { session })).status, 200);
     assert.equal((await http.call(undefined, { session })).status, 200);
-    assert.deepEqual(dump(), before);
-    assert.equal(d.prepare('SELECT status FROM assurance_runs WHERE id=?').get(queued.id).status, 'QUEUED');
-    assert.equal(d.prepare('SELECT COUNT(*) AS n FROM assurance_evidence').get().n, 0);
+    assert.deepEqual(await dump(), before);
+    assert.equal((await d.transaction(c => c.query('SELECT status FROM assurance_runs WHERE id=$1', [queued.id]))).rows[0].status, 'QUEUED');
+    assert.equal(Number((await d.transaction(c => c.query('SELECT COUNT(*) AS n FROM assurance_evidence'))).rows[0].n), 0);
 });
 
 test('support HTTP / secure-session configuration is reported without claiming hosted browser acceptance', async t => {

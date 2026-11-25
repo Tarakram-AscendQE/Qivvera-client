@@ -5,9 +5,9 @@ import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { setupTemplates, otherAuthority } from './templates-helpers.mjs';
 import { author, authority, viewer } from './generalization-helpers.mjs';
-import { openAssuranceRepository } from '../server/assurance/repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openAssuranceRepository } from '../backend/server/assurance/repository.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
+import { hashPassword } from '../backend/server/auth.mjs';
 
 const ROOT = '/api/verification-templates';
 

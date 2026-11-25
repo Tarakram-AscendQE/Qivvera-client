@@ -1,7 +1,7 @@
 /** Disposable real template workflow; only response delivery is fault-injected. */
 import { setupTemplates, author, authority, viewer } from './templates-helpers.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
+import { hashPassword } from '../backend/server/auth.mjs';
 
 const password=process.env.TEMPLATES_TEST_PASSWORD;
 if(typeof password!=='string'||password.length<24)throw new Error('Supply a generated TEMPLATES_TEST_PASSWORD.');

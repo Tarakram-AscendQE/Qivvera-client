@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { setupIntake, author } from './intake-helpers.mjs';
-import { openIntakeRepository } from '../server/intake/repository.mjs';
+import { openIntakeRepository } from '../backend/server/intake/repository.mjs';
 
 const url = process.env.TEST_DATABASE_URL;
 if (!url) test('WEBHOOK POSTGRES NOT EXECUTED: disposable database required', { skip: process.env.REQUIRE_POSTGRES !== 'true' }, () => { throw new Error('Mandatory webhook PostgreSQL suite did not execute.'); });

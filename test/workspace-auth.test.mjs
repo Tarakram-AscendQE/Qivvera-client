@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { createWorkspaceAuth, normalizeAccounts } from '../server/workspace-auth.mjs';
-import { hashPassword } from '../server/auth.mjs';
-import { loadConfig, normalizeOrigin } from '../server/config.mjs';
-import { postgresOptions } from '../server/workflow-store.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { createWorkspaceAuth, normalizeAccounts } from '../backend/server/workspace-auth.mjs';
+import { hashPassword } from '../backend/server/auth.mjs';
+import { loadConfig, normalizeOrigin } from '../backend/server/config.mjs';
+import { postgresOptions } from '../backend/server/workflow-store.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 const password = 'synthetic-long-test-password-2026', hash = hashPassword(password), accounts = [{ email: 'author@example.test', passwordHash: hash, roles: ['AUTHOR'] }];
 function req(cookie) { return { headers: { cookie: cookie.split(';')[0] } }; }
-async function setup(t) { const repository = await openWorkflowRepository({ migrate: true }); t.after(() => repository.close()); return repository; }
+async function setup(t) { const repository = await openWorkflowRepository({ ...await testDatabase(), migrate: true }); t.after(() => repository.close()); return repository; }
 test('workspace auth / session works across instances and logout revokes all instances', async (t) => { const r = await setup(t); const a = createWorkspaceAuth({ accounts, repository: r, secureCookies: true }), b = createWorkspaceAuth({ accounts, repository: r, secureCookies: true }); const login = await a.login(accounts[0].email, password); assert.match(login.cookie, /__Host-/); assert.match(login.cookie, /; Secure/); assert.match(login.cookie, /HttpOnly/); assert.match(login.cookie, /SameSite=Strict/); assert.equal((await b.session(req(login.cookie))).email, accounts[0].email); await b.logout(req(login.cookie)); assert.equal(await a.session(req(login.cookie)), null); });
 test('workspace auth / rotation invalidates sessions even if another instance cached an earlier request', async (t) => { const r = await setup(t), a = createWorkspaceAuth({ accounts, repository: r }); const l = await a.login(accounts[0].email, password); const changed = createWorkspaceAuth({ accounts: [{ ...accounts[0], passwordHash: hashPassword('another-long-synthetic-password') }], repository: r }); assert.equal(await changed.session(req(l.cookie)), null); assert.equal(await a.session(req(l.cookie)), null); });
 test('workspace auth / role changes revoke existing sessions', async (t) => { const r = await setup(t); const a = createWorkspaceAuth({ accounts, repository: r }); const l = await a.login(accounts[0].email, password); const b = createWorkspaceAuth({ accounts: [{ ...accounts[0], roles: ['VIEWER'] }], repository: r }); assert.equal(await b.session(req(l.cookie)), null); });
@@ -22,9 +23,9 @@ test('workspace auth / invalid roles and duplicate accounts fail configuration',
 const base = { NODE_ENV: 'production', PUBLIC_ORIGIN: 'review.example.test/', DATABASE_URL: 'postgresql://user:placeholder@db.example.test/example', QIVVERA_ACCOUNTS_JSON: JSON.stringify(accounts) };
 test('configuration / HTTPS origin format is normalized without accepting an arbitrary path', () => { assert.equal(loadConfig(base).publicOrigin, 'https://review.example.test'); for (const value of ['https://example.test/path', 'https://example.test?x=1', 'https://user:password@example.test', 'http://example.test', 'https://example.test#fragment'])
     assert.throws(() => normalizeOrigin(value)); });
-test('configuration / hosted database cannot fall back to SQLite', () => { assert.throws(() => loadConfig({ ...base, DATABASE_URL: '' }), /HOSTED_POSTGRES_REQUIRED/); });
+test('configuration / hosted start-up requires a PostgreSQL database URL', () => { assert.throws(() => loadConfig({ ...base, DATABASE_URL: '' }), /DATABASE_URL_REQUIRED/); });
 test('configuration / hosted credentials have no defaults', () => { const cfg = loadConfig({ ...base, QIVVERA_ACCOUNTS_JSON: '' }); assert.equal(cfg.accounts, null, 'no default identity may be invented; startup then requires database accounts'); assert.throws(() => loadConfig({ ...base, QIVVERA_ACCOUNTS_JSON: '{bad' }), /INVALID_ACCOUNT_JSON/); });
-test('configuration / local SQLite requires an explicit local choice', () => { assert.throws(() => loadConfig({ OWNER_EMAIL: 'a@example.test', OWNER_PASSWORD_HASH: hash }), /EXPLICIT_LOCAL_SQLITE/); });
+test('configuration / local start-up also requires a PostgreSQL database URL', () => { assert.throws(() => loadConfig({ OWNER_EMAIL: 'a@example.test', OWNER_PASSWORD_HASH: hash }), /DATABASE_URL_REQUIRED/); });
 test('configuration / plaintext password conversion is stable across fresh instances', () => { const env = { ...base, QIVVERA_ACCOUNTS_JSON: '', OWNER_EMAIL: 'owner@example.test', OWNER_PASSWORD: 'synthetic-strong-config-password', OWNER_PASSWORD_SALT: 'a'.repeat(32) }; assert.equal(loadConfig(env).accounts[0].passwordHash, loadConfig(env).accounts[0].passwordHash); assert.throws(() => loadConfig({ ...env, OWNER_PASSWORD: 'short' }), /LENGTH_INVALID/); });
 test('configuration / PostgreSQL requires verified TLS except an explicit local test database', () => { const cfg = postgresOptions('postgresql://u:placeholder@db.example.test/app?sslmode=require'); assert.equal(cfg.ssl.rejectUnauthorized, true); assert.equal(cfg.connectionString.includes('sslmode'), false); assert.throws(() => postgresOptions('postgresql://u:placeholder@db.example.test/app', { sslMode: 'disable' }), /PLAINTEXT/); assert.equal(postgresOptions('postgresql://u:placeholder@127.0.0.1/app', { sslMode: 'disable' }).ssl, false); });
 test('configuration / raw-password compatibility requires a random provisioned stable salt', () => { assert.throws(() => loadConfig({ ...base, QIVVERA_ACCOUNTS_JSON: '', OWNER_EMAIL: 'owner@example.test', OWNER_PASSWORD: 'synthetic-strong-config-password' }), /SALT_REQUIRED/); });

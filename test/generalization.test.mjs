@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {setupMulti,author,authority,viewer,rationale} from './generalization-helpers.mjs';
-import {openAssuranceRepository} from '../server/assurance/repository.mjs';
-import {openResolutionRepository} from '../server/resolution/repository.mjs';
-import {openDatabase} from '../server/workflow-store.mjs';
-import {digest,verifierDigest,PROFILE} from '../server/assurance/contracts.mjs';
-import {mappingsOf,validateTargets,verificationIdentity} from '../server/assurance/generalization.mjs';
-import {workOnce} from '../server/assurance/worker.mjs';
+import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';
+import {openResolutionRepository} from '../backend/server/resolution/repository.mjs';
+import {openDatabase} from '../backend/server/workflow-store.mjs';
+import {digest,verifierDigest,PROFILE} from '../backend/server/assurance/contracts.mjs';
+import {mappingsOf,validateTargets,verificationIdentity} from '../backend/server/assurance/generalization.mjs';
+import {workOnce} from '../backend/server/assurance/worker.mjs';
 for(const adapter of ['approval-v1','expense-v1'])for(const [mode,verdict,states]of [
  ['correct','READY',['SUPPORTED','SUPPORTED']],['self-approval-defect','NOT_READY',['VIOLATED','SUPPORTED']],['repeat-approval-defect','NOT_READY',['SUPPORTED','VIOLATED']],['reject-all','INDETERMINATE',['INSUFFICIENT','INSUFFICIENT']]
 ])test(`multi / ${adapter} / ${mode}`,async t=>{

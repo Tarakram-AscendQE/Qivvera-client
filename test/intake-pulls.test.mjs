@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
 import {setupIntake,author,authority,viewer,pull} from './intake-helpers.mjs';
-import {openIntakeRepository} from '../server/intake/repository.mjs';
-import {PULL_LIST_LIMIT} from '../server/intake/github.mjs';
+import {openIntakeRepository} from '../backend/server/intake/repository.mjs';
+import {PULL_LIST_LIMIT} from '../backend/server/intake/github.mjs';
 
 const listed=(n,extra={})=>{const p=pull();return {...p,number:n,title:`PR ${n}`,user:{login:'dev-'+n},updated_at:'2026-11-20T10:00:00Z',head:{...p.head,sha:String(n%10).repeat(40)},...extra};};
 

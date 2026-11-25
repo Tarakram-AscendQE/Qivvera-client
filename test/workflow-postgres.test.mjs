@@ -2,7 +2,7 @@ import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Mandatory release suite; only disposable loopback PostgreSQL databases are allowed. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
 import { contractCases } from './workflow-contract.mjs';
 const url = process.env.TEST_DATABASE_URL;
 if (!url) {
@@ -52,8 +52,8 @@ else {
     });
     test('POSTGRES / fresh repository and auth instances share revocation and persistent history', async () => {
         await reset();
-        const { createWorkspaceAuth } = await import('../server/workspace-auth.mjs');
-        const { hashPassword } = await import('../server/auth.mjs');
+        const { createWorkspaceAuth } = await import('../backend/server/workspace-auth.mjs');
+        const { hashPassword } = await import('../backend/server/auth.mjs');
         const options = { driver: 'postgres', connectionString: url, sslMode: 'disable', migrate: true };
         const one = await openWorkflowRepository(options);
         const account = { email: 'reviewer@example.test', passwordHash: hashPassword('synthetic-pg-session-password'), roles: ['POLICY_AUTHORITY'] };
@@ -77,9 +77,9 @@ else {
     });
     test('POSTGRES / authenticated support works with SELECT-only storage permissions', async () => {
         await reset();
-        const { createApplicationServer } = await import('../server/app.mjs');
-        const { createWorkspaceAuth } = await import('../server/workspace-auth.mjs');
-        const { hashPassword } = await import('../server/auth.mjs');
+        const { createApplicationServer } = await import('../dist/api/server.js');
+        const { createWorkspaceAuth } = await import('../backend/server/workspace-auth.mjs');
+        const { hashPassword } = await import('../backend/server/auth.mjs');
         const { randomUUID } = await import('node:crypto');
         const { once } = await import('node:events');
         const options = { driver: 'postgres', connectionString: url, sslMode: 'disable', migrate: true };

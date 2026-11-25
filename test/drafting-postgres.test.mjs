@@ -5,10 +5,10 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { setupDrafting, draftingAssuranceJourney, author, otherAuthor, modelResult } from './drafting-helpers.mjs';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { openDatabase } from '../server/workflow-store.mjs';
-import { migrateDrafting, draftingChecksum } from '../server/drafting/migration.mjs';
-import { generateDrafts } from '../server/drafting/generator.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { openDatabase } from '../backend/server/workflow-store.mjs';
+import { migrateDrafting, draftingChecksum } from '../backend/server/drafting/migration.mjs';
+import { generateDrafts } from '../backend/server/drafting/generator.mjs';
 
 const url = process.env.TEST_DATABASE_URL;
 if (!url) test('DRAFTING POSTGRES NOT EXECUTED: disposable database required', { skip: process.env.REQUIRE_POSTGRES !== 'true' }, () => {
@@ -110,7 +110,7 @@ else {
             await owner.query(`GRANT SELECT ON qivvera_migrations,applications,changes,change_revisions,obligations,obligation_workflow,obligation_history TO ${role}`);
             await owner.query(`GRANT INSERT ON obligations,obligation_workflow,obligation_history,activity TO ${role}`);
             await owner.query(`GRANT UPDATE(id) ON changes TO ${role}`);
-            await owner.query(readFileSync(new URL('../ops/drafting-permissions.sql', import.meta.url), 'utf8').replaceAll('qivvera_web', role));
+            await owner.query(readFileSync(new URL('../backend/ops/drafting-permissions.sql', import.meta.url), 'utf8').replaceAll('qivvera_web', role));
             const connection = new URL(url); connection.username = role; connection.password = password;
             limited = await openWorkflowRepository({ ...h.options, connectionString: connection.toString(), migrate: false });
             pool = new pg.Pool({ connectionString: connection.toString() });

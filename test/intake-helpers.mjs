@@ -1,12 +1,13 @@
 import {mkdtempSync,rmSync} from 'node:fs';
 import {join} from 'node:path';import {tmpdir} from 'node:os';import {randomUUID,randomBytes} from 'node:crypto';
-import {openWorkflowRepository} from '../server/workflow-repository.mjs';
-import {openIntakeRepository} from '../server/intake/repository.mjs';
+import {openWorkflowRepository} from '../backend/server/workflow-repository.mjs';
+import {openIntakeRepository} from '../backend/server/intake/repository.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 export const author={email:'source-author@example.test',roles:['AUTHOR']},other={email:'other@example.test',roles:['AUTHOR']},authority={email:'policy@example.test',roles:['POLICY_AUTHORITY']},viewer={email:'viewer@example.test',roles:['VIEWER']};
 export function pull(){return {number:12,state:'open',merged:false,draft:false,title:'Approval correction',body:'Untrusted description; not a requirement.',base:{sha:'b'.repeat(40),ref:'main',repo:{id:12345,full_name:'example/testrepo'}},head:{sha:'a'.repeat(40),ref:'fix',repo:{id:54321,full_name:'contributor/testrepo'}}};}
 export async function setupIntake(t,{postgresURL,clock}={}){
  const dir=mkdtempSync(join(tmpdir(),'qivvera-intake-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
- const db=postgresURL?{driver:'postgres',connectionString:postgresURL,sslMode:'disable'}:{path:join(dir,'workspace.sqlite')};
+ const db=postgresURL?{driver:'postgres',connectionString:postgresURL,sslMode:'disable'}: await testDatabase();
  const workflow=await openWorkflowRepository({...db,migrate:true});t.after(()=>workflow.close());
  const app=await workflow.createApplication({name:'Intake '+randomUUID()},author);
  const config={id:'configured-repo',owner:'example',repo:'testrepo',repositoryId:12345,applicationId:app.id,tokenEnv:'SOURCE_TOKEN'};

@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';import {pathToFileURL} from 'node:url';import {once} from 'node:events';import {randomUUID} from 'node:crypto';
 import {setupMulti,author,authority,rationale} from './generalization-helpers.mjs';
-import {openResolutionRepository} from '../server/resolution/repository.mjs';import {openAssuranceRepository} from '../server/assurance/repository.mjs';import {workOnce} from '../server/assurance/worker.mjs';
+import {openResolutionRepository} from '../backend/server/resolution/repository.mjs';import {openAssuranceRepository} from '../backend/server/assurance/repository.mjs';import {workOnce} from '../backend/server/assurance/worker.mjs';
 export async function correctionJourney(t,{postgresURL}={}){
  const h=await setupMulti(t,{mode:'repeat-approval-defect',postgresURL}),source=await h.run();
  const accounts=[author,authority];const original=await openResolutionRepository({...h.options,accounts});t.after(()=>original.close());

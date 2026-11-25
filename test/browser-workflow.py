@@ -1,7 +1,7 @@
 import subprocess,os,tempfile,time,json,pathlib,urllib.request
 from playwright.sync_api import sync_playwright, expect
 work=pathlib.Path(__file__).resolve().parents[1];out=pathlib.Path(os.environ.get('QIVVERA_TEST_OUTPUT',str(work/'review-test-results')));out.mkdir(parents=True,exist_ok=True)
-d=tempfile.mkdtemp(prefix='qivvera-browser-');env={**os.environ,'TEST_SQLITE_PATH':d+'/review.sqlite','TEST_PORT':'3127'}
+d=tempfile.mkdtemp(prefix='qivvera-browser-');env={**os.environ,'TEST_DATABASE_NAME':'browser_workflow_'+os.urandom(4).hex(),'TEST_PORT':'3127'}
 log=open(out/'browser-server.txt','w')
 proc=subprocess.Popen(['node','test/browser-fixture.mjs'],cwd=work,env=env,stdout=log,stderr=log)
 checks=[]

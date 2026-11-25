@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { createHealthServer } from '../scripts/health-server.mjs';
+import { createHealthServer } from '../backend/scripts/health-server.mjs';
 
 test('health endpoint runs on a real local socket and does not claim product readiness',async t=>{
   const server=createHealthServer();server.listen(0,'127.0.0.1');await once(server,'listening');

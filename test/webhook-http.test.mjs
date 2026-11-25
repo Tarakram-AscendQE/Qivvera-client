@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createHmac, randomUUID } from 'node:crypto';
 import { setupIntake, author, viewer } from './intake-helpers.mjs';
-import { openIntakeRepository } from '../server/intake/repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openIntakeRepository } from '../backend/server/intake/repository.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
+import { hashPassword } from '../backend/server/auth.mjs';
 
 const secret = 'http-webhook-secret-' + 'z'.repeat(32), password = randomUUID() + randomUUID(), origin = 'http://127.0.0.1:3023';
 const prPayload = (over = {}) => ({ action: 'opened', number: 12,

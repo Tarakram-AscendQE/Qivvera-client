@@ -2,7 +2,7 @@ import { requireDisposablePostgresURL } from './postgres-safety.mjs';
 /** Destructive tests run only against explicitly disposable loopback PostgreSQL. */
 import test from 'node:test';import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
 import {setupMulti} from './generalization-helpers.mjs';import {setupIntake,author} from './intake-helpers.mjs';import {correctionJourney} from './multi-correction-helpers.mjs';
-import {openIntakeRepository} from '../server/intake/repository.mjs';import {openDatabase} from '../server/workflow-store.mjs';import {migrateIntake,intakeChecksum} from '../server/intake/migration.mjs';import {resolutionSetup} from './resolution-helpers.mjs';
+import {openIntakeRepository} from '../backend/server/intake/repository.mjs';import {openDatabase} from '../backend/server/workflow-store.mjs';import {migrateIntake,intakeChecksum} from '../backend/server/intake/migration.mjs';import {resolutionSetup} from './resolution-helpers.mjs';
 const url=process.env.TEST_DATABASE_URL;
 if(!url)test('GENERALIZATION POSTGRES NOT EXECUTED: disposable database required',{skip:process.env.REQUIRE_POSTGRES!=='true'},()=>{throw new Error('Mandatory generalization PostgreSQL suite did not execute.');});
 else {

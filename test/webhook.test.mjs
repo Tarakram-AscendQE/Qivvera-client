@@ -1,12 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac, randomUUID } from 'node:crypto';
-import { DatabaseSync } from 'node:sqlite';
+import pg from 'pg';
 import { setupIntake, author, viewer, authority } from './intake-helpers.mjs';
-import { openIntakeRepository } from '../server/intake/repository.mjs';
-import { loadIntakeConfig } from '../server/intake/github.mjs';
-import { validSignature, webhookSecret, deliveryHeaders, pullRequestEvent } from '../server/intake/webhook.mjs';
-import { webhooksChecksum } from '../server/intake/webhook-migration.mjs';
+import { openIntakeRepository } from '../backend/server/intake/repository.mjs';
+import { loadIntakeConfig } from '../backend/server/intake/github.mjs';
+import { validSignature, webhookSecret, deliveryHeaders, pullRequestEvent } from '../backend/server/intake/webhook.mjs';
+import { webhooksChecksum } from '../backend/server/intake/webhook-migration.mjs';
+
+/** Runs one SQL statement against the test's own disposable PostgreSQL database. */
+async function sql(h, text) {
+    const pool = new pg.Pool({ connectionString: h.opts.connectionString });
+    try { return (await pool.query(text)).rows; } finally { await pool.end(); }
+}
 
 const secret = 'test-webhook-secret-' + 'x'.repeat(32);
 const sign = (raw, key = secret) => 'sha256=' + createHmac('sha256', key).update(raw).digest('hex');
@@ -85,8 +91,7 @@ test('webhook / a recorded delivery stores the event and audit, and creates no c
     assert.equal(list.pulls[0].url, 'https://github.com/example/testrepo/pull/12');
     assert.equal((await h.workflow.listChanges()).length, 0);
     assert.equal(h.requests.length, 0, 'receipt never calls GitHub');
-    const d = new DatabaseSync(h.opts.path); t.after(() => d.close());
-    assert.equal(d.prepare("SELECT COUNT(*) AS n FROM activity WHERE action='GITHUB_PR_EVENT_RECORDED'").get().n, 1);
+    assert.equal(Number((await sql(h, "SELECT COUNT(*) AS n FROM activity WHERE action='GITHUB_PR_EVENT_RECORDED'"))[0].n), 1);
 });
 
 test('webhook / redelivery of the same delivery ID is idempotent', async t => {
@@ -104,8 +109,7 @@ test('webhook / ping and unsupported events are kept as ignored receipts only', 
     assert.equal((await h.deliver(prPayload(), 'push')).reason, 'UNSUPPORTED_EVENT');
     assert.equal((await h.deliver(prPayload({ repository: { id: 1, full_name: 'a/b' } }))).reason, 'REPOSITORY_NOT_CONFIGURED');
     assert.deepEqual((await h.hooks.listSourceEvents(h.app.id, author)).pulls, []);
-    const d = new DatabaseSync(h.opts.path); t.after(() => d.close());
-    assert.equal(d.prepare("SELECT COUNT(*) AS n FROM github_webhook_deliveries WHERE outcome='IGNORED'").get().n, 3);
+    assert.equal(Number((await sql(h, "SELECT COUNT(*) AS n FROM github_webhook_deliveries WHERE outcome='IGNORED'"))[0].n), 3);
 });
 
 test('webhook / activity shows the latest event per PR and its import state', async t => {
@@ -137,9 +141,8 @@ test('webhook / disabled repository refuses receipt', async t => {
 test('webhook / schema 9 migration is recorded, idempotent and checksum-verified', async t => {
     const h = await setupWebhooks(t);
     const again = await openIntakeRepository({ ...h.opts, webhook: { enabled: true, secret } }); await again.close();
-    const d = new DatabaseSync(h.opts.path); t.after(() => d.close());
-    assert.equal(d.prepare('SELECT checksum FROM qivvera_migrations WHERE version=9').get().checksum, webhooksChecksum);
-    d.prepare("UPDATE qivvera_migrations SET checksum='damaged' WHERE version=9").run();
+    assert.equal((await sql(h, 'SELECT checksum FROM qivvera_migrations WHERE version=9'))[0].checksum, webhooksChecksum);
+    await sql(h, "UPDATE qivvera_migrations SET checksum='damaged' WHERE version=9");
     await assert.rejects(openIntakeRepository({ ...h.opts, webhook: { enabled: true, secret } }), /WEBHOOKS_MIGRATION_CHECKSUM_MISMATCH/);
     await assert.rejects(openIntakeRepository({ ...h.opts, migrate: false, webhook: { enabled: true, secret } }), /WEBHOOKS_MIGRATION_REQUIRED/);
 });

@@ -1,10 +1,8 @@
 /** Real local drafting application with disposable storage and test-only transport faults. */
-import { mkdtempSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { openWorkflowRepository } from '../server/workflow-repository.mjs';
-import { createApplicationServer } from '../server/app.mjs';
-import { hashPassword } from '../server/auth.mjs';
+import { openWorkflowRepository } from '../backend/server/workflow-repository.mjs';
+import { createApplicationServer } from '../dist/api/server.js';
+import { hashPassword } from '../backend/server/auth.mjs';
+import { testDatabase } from './postgres-test-database.mjs';
 
 const password = process.env.DRAFTING_TEST_PASSWORD;
 if (typeof password !== 'string' || password.length < 24)
@@ -16,9 +14,8 @@ const latency = Number(process.env.DRAFTING_TEST_LATENCY_MS ?? 0);
 if (!Number.isInteger(latency) || latency < 0 || latency > 5000)
     throw new Error('Test latency must be 0–5000 ms.');
 
-const dir = mkdtempSync(join(tmpdir(), 'qivvera-drafting-browser-'));
 const repository = await openWorkflowRepository({
-    path: join(dir, 'workspace.sqlite'), migrate: true, reviewMode: 'independent',
+    ...await testDatabase(), migrate: true, reviewMode: 'independent',
     drafting: { enabled: true, openaiEnabled: false },
 });
 const passwordHash = hashPassword(password);
@@ -61,7 +58,7 @@ server.on('request', (req, res) => {
 });
 const schemaVersion = await repository.getSchemaVersion();
 server.listen(port, '127.0.0.1', () => {
-    console.log(JSON.stringify({ origin, storage: 'sqlite', schemaVersion, liveModel: false }));
+    console.log(JSON.stringify({ origin, storage: 'postgres', schemaVersion, liveModel: false }));
 });
 let closing = false;
 async function stop() {
@@ -69,7 +66,6 @@ async function stop() {
     closing = true;
     await new Promise(resolve => server.close(resolve));
     await repository.close();
-    rmSync(dir, { recursive: true, force: true });
     process.exit(0);
 }
 process.on('SIGTERM', stop);

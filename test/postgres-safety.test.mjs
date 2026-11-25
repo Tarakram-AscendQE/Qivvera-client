@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { parse } from 'pg-connection-string';
 import { requireDisposablePostgresURL } from './postgres-safety.mjs';
-import { postgresOptions } from '../server/workflow-store.mjs';
+import { postgresOptions } from '../backend/server/workflow-store.mjs';
 
 const safe = 'postgresql://tester:synthetic-password@127.0.0.1:5432/qivvera_test_guard';
 
