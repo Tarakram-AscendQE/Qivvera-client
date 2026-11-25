@@ -7,6 +7,26 @@ Qivvera imports VendorPay pull requests #6, #7 and #8 from GitHub. When you clic
 GitHub Actions runs Qivvera's 14 checks against that pull request's exact commit, and Qivvera
 shows the result. The expected outcome is **2 broken rules → 1 → 0**.
 
+## 0. Local demo (internal team demo, before deployment)
+
+Runs Qivvera on this laptop with a **throwaway local database**. It never uses the Neon database in
+`.env.local`, because the command blanks `DATABASE_URL`. The checks still run for real on GitHub Actions.
+
+1. Docker must be running. Use Node 22 (`nvm use 22`).
+2. `.env.local` must contain `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN`, a token that can read prcheck-live and
+   start workflows in prcheck-verifiers.
+3. Start it: `npm run demo:pr-assurance`. Open **http://127.0.0.1:3100**. (Port 3100, so it does not
+   clash with your usual `npm run dev` on 3000.)
+4. Sign in with the owner account from `.env.local` (`OWNER_EMAIL` and its password).
+5. Follow section 3 below. Each evaluation takes about a minute.
+6. Stop with Ctrl+C. The local database is removed, so the next start begins with nothing imported.
+
+Rehearsed on 2026-11-25 against real GitHub: PR #6 NOT READY (2 rules broken) in 53 s, PR #7 NOT READY
+(1 rule broken) in 48 s, PR #8 READY in 57 s; timeline 2 → 1 → 0; no page errors.
+
+Optional polish: GitHub's titles for PRs #7 and #8 are auto-generated ("Feature/vp 184 v2 partial fix").
+Someone with write access to vendorpay-app can rename them; **Re-import from GitHub** then shows the new titles.
+
 ## 1. Before the demo (once)
 
 | # | Step | Who | Done when |

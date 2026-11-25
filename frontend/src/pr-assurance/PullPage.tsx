@@ -82,7 +82,7 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
       <div className="form-error" role="alert">{error}</div>
       {notice ? <div className="notice warning">{notice}</div> : null}
       {view ? <RunPanel key={text(field(field(view, 'run'), 'id'))} bridge={bridge} initial={view} active={active} />
-        : <section className="panel"><div className="panel-body"><h2>Not evaluated yet</h2><p className="small">Evaluate runs Qivvera's 14 checks against this pull request's exact commit on GitHub Actions. It takes about 2–3 minutes.</p></div></section>}
+        : <section className="panel"><div className="panel-body"><h2>Not evaluated yet</h2><p className="small">Evaluate runs Qivvera's 14 checks against this pull request's exact commit on GitHub Actions. It takes about a minute.</p></div></section>}
       <section className="panel"><div className="panel-head"><h2>Earlier runs</h2></div><div className="panel-body"><History runs={history} /></div></section>
     </>
   );

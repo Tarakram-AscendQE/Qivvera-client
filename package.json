@@ -15,6 +15,7 @@
     "test:frontend": "vitest run --config frontend/vite.config.ts",
     "test:postgres": "node scripts/with-postgres.mjs node --test --test-concurrency=1 test/workflow-postgres.test.mjs test/assurance-postgres.test.mjs test/resolution-postgres.test.mjs test/generalization-postgres.test.mjs test/drafting-postgres.test.mjs test/impact-postgres.test.mjs test/templates-postgres.test.mjs test/operations-postgres.test.mjs test/pr-assurance-postgres.test.mjs",
     "dev": "npm run build && node scripts/dev.mjs",
+    "demo:pr-assurance": "npm run build && DATABASE_URL= PORT=3100 PUBLIC_ORIGIN=http://127.0.0.1:3100 QIVVERA_PR_ASSURANCE_ENABLED=true node scripts/dev.mjs",
     "start": "node backend/server/start.mjs",
     "start:registry": "node backend/server/start.mjs",
     "migrate": "node backend/scripts/migrate.mjs",
