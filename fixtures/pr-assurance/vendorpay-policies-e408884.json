@@ -1,0 +1,257 @@
+{
+  "kind": "qivvera.rules-snapshot/v1",
+  "source": {
+    "repository": "prcheck-live/vendorpay-policies",
+    "commit": "e408884988ad27d6e0776700c4e268d4bf86ad9d",
+    "selectedFor": [
+      "af51c26b0b9f94894cccfaa5b0fb893221952c65",
+      "ae50debcd01bcc47fc137855cbc21b0e72107f1e",
+      "b62db000bfef1449fa64588542bdb45d5abe9589"
+    ],
+    "generatedBy": "scripts/pr-assurance-snapshot.mjs"
+  },
+  "profile": {
+    "id": "payments-critical",
+    "title": "Payments: critical financial controls",
+    "file": "profiles/payments-critical.yaml",
+    "digest": "sha256:1df281544d5d608eccc4942a7abb7790affc9960e2c303fc9a15af50fcc07051",
+    "rules": [
+      {
+        "when": "any obligation is NOT_ASSESSED on a policy with severity critical",
+        "result": "INDETERMINATE"
+      },
+      {
+        "when": "any obligation is VIOLATED or CONFLICTED",
+        "result": "NOT_READY"
+      },
+      {
+        "when": "any obligation is INSUFFICIENT and its policy has no active exception",
+        "result": "NOT_READY"
+      },
+      {
+        "when": "any obligation is INSUFFICIENT and its policy has an active exception",
+        "result": "READY_WITH_EXCEPTIONS"
+      },
+      {
+        "when": "every obligation is SUPPORTED",
+        "result": "READY"
+      }
+    ]
+  },
+  "verifiers": {
+    "file": "catalog/verifiers.yaml",
+    "digest": "sha256:84ecdc167dd07f204697ce50bdb6aa3ce47775dae789f9fbdeed0ee8b21628bb",
+    "catalog": {
+      "V1": {
+        "name": "Environment identity",
+        "checks": {
+          "qe-runs-head-commit": "QE /version reports the PR head commit before and after the run."
+        }
+      },
+      "V2": {
+        "name": "Separation of duties",
+        "checks": {
+          "bank-change-self-approval-blocked": "The requester of a bank change gets 403 when approving it; a second approver succeeds.",
+          "proposed-account-not-payable": "A payment cannot be scheduled to, or released to, an account that is still proposed.",
+          "payment-self-release-blocked": "The scheduler of a payment gets 403 when releasing it.",
+          "payment-single-release": "A second release of the same payment gets 409."
+        }
+      },
+      "V3": {
+        "name": "Scheduled payment safety",
+        "checks": {
+          "scheduled-payments-held": "After an approved bank change, the supplier's scheduled payments are on hold and release is refused.",
+          "no-silent-redirect": "No scheduled payment's destination changes without a recorded Finance decision.",
+          "held-payment-visible": "Held payments appear to Finance with a hold reason."
+        }
+      },
+      "V4": {
+        "name": "Data exposure",
+        "checks": {
+          "ui-masked": "Every screen showing a bank account shows only the last four digits.",
+          "api-masked": "No API response body contains a 9 to 18 digit run.",
+          "logs-masked": "The application log and audit details contain no 9 to 18 digit run."
+        }
+      },
+      "V5": {
+        "name": "Audit trail",
+        "checks": {
+          "bank-change-actors-recorded": "Bank change records hold distinct requester and approver.",
+          "bank-change-audited": "Request, approve and reject each write an audit event with the actor.",
+          "payment-steps-audited": "Schedule, release and hold each write an audit event with the actor."
+        }
+      }
+    }
+  },
+  "policies": [
+    {
+      "id": "CMP-001",
+      "title": "Every supplier and payment change is in the audit trail",
+      "version": "1.0.0",
+      "authority": "compliance",
+      "owner": "@qivvra-demo/compliance",
+      "severity": "high",
+      "file": "policies/compliance/CMP-001-audit-trail.yaml",
+      "digest": "sha256:245cbe906e45f5d8e43490923106455073351f6e7b05de4b86155d96736d9433",
+      "rule": "Every create, verify, change, approve, reject, schedule and release of a supplier, bank account or payment writes an audit event naming the actor, the record and what changed.",
+      "exceptionsAllowed": true,
+      "obligations": [
+        {
+          "id": "CMP-001.1",
+          "statement": "Each bank account change step (request, approve, reject) writes an audit event with its actor.",
+          "verifier": "V5",
+          "check": "bank-change-audited"
+        },
+        {
+          "id": "CMP-001.2",
+          "statement": "Each payment step (schedule, release, hold) writes an audit event with its actor.",
+          "verifier": "V5",
+          "check": "payment-steps-audited"
+        }
+      ]
+    },
+    {
+      "id": "FIN-001",
+      "title": "A bank account change needs a second person",
+      "version": "1.0.0",
+      "authority": "finance",
+      "owner": "@qivvra-demo/finance-controls",
+      "severity": "critical",
+      "file": "policies/finance/FIN-001-bank-change-second-person.yaml",
+      "digest": "sha256:07b5dfd4e77cf5bd799b8a205683a368f100f19a038869018247e93193d78029",
+      "rule": "A change to a supplier's bank account takes effect only after a person other than the requester approves it. No role, combination of roles or admin path may let one person both request and approve the same change.",
+      "exceptionsAllowed": false,
+      "obligations": [
+        {
+          "id": "FIN-001.1",
+          "statement": "The person who requested a bank account change cannot approve it.",
+          "verifier": "V2",
+          "check": "bank-change-self-approval-blocked"
+        },
+        {
+          "id": "FIN-001.2",
+          "statement": "A proposed bank account cannot receive payments before it is approved.",
+          "verifier": "V2",
+          "check": "proposed-account-not-payable"
+        },
+        {
+          "id": "FIN-001.3",
+          "statement": "The requester and the approver of every change are recorded.",
+          "verifier": "V5",
+          "check": "bank-change-actors-recorded"
+        }
+      ]
+    },
+    {
+      "id": "FIN-002",
+      "title": "Scheduled payments are held when the bank account changes",
+      "version": "1.0.0",
+      "authority": "finance",
+      "owner": "@qivvra-demo/finance-controls",
+      "severity": "critical",
+      "file": "policies/finance/FIN-002-scheduled-payments-on-bank-change.yaml",
+      "digest": "sha256:4e44f5418ca499605be64b1a740dd0266ed90d09ab5a2bbc94142e599608a100",
+      "rule": "When a supplier's bank account changes, every payment already scheduled for that supplier and not yet released is put on hold for Finance review. It is neither silently paid to the old account nor silently redirected to the new one.",
+      "exceptionsAllowed": true,
+      "obligations": [
+        {
+          "id": "FIN-002.1",
+          "statement": "After a bank change is approved, the supplier's scheduled payments are on hold and cannot be released.",
+          "verifier": "V3",
+          "check": "scheduled-payments-held"
+        },
+        {
+          "id": "FIN-002.2",
+          "statement": "Scheduled payments are never redirected to the new account without a Finance decision.",
+          "verifier": "V3",
+          "check": "no-silent-redirect"
+        },
+        {
+          "id": "FIN-002.3",
+          "statement": "Each held payment is visible to Finance with the reason it was held.",
+          "verifier": "V3",
+          "check": "held-payment-visible"
+        }
+      ]
+    },
+    {
+      "id": "FIN-003",
+      "title": "A payment is released by someone other than its scheduler",
+      "version": "1.0.0",
+      "authority": "finance",
+      "owner": "@qivvra-demo/finance-controls",
+      "severity": "critical",
+      "file": "policies/finance/FIN-003-payment-release-second-person.yaml",
+      "digest": "sha256:6a971b133f3a888f4dc07f375637bc507a3ace4f18db235ce6cf03ec8daf7760",
+      "rule": "Only a Finance Approver releases a payment, never the person who scheduled it, and a payment is released at most once.",
+      "exceptionsAllowed": false,
+      "obligations": [
+        {
+          "id": "FIN-003.1",
+          "statement": "The scheduler of a payment cannot release it.",
+          "verifier": "V2",
+          "check": "payment-self-release-blocked"
+        },
+        {
+          "id": "FIN-003.2",
+          "statement": "A payment cannot be released twice.",
+          "verifier": "V2",
+          "check": "payment-single-release"
+        }
+      ]
+    },
+    {
+      "id": "PLT-001",
+      "title": "Evidence comes from the exact commit under review",
+      "version": "1.0.0",
+      "authority": "platform",
+      "owner": "@qivvra-demo/platform-eng",
+      "severity": "critical",
+      "file": "policies/platform/PLT-001-assured-build-is-deployed.yaml",
+      "digest": "sha256:98141608ed495b2de9df338f754c1ab8f4cedb7df5b24b903ad2f1accb862f4c",
+      "rule": "Verifiers run only against an environment whose /version reports the pull request's head commit. Evidence from any other build is discarded.",
+      "exceptionsAllowed": false,
+      "obligations": [
+        {
+          "id": "PLT-001.1",
+          "statement": "The QE environment reports the pull request's head commit at /version before and after verification.",
+          "verifier": "V1",
+          "check": "qe-runs-head-commit"
+        }
+      ]
+    },
+    {
+      "id": "SEC-001",
+      "title": "Bank account numbers never leave the service unmasked",
+      "version": "1.1.0",
+      "authority": "security",
+      "owner": "@qivvra-demo/security",
+      "severity": "high",
+      "file": "policies/security/SEC-001-bank-account-masking.yaml",
+      "digest": "sha256:81cc541988cc7ce20b580ecd6d249720436faa23abfef71f8a6ab42176875f7a",
+      "rule": "A bank account number is shown only as its last four digits (\"**** 4421\") in screens, API responses, audit details and application logs.",
+      "exceptionsAllowed": false,
+      "obligations": [
+        {
+          "id": "SEC-001.1",
+          "statement": "Screens show only the last four digits of any bank account.",
+          "verifier": "V4",
+          "check": "ui-masked"
+        },
+        {
+          "id": "SEC-001.2",
+          "statement": "API responses never contain a full bank account number.",
+          "verifier": "V4",
+          "check": "api-masked"
+        },
+        {
+          "id": "SEC-001.3",
+          "statement": "Application logs and audit details never contain a full bank account number.",
+          "verifier": "V4",
+          "check": "logs-masked"
+        }
+      ]
+    }
+  ],
+  "snapshotDigest": "sha256:f6b9d6ba45b87eb1319f011dcc2a2ac4e46b629499374428834ab0ce67ea4639"
+}
