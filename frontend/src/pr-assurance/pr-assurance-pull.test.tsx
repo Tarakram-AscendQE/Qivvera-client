@@ -80,6 +80,19 @@ describe('PR assurance: one pull request', () => {
     expect(route).toHaveBeenCalledTimes(1);
   });
 
+  it('announces progress to screen readers from a region that exists before the first update', async () => {
+    setup();
+    await ui.showPull(6);
+    await act(async () => { fireEvent.click(evaluateButton()); });
+    const status = within(panel()).getByRole('status');
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    expect(status.textContent).toBe('Waiting for GitHub');
+    syncAnswers.push(view('RUNNING', { progress: { stage: 'running-checks', message: 'Running', checksTotal: 14, checks: checks(5) } }));
+    await tick();
+    expect(within(panel()).getByRole('status')).toBe(status);
+    expect(status.textContent).toBe('Running Qivvera’s checks · 5 of 14 checks finished');
+  });
+
   it('stops asking once the visit has ended', async () => {
     setup();
     await ui.showPull(6);

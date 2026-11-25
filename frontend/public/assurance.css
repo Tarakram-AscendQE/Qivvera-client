@@ -44,3 +44,4 @@
 .pr-result-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pr-count{margin:0;font-size:14px}.pr-count strong{font-size:30px;margin-right:4px}
 .pr-count.bad strong{color:#9d2530}.pr-count.good strong{color:#205f44}.pr-progression{font-size:20px;font-weight:700;text-align:center;margin:0 0 18px}
 .pr-compare-table{overflow-x:auto}.pr-compare-table table{width:100%;border-collapse:collapse;font-size:13px}.pr-compare-table th,.pr-compare-table td{text-align:left;padding:7px;border-bottom:1px solid var(--line);vertical-align:top}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

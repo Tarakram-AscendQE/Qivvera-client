@@ -29,10 +29,22 @@ export function runLabel(run: unknown): { label: string; kind: string } {
   return { label: labels[status] ?? status, kind: isActive(run) ? 'candidate' : 'finding-gap' };
 }
 
+/** The stage a run is at: from its latest progress, else its latest event, else waiting for GitHub. */
+function currentStage(run: unknown, events: readonly unknown[]): string {
+  return text(field(field(run, 'progress'), 'stage')) || text(field(events.at(-1), 'stage')) || 'queued';
+}
+
+/** What a screen reader announces while a run is active, e.g. "Running Qivvera’s checks · 5 of 14 checks finished". */
+function announcement(run: unknown, events: readonly unknown[]): string {
+  if (!isActive(run)) return '';
+  const label = STAGES.find(([stage]) => stage === currentStage(run, events))?.[1] ?? 'Evaluation in progress';
+  const progress = field(run, 'progress'), finished = list(field(progress, 'checks')).length;
+  return finished ? `${label} · ${finished} of ${text(field(progress, 'checksTotal')) || '14'} checks finished` : label;
+}
+
 function Stages({ run, events }: { run: unknown; events: readonly unknown[] }) {
   const complete = text(field(run, 'status')) === 'COMPLETED';
-  const current = text(field(field(run, 'progress'), 'stage')) || text(field(events.at(-1), 'stage')) || 'queued';
-  const at = STAGES.findIndex(([stage]) => stage === current);
+  const at = STAGES.findIndex(([stage]) => stage === currentStage(run, events));
   return (
     <ol className="pr-stages">
       {STAGES.map(([stage, label], index) => {
@@ -97,6 +109,8 @@ export function RunPanel({ bridge, initial, active }: { bridge: PrAssuranceBridg
         <Badge text={label} kind={kind} /></div>
       <div className="panel-body">
         {notice || syncError ? <div className="notice warning">{syncError || notice} Qivvera keeps checking.</div> : null}
+        {/* Always present, so changes are announced: a live region added together with its text is not. */}
+        <p className="sr-only" role="status" aria-live="polite">{announcement(run, events)}</p>
         {running || text(field(run, 'status')) === 'COMPLETED' ? <Stages run={run} events={events} /> : null}
         {running ? <Checks progress={field(run, 'progress')} /> : null}
         {failure ? <div className="notice warning"><strong>No result.</strong> {text(field(failure, 'message'))} A run that did not finish has no verdict.</div> : null}

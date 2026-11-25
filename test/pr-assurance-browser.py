@@ -93,6 +93,8 @@ def evaluate(page, fixture, number, summary):
     expect(page.get_by_role('heading', name='Evaluation in progress', exact=True)).to_be_visible()
     expect(page.locator('.pr-stages li.current')).to_have_count(1)
     expect(page.get_by_text(re.compile(r'\d+ of 14 finished'))).to_be_visible(timeout=20000)
+    # Screen readers hear the same progress through the run panel's polite live region.
+    expect(page.locator('.pr-run [role="status"][aria-live="polite"]')).to_have_text(re.compile(r'\d+ of 14 checks finished'), timeout=20000)
     expect(page.get_by_text(summary, exact=True)).to_be_visible(timeout=40000)
     expect(page.get_by_role('heading', name='Latest result', exact=True)).to_be_visible()
 
@@ -134,7 +136,7 @@ try:
         expect(page.locator('[data-rule]')).to_have_count(2)
         expect(page.locator('[data-rule="FIN-001"]').get_by_text('V2/bank-change-self-approval-blocked', exact=True)).to_be_visible()
         page.screenshot(path=str(OUTPUT / 'pr-6-report.png'), full_page=True)
-        check('Evaluating PR #6 shows live progress, then NOT READY with FIN-001 and FIN-002 broken while the team\'s tests pass.')
+        check('Evaluating PR #6 shows live progress (also announced to screen readers), then NOT READY with FIN-001 and FIN-002 broken while the team\'s tests pass.')
 
         evaluate(page, fixture, 7, 'NOT READY · 1 rule broken · 12 of 14 obligations supported')
         since = page.get_by_role('region', name='Since PR #6')
