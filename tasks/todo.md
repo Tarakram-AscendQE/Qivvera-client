@@ -205,12 +205,15 @@ resolve it), all 14 obligations, proof, scope statement.
 the table of 14 obligations × 3 PRs with "now supported" markers.
 
 **Acceptance:**
-- [ ] A PR without a completed run shows "not evaluated", never a guessed count.
-- [ ] A later READY never hides an earlier NOT READY in the history.
+- [x] A PR without a completed run shows "not evaluated", never a guessed count; a running or failed run does not
+  replace the last completed result; a result whose stored evidence fails its check shows no count.
+- [x] A later READY never hides an earlier NOT READY in the history (the PR page lists every run).
+- [x] `2 → 1 → 0 rules broken` once all three PRs have a result; the 14 × 3 table marks "Now supported".
+  2 backend + 4 frontend tests.
 
 **Verify:** `npm run test:frontend`, `npm test`.
 **Dependencies:** Task 9.
-**Files:** `backend/api/endpoints/pr-assurance/get-scenario.ts`, `frontend/src/pr-assurance/{Timeline,CompareTable}.tsx`, tests.
+**Files:** `backend/server/pr-assurance/service.mjs` (scenario results), `frontend/src/pr-assurance/TimelinePage.tsx`, tests.
 **Size:** M.
 
 ## Checkpoint C: end-to-end locally

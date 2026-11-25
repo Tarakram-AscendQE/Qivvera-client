@@ -53,6 +53,7 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
     const repository = await openPrAssuranceRepository({ ...database, migrate });
     const github = createGitHubClient({ secretEnv, fetchFn });
     const obligations = snapshot.policies.reduce((n, policy) => n + policy.obligations.length, 0);
+    const obligationRows = snapshot.policies.flatMap(policy => policy.obligations.map(o => ({ id: o.id, statement: o.statement, policyId: policy.id })));
 
     /** Assesses a stored run's evidence again; a changed snapshot or altered evidence is reported, not hidden. */
     function assessStored(run) {
@@ -76,6 +77,20 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
         return {
             ...result, teamTests: run.teamTests, comparison,
             proof: { ...result.proof, pullNumber: run.pullNumber, headSha: run.headSha, evidenceSha256: run.evidenceSha256, githubRunUrl: run.githubRunUrl },
+        };
+    }
+
+    /** A PR's result for the timeline: its latest COMPLETED run, assessed again from the stored evidence. */
+    async function resultOf(runs, number) {
+        const latest = runs.find(r => r.pullNumber === number && r.status === 'COMPLETED');
+        if (!latest) return null;
+        const assessed = assessStored(await repository.getRun(latest.id));
+        if (!assessed.ok) return { runId: latest.id, finishedAt: latest.finishedAt, integrityFailed: true, reason: assessed.reason };
+        return {
+            runId: latest.id, finishedAt: latest.finishedAt, disposition: assessed.disposition,
+            brokenRules: assessed.counts.brokenRules, brokenRuleIds: assessed.rules.filter(r => r.broken).map(r => r.id),
+            supported: assessed.counts.supported, obligations: assessed.counts.obligations,
+            states: Object.fromEntries(assessed.rules.flatMap(r => r.obligations.map(o => [o.id, o.state]))),
         };
     }
 
@@ -158,11 +173,13 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
                     repository: snapshot.source.repository, commit: snapshot.source.commit, snapshotDigest: snapshot.snapshotDigest,
                     profile: { id: snapshot.profile.id, title: snapshot.profile.title }, policies: snapshot.policies.length, obligations,
                 },
-                pulls: SCENARIO.pulls.map(number => ({
+                obligations: obligationRows,
+                pulls: await Promise.all(SCENARIO.pulls.map(async number => ({
                     number,
                     pull: pulls.find(p => p.pullNumber === number) ?? null,
                     latestRun: runSummary(runs.find(r => r.pullNumber === number)) ?? null,
-                })),
+                    result: await resultOf(runs, number),
+                }))),
             };
         },
 

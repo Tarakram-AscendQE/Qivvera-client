@@ -41,3 +41,6 @@
 .pr-observed{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font-size:12px;background:var(--paper);padding:8px;border-radius:6px}
 .pr-all{margin:16px 0}.pr-all table{width:100%;border-collapse:collapse;font-size:13px}.pr-all th,.pr-all td{text-align:left;padding:6px;border-bottom:1px solid var(--line);vertical-align:top}
 .pr-proof{margin-top:16px}.pr-proof h3{font-size:14px}
+.pr-result-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pr-count{margin:0;font-size:14px}.pr-count strong{font-size:30px;margin-right:4px}
+.pr-count.bad strong{color:#9d2530}.pr-count.good strong{color:#205f44}.pr-progression{font-size:20px;font-weight:700;text-align:center;margin:0 0 18px}
+.pr-compare-table{overflow-x:auto}.pr-compare-table table{width:100%;border-collapse:collapse;font-size:13px}.pr-compare-table th,.pr-compare-table td{text-align:left;padding:7px;border-bottom:1px solid var(--line);vertical-align:top}

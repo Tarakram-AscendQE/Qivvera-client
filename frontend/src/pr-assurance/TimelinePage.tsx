@@ -7,20 +7,66 @@ import type { ActiveCheck } from '../visits';
 import type { PrAssuranceBridge } from './pr-assurance-module';
 
 const short = (sha: unknown) => text(sha).slice(0, 7);
-const STATUS_LABEL: Record<string, string> = { QUEUED: 'Waiting for GitHub', RUNNING: 'Running', FAILED: 'Run failed', TIMED_OUT: 'Timed out', CANCELLED: 'Cancelled' };
 const DISPOSITION_KIND: Record<string, string> = { READY: 'finding-good', NOT_READY: 'finding-bad', INDETERMINATE: 'finding-gap' };
+const STATE_KIND: Record<string, string> = { SUPPORTED: 'finding-good', VIOLATED: 'finding-bad', INSUFFICIENT: 'finding-gap', NOT_ASSESSED: 'finding-gap' };
+const isActive = (run: unknown) => ['QUEUED', 'RUNNING'].includes(text(field(run, 'status')));
+/** A PR's broken-rule count, only from a completed run whose stored evidence passed its check. */
+const countOf = (entry: unknown): number | null => {
+  const result = field(entry, 'result');
+  return result && field(result, 'integrityFailed') !== true ? Number(field(result, 'brokenRules')) : null;
+};
+
+/** The latest completed result: the count of broken rules, never a guess. */
+function Result({ entry }: { entry: unknown }) {
+  const result = field(entry, 'result'), count = countOf(entry);
+  if (!result) return <p className="pr-count muted">Not evaluated</p>;
+  if (count === null) return <p className="small">The stored evidence of its last result failed its integrity check. No count is shown.</p>;
+  const disposition = text(field(result, 'disposition'));
+  return (
+    <div className="pr-result-line">
+      <p className={`pr-count ${count ? 'bad' : 'good'}`}><strong>{count}</strong> {count === 1 ? 'rule broken' : 'rules broken'}</p>
+      <Badge text={disposition.replace('_', ' ')} kind={DISPOSITION_KIND[disposition] ?? ''} />
+    </div>
+  );
+}
+
+/** Each obligation's state on each PR's latest result, and what changed from the first to the last. */
+function CompareTable({ obligations, pulls }: { obligations: readonly unknown[]; pulls: readonly unknown[] }) {
+  const evaluated = pulls.filter(entry => countOf(entry) !== null);
+  if (!evaluated.length) return null;
+  const state = (entry: unknown, id: string) => text(field(field(field(entry, 'result'), 'states'), id));
+  const first = evaluated[0], last = evaluated.at(-1);
+  return (
+    <section className="panel"><div className="panel-head"><div><h2>Compare pull requests</h2><p>Each obligation on each pull request's latest result. The last column compares the first and last evaluated.</p></div></div>
+      <div className="panel-body pr-compare-table"><table aria-label="Obligations across pull requests">
+        <thead><tr><th>Obligation</th>{pulls.map(entry => <th key={text(field(entry, 'number'))}>PR #{text(field(entry, 'number'))}</th>)}<th>Change</th></tr></thead>
+        <tbody>{obligations.map(obligation => {
+          const id = text(field(obligation, 'id')), before = state(first, id), after = state(last, id);
+          const change = evaluated.length < 2 || before === after ? 'Unchanged' : after === 'SUPPORTED' ? 'Now supported' : before === 'SUPPORTED' ? 'Newly failing' : 'Changed';
+          return (
+            <tr key={id} data-obligation={id}>
+              <td><span className="mono">{id}</span> {text(field(obligation, 'statement'))}</td>
+              {pulls.map(entry => { const s = countOf(entry) === null ? '' : state(entry, id); return <td key={text(field(entry, 'number'))}>{s ? <Badge text={s} kind={STATE_KIND[s] ?? ''} /> : <span className="small muted">—</span>}</td>; })}
+              <td><Badge text={change} kind={change === 'Now supported' ? 'finding-good' : change === 'Newly failing' ? 'finding-bad' : ''} /></td>
+            </tr>
+          );
+        })}</tbody>
+      </table></div>
+    </section>
+  );
+}
 
 /** One pull request: what was imported from GitHub, and its latest run. */
 function PullCard({ entry, canImport, importing, error, onImport }: {
   entry: unknown; canImport: boolean; importing: boolean; error: string; onImport: () => void;
 }) {
   const number = text(field(entry, 'number')), pull = field(entry, 'pull'), run = field(entry, 'latestRun');
-  const disposition = text(field(run, 'disposition')), status = text(field(run, 'status'));
   return (
     <article className="pr-card" data-pull={number}>
       <div className="pr-card-head"><span className="pr-number">PR #{number}</span>
-        {run ? <Badge text={disposition ? disposition.replace('_', ' ') : STATUS_LABEL[status] ?? status} kind={DISPOSITION_KIND[disposition] ?? 'candidate'} /> : <Badge text={pull ? 'Not evaluated' : 'Not imported'} />}
+        {!pull ? <Badge text="Not imported" /> : isActive(run) ? <Badge text="Evaluation running" kind="candidate" /> : null}
       </div>
+      {pull ? <Result entry={entry} /> : null}
       {pull ? (
         <>
           <h3>{text(field(pull, 'title'))}</h3>
@@ -46,6 +92,7 @@ export function TimelinePage({ bridge, scenario, active }: { bridge: PrAssurance
   const rules = field(scenario, 'rules'), tokenConfigured = field(scenario, 'githubTokenConfigured') === true;
   const canImport = field(scenario, 'canEvaluate') === true && tokenConfigured;
   const pulls = list(field(scenario, 'pulls'));
+  const counts = pulls.map(countOf);
 
   async function importPull(number: number) {
     if (!active() || importing.current !== null) return;
@@ -88,6 +135,8 @@ export function TimelinePage({ bridge, scenario, active }: { bridge: PrAssurance
           );
         })}
       </div>
+      {counts.every(count => count !== null) ? <p className="pr-progression" aria-label="Progression">{counts.join(' → ')} {counts.at(-1) === 1 ? 'rule' : 'rules'} broken</p> : null}
+      <CompareTable obligations={list(field(scenario, 'obligations'))} pulls={pulls} />
       <div className="notice">Importing reads pull-request metadata only. It does not run code, post to GitHub or block a merge.</div>
     </>
   );

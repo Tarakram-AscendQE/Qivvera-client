@@ -272,3 +272,25 @@ test('pr-assurance runs / a check run written for another run is refused and end
   const synced = (await h.sync(run.id)).body.run;
   assert.deepEqual([synced.status, synced.failure.code, synced.disposition], ['FAILED', 'OUTPUT_FOR_ANOTHER_RUN', null]);
 });
+
+// ---- Progression across the three PRs (Task 10) ---------------------------------------------------
+test('pr-assurance runs / the scenario shows 2 → 1 → 0 broken rules from each PR\'s latest completed run', async t => {
+  const h = await fixture(t);
+  await h.complete(6); await h.complete(7); await h.complete(8);
+  const scenario = (await h.call('/api/pr-assurance', { session: h.session })).body;
+  assert.deepEqual(scenario.pulls.map(p => [p.number, p.result.disposition, p.result.brokenRules, p.result.brokenRuleIds]),
+    [[6, 'NOT_READY', 2, ['FIN-001', 'FIN-002']], [7, 'NOT_READY', 1, ['FIN-002']], [8, 'READY', 0, []]]);
+  assert.equal(scenario.obligations.length, 14);
+  assert.deepEqual(scenario.pulls.map(p => p.result.states['FIN-001.1']), ['VIOLATED', 'SUPPORTED', 'SUPPORTED']);
+  assert.deepEqual(scenario.pulls.map(p => p.result.states['FIN-002.1']), ['VIOLATED', 'VIOLATED', 'SUPPORTED']);
+});
+
+test('pr-assurance runs / a PR without a completed run shows no count; a running or failed run does not replace the last result', async t => {
+  const h = await fixture(t);
+  await h.complete(6);
+  await h.complete(6, { evidenceFor: 'ae50deb' });
+  const { run } = (await h.evaluate(6)).body;
+  const scenario = (await h.call('/api/pr-assurance', { session: h.session })).body;
+  assert.deepEqual([scenario.pulls[0].latestRun.id, scenario.pulls[0].latestRun.status], [run.id, 'QUEUED']);
+  assert.deepEqual([scenario.pulls[0].result.brokenRules, scenario.pulls[1].result], [2, null]);
+});
