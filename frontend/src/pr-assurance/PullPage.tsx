@@ -32,7 +32,7 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
   bridge: PrAssuranceBridge; number: number; scenario: unknown; history: readonly unknown[]; latest: unknown; active: ActiveCheck;
 }) {
   const entry = list(field(scenario, 'pulls')).find(p => field(p, 'number') === number);
-  const pull = field(entry, 'pull');
+  const pull = field(entry, 'pull'), applicationId = text(field(field(scenario, 'application'), 'id')), rules = field(scenario, 'rules');
   const [view, setView] = useState<unknown>(latest);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -40,7 +40,7 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
   // One request key per attempt: a repeat after a lost answer returns the same run instead of starting another.
   const requestKey = useRef<string | null>(null);
   const runActive = isActive(field(view, 'run'));
-  const canStart = field(scenario, 'canEvaluate') === true && field(scenario, 'githubTokenConfigured') === true && !!pull && !runActive;
+  const canStart = field(scenario, 'canEvaluate') === true && field(scenario, 'githubTokenConfigured') === true && field(scenario, 'credentialsReady') === true && !!rules && !!pull && !runActive;
 
   async function evaluate() {
     if (!active() || starting || !canStart) return;
@@ -48,7 +48,7 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
     setStarting(true);
     setError('');
     try {
-      const result = await bridge.api(`/api/pr-assurance/pulls/${number}/runs`, { method: 'POST', data: { requestKey: requestKey.current } });
+      const result = await bridge.api(`/api/pr-assurance/applications/${applicationId}/pulls/${number}/runs`, { method: 'POST', data: { requestKey: requestKey.current } });
       if (!active()) return;
       requestKey.current = null;
       setView(result);
@@ -67,7 +67,7 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
 
   return (
     <>
-      <a className="back" href="#/pr-assurance">← All pull requests</a>
+      <a className="back" href={`#/pr-assurance/apps/${applicationId}`}>← {text(field(field(scenario, 'application'), 'name'))} pull requests</a>
       <div className="heading">
         <div>
           <div className="eyebrow">{text(field(scenario, 'repository'))} · PR #{number}</div>
@@ -82,7 +82,7 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
       <div className="form-error" role="alert">{error}</div>
       {notice ? <div className="notice warning">{notice}</div> : null}
       {view ? <RunPanel key={text(field(field(view, 'run'), 'id'))} bridge={bridge} initial={view} active={active} />
-        : <section className="panel"><div className="panel-body"><h2>Not evaluated yet</h2><p className="small">Evaluate runs Qivvera's 14 checks against this pull request's exact commit on GitHub Actions. It takes about a minute.</p></div></section>}
+        : <section className="panel"><div className="panel-body"><h2>Not evaluated yet</h2><p className="small">{rules ? `Evaluate runs this application's test automation against this pull request's exact commit on GitHub Actions and assesses ${text(field(rules, 'obligations'))} obligations. It takes about a minute.` : 'This application has no rules snapshot yet, so it cannot be evaluated.'}</p></div></section>}
       <section className="panel"><div className="panel-head"><h2>Earlier runs</h2></div><div className="panel-body"><History runs={history} /></div></section>
     </>
   );
@@ -93,7 +93,7 @@ export function RunPage({ bridge, view, active }: { bridge: PrAssuranceBridge; v
   const run = field(view, 'run');
   return (
     <>
-      <a className="back" href={`#/pr-assurance/pulls/${text(field(run, 'pullNumber'))}`}>← PR #{text(field(run, 'pullNumber'))}</a>
+      <a className="back" href={`#/pr-assurance/apps/${text(field(run, 'applicationId'))}/pulls/${text(field(run, 'pullNumber'))}`}>← PR #{text(field(run, 'pullNumber'))}</a>
       <div className="heading"><div><div className="eyebrow">PR #{text(field(run, 'pullNumber'))} · commit <span className="mono">{short(field(run, 'headSha'))}</span></div><h1>Assessment run</h1><p className="sub">PR #{text(field(run, 'pullNumber'))} · commit <span className="mono">{short(field(run, 'headSha'))}</span></p></div></div>
       <RunPanel bridge={bridge} initial={view} active={active} />
     </>

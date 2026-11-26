@@ -1,4 +1,6 @@
-"""Native PR assurance journey over real HTTP, authentication, PostgreSQL and service code.
+"""Native PR assurance journey over real HTTP, authentication, PostgreSQL and service code: register an
+application with its repositories and GitHub token in the UI, choose it in PR assurance, import its
+pull requests from GitHub and evaluate them.
 
 Only GitHub is a stand-in (pr-assurance-browser-fixture.mjs): each run plays out over successive syncs
 with the real check names and the evidence prcheck-verifiers recorded for each PR commit. Hosted HTTPS,
@@ -80,14 +82,32 @@ def card(page, number):
     return page.locator(f'[data-pull="{number}"]')
 
 
+APP = {}
+
+
 def open_timeline(page, fixture):
-    page.goto(fixture.origin + '/#/pr-assurance', wait_until='networkidle')
-    expect(page.get_by_role('heading', name='Pull request assurance', exact=True)).to_be_visible()
+    page.goto(fixture.origin + f"/#/pr-assurance/apps/{APP['id']}", wait_until='networkidle')
+    expect(page.get_by_role('heading', name='VendorPay', exact=True)).to_be_visible()
+
+
+def pull_url(fixture, number):
+    return fixture.origin + f"/#/pr-assurance/apps/{APP['id']}/pulls/{number}"
+
+
+def register(page, fixture, token):
+    dialog = page.locator('#modal')
+    dialog.get_by_label('Application name *').fill('VendorPay')
+    dialog.get_by_label('Description').fill('Supplier payments')
+    dialog.get_by_label('Application repository URL *').fill('https://github.com/prcheck-live/vendorpay-app')
+    dialog.get_by_label('Test automation repository URL *').fill('https://github.com/prcheck-live/prcheck-verifiers')
+    dialog.get_by_label('Profiles repository URL *').fill('https://github.com/prcheck-live/vendorpay-policies')
+    dialog.get_by_label('GitHub personal access token *').fill(token)
+    dialog.get_by_role('button', name='Register application', exact=True).click()
 
 
 def evaluate(page, fixture, number, summary):
     """Opens a PR, starts an evaluation, watches it progress and waits for the report."""
-    page.goto(fixture.origin + f'/#/pr-assurance/pulls/{number}', wait_until='networkidle')
+    page.goto(pull_url(fixture, number), wait_until='networkidle')
     expect(page.get_by_text('Not evaluated yet', exact=True)).to_be_visible()
     page.get_by_role('button', name='Evaluate with Qivvera', exact=True).click()
     expect(page.get_by_role('heading', name='Evaluation in progress', exact=True)).to_be_visible()
@@ -118,21 +138,53 @@ try:
         page.on('request', lambda request: syncs.append(request.url) if request.url.endswith('/sync') else None)
 
         sign_in(page, fixture, 'author@example.test')
+        page.get_by_role('navigation', name='Main navigation').get_by_role('link', name='Applications', exact=True).click()
+        page.get_by_role('button', name='+ Register application', exact=True).click()
+        token_field = page.locator('#modal').get_by_label('GitHub personal access token *')
+        expect(token_field).to_have_attribute('type', 'password')
+        page.locator('#modal').get_by_role('button', name='Show token', exact=True).click()
+        expect(token_field).to_have_attribute('type', 'text')
+        page.locator('#modal').get_by_role('button', name='Hide token', exact=True).click()
+        expect(token_field).to_have_attribute('type', 'password')
+        page.screenshot(path=str(OUTPUT / 'register-dialog.png'))
+        check('The Register application dialog asks for the three repositories and a token that stays hidden until shown.')
+
+        wrong = 'github_pat_' + secrets.token_hex(20)
+        register(page, fixture, wrong)
+        expect(page.locator('#modal [role="alert"]')).to_contain_text('rejected this application', timeout=15000)
+        assert wrong not in page.locator('#modal [role="alert"]').inner_text()
+        check('A token GitHub rejects is reported in the dialog, never echoed, and nothing is saved.')
+
+        page.locator('#modal').get_by_label('GitHub personal access token *').fill(fixture.metadata['token'])
+        page.locator('#modal').get_by_role('button', name='Register application', exact=True).click()
+        expect(page.get_by_role('heading', name='VendorPay', exact=True)).to_be_visible(timeout=15000)
+        APP['id'] = re.search(r'#/applications/([0-9a-f-]{36})', page.url).group(1)
+        panel = page.locator('#app-github')
+        expect(panel.get_by_role('link', name='prcheck-live/prcheck-verifiers', exact=True)).to_be_visible()
+        expect(panel.get_by_text('Stored encrypted', exact=True)).to_be_visible()
+        assert fixture.metadata['token'] not in page.content()
+        check('Registering saves the application with its checked GitHub access; the page shows the repositories, never the token.')
+
         page.get_by_role('navigation', name='Main navigation').get_by_role('link', name='PR assurance', exact=True).click()
         expect(page.get_by_role('heading', name='Pull request assurance', exact=True)).to_be_visible()
+        page.locator(f"[data-application=\"{APP['id']}\"]").get_by_role('link', name='VendorPay', exact=True).click()
+        expect(page.get_by_role('heading', name='VendorPay', exact=True)).to_be_visible()
         expect(page.get_by_text('6 rules · 14 obligations', exact=False)).to_be_visible()
-        for number in (6, 7, 8):
-            expect(card(page, number).get_by_text('Not imported', exact=True)).to_be_visible()
-        check('The PR assurance page lists the three demo pull requests and the rules snapshot they are assured against.')
+        expect(page.get_by_text('No pull requests imported yet', exact=True)).to_be_visible()
+        check('PR assurance lists the registered application; choosing it shows its rules and no pull requests yet.')
 
-        card(page, 6).get_by_role('button', name='Import from GitHub', exact=True).click()
+        page.get_by_role('button', name='Show open pull requests', exact=True).click()
+        expect(page.locator('[data-github-pull]')).to_have_count(3)
+        page.locator('[data-github-pull="6"]').get_by_role('button', name='Import', exact=True).click()
         expect(card(page, 6).get_by_text('Not evaluated', exact=True)).to_be_visible()
         page.get_by_role('button', name='Import all from GitHub', exact=True).click()
-        expect(page.get_by_text('All 3 pull requests imported from GitHub. Nothing has been evaluated yet.', exact=True)).to_be_visible()
+        expect(page.get_by_text('All 2 pull requests imported from GitHub. Nothing has been evaluated yet.', exact=True)).to_be_visible()
         for number in (6, 7, 8):
             expect(card(page, number).get_by_text('Not evaluated', exact=True)).to_be_visible()
             expect(card(page, number).get_by_text(fixture.metadata['pulls'][str(number)][:7], exact=True)).to_be_visible()
-        check('Importing one PR, then all of them with one button, reads each PR\'s title, branch and exact head commit; nothing is evaluated yet.')
+        page.get_by_role('button', name='Show open pull requests', exact=True).click()
+        expect(page.locator('[data-github-pull] >> text=Imported')).to_have_count(3)
+        check('The application\'s open pull requests are listed with its own token; importing one, then the rest with one button, reads each title, branch and exact head commit.')
 
         evaluate(page, fixture, 6, 'NOT READY · 2 rules broken · 11 of 14 obligations supported')
         expect(page.get_by_text('The team’s own tests all passed, yet 2 business rules are broken.', exact=True)).to_be_visible()
@@ -160,14 +212,14 @@ try:
         page.screenshot(path=str(OUTPUT / 'timeline.png'), full_page=True)
         check('The timeline shows 2 → 1 → 0 and the comparison table marks FIN-002.1 now supported.')
 
-        page.goto(fixture.origin + '/#/pr-assurance/pulls/6', wait_until='networkidle')
+        page.goto(pull_url(fixture, 6), wait_until='networkidle')
         expect(page.locator('.pr-history li')).to_have_count(1)
         page.locator('.pr-history a').first.click()
         expect(page.get_by_role('heading', name='Assessment run', exact=True)).to_be_visible()
         expect(page.get_by_text('NOT READY · 2 rules broken · 11 of 14 obligations supported', exact=True)).to_be_visible()
         check('A run stays available by its own link from the PR\'s history.')
 
-        page.goto(fixture.origin + '/#/pr-assurance/pulls/6', wait_until='networkidle')
+        page.goto(pull_url(fixture, 6), wait_until='networkidle')
         page.get_by_role('button', name='Evaluate with Qivvera', exact=True).click()
         expect(page.get_by_role('heading', name='Evaluation in progress', exact=True)).to_be_visible()
         page.evaluate("location.hash = '#/guide'")
@@ -180,7 +232,7 @@ try:
         page.set_viewport_size({'width': 390, 'height': 844})
         open_timeline(page, fixture)
         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
-        page.goto(fixture.origin + '/#/pr-assurance/pulls/8', wait_until='networkidle')
+        page.goto(pull_url(fixture, 8), wait_until='networkidle')
         expect(page.get_by_text('READY · no rules broken · 14 of 14 obligations supported', exact=True)).to_be_visible()
         assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
         page.screenshot(path=str(OUTPUT / 'mobile-report.png'), full_page=True)
@@ -190,8 +242,8 @@ try:
         sign_out(page)
         sign_in(page, fixture, 'viewer@example.test')
         open_timeline(page, fixture)
-        assert page.get_by_role('button', name=re.compile('Import')).count() == 0
-        page.goto(fixture.origin + '/#/pr-assurance/pulls/8', wait_until='networkidle')
+        assert page.get_by_role('button', name=re.compile('Import|Show open')).count() == 0
+        page.goto(pull_url(fixture, 8), wait_until='networkidle')
         expect(page.get_by_role('button', name='Evaluate with Qivvera', exact=True)).to_be_disabled()
         check('A Viewer can read the pull requests and reports but cannot import or evaluate.')
 

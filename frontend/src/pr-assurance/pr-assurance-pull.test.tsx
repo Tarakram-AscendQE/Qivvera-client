@@ -8,11 +8,13 @@ import { SYNC_INTERVAL_MS } from './RunPanel';
 const shell = fakeShell();
 const RUN = '11111111-2222-4333-8444-555555555555';
 const pull = { pullNumber: 6, title: 'VP-184 v1', headRef: 'feature/VP-184-v1-initial', headSha: 'af51c26b0b9f94894cccfaa5b0fb893221952c65', url: 'https://github.com/prcheck-live/vendorpay-app/pull/6' };
+const APP = '0b7c2f8e-1d2a-4c3b-9e8f-7a6b5c4d3e2f';
+const PATH = `/api/pr-assurance/applications/${APP}`;
 const scenario = (overrides: Record<string, unknown> = {}) => ({
-  repository: 'prcheck-live/vendorpay-app', githubTokenConfigured: true, canEvaluate: true,
-  pulls: [{ number: 6, pull, latestRun: null }, { number: 7, pull: null, latestRun: null }, { number: 8, pull: null, latestRun: null }], ...overrides
+  application: { id: APP, name: 'VendorPay' }, repository: 'prcheck-live/vendorpay-app', githubTokenConfigured: true, credentialsReady: true, canEvaluate: true,
+  rules: { obligations: 14, policies: 6 }, pulls: [{ number: 6, pull, latestRun: null }], ...overrides
 });
-const run = (status: string, extra: Record<string, unknown> = {}) => ({ id: RUN, pullNumber: 6, headSha: pull.headSha, status, disposition: null, failure: null, createdAt: '2026-11-27T10:00:00Z', githubRunUrl: null, progress: null, ...extra });
+const run = (status: string, extra: Record<string, unknown> = {}) => ({ id: RUN, applicationId: APP, pullNumber: 6, headSha: pull.headSha, status, disposition: null, failure: null, createdAt: '2026-11-27T10:00:00Z', githubRunUrl: null, progress: null, ...extra });
 const view = (status: string, extra: Record<string, unknown> = {}, more: Record<string, unknown> = {}) => ({ run: run(status, extra), events: [{ seq: 1, stage: 'queued', message: 'Waiting for GitHub to start the run', recordedAt: '2026-11-27T10:00:00Z' }], report: null, githubNotice: null, ...more });
 const checks = (n: number) => Array.from({ length: n }, (_, i) => ({ check: `V${i}/check`, outcome: i === 1 ? 'failed' : 'passed', durationMs: 5 }));
 
@@ -25,9 +27,9 @@ let syncAnswers: unknown[];
 function setup(answers: Record<string, unknown> = {}) {
   syncAnswers = [];
   api = vi.fn<Api>(async (path, options) => {
-    if (path === '/api/pr-assurance') return answers['scenario'] ?? scenario();
-    if (path === '/api/pr-assurance/pulls/6/runs' && !options?.method) return answers['history'] ?? [];
-    if (path === '/api/pr-assurance/pulls/6/runs') {
+    if (path === PATH) return answers['scenario'] ?? scenario();
+    if (path === `${PATH}/pulls/6/runs` && !options?.method) return answers['history'] ?? [];
+    if (path === `${PATH}/pulls/6/runs`) {
       const start = answers['start'];
       if (start instanceof Error) throw start;
       return start ?? view('QUEUED', {}, { notice: null });
@@ -48,14 +50,14 @@ beforeEach(() => {
   state = { session: { email: 'author@example.test', roles: ['AUTHOR'] } };
   document.body.innerHTML = '<div id="root"></div>';
   shell.mockClear();
-  location.hash = '#/pr-assurance/pulls/6';
+  location.hash = `#/pr-assurance/apps/${APP}/pulls/6`;
 });
 afterEach(() => { shell.reset(); vi.useRealTimers(); });
 
 describe('PR assurance: one pull request', () => {
   it('shows the imported PR, offers Evaluate and says it has not been evaluated', async () => {
     setup();
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('VP-184 v1');
     expect(screen.getByText('Not evaluated yet')).toBeTruthy();
     // The PR number must not depend on the eyebrow line, which the redesigned theme hides.
@@ -65,9 +67,9 @@ describe('PR assurance: one pull request', () => {
 
   it('Evaluate sends only a request key, then shows the run live until it ends', async () => {
     setup();
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     await act(async () => { fireEvent.click(evaluateButton()); });
-    const [, options] = api.mock.calls.find(([path, o]) => path === '/api/pr-assurance/pulls/6/runs' && o?.method === 'POST')!;
+    const [, options] = api.mock.calls.find(([path, o]) => path === `${PATH}/pulls/6/runs` && o?.method === 'POST')!;
     expect(Object.keys(options!.data as object)).toEqual(['requestKey']);
     const stages = () => panel().querySelector<HTMLElement>('.pr-stages')!;
     expect(within(stages()).getByText('Waiting for GitHub').closest('li')!.getAttribute('aria-current')).toBe('step');
@@ -84,7 +86,7 @@ describe('PR assurance: one pull request', () => {
 
   it('announces progress to screen readers from a region that exists before the first update', async () => {
     setup();
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     await act(async () => { fireEvent.click(evaluateButton()); });
     const status = within(panel()).getByRole('status');
     expect(status.getAttribute('aria-live')).toBe('polite');
@@ -97,7 +99,7 @@ describe('PR assurance: one pull request', () => {
 
   it('stops asking once the visit has ended', async () => {
     setup();
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     await act(async () => { fireEvent.click(evaluateButton()); });
     ui.invalidate();
     await tick();
@@ -106,31 +108,40 @@ describe('PR assurance: one pull request', () => {
 
   it('keeps the same request key after an answer was lost, so a retry cannot start a second run', async () => {
     setup({ start: new TypeError('Failed to fetch') });
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     await act(async () => { fireEvent.click(evaluateButton()); });
     await act(async () => { fireEvent.click(evaluateButton()); });
-    const keys = api.mock.calls.filter(([path, o]) => path === '/api/pr-assurance/pulls/6/runs' && o?.method === 'POST').map(([, o]) => (o!.data as { requestKey: string }).requestKey);
+    const keys = api.mock.calls.filter(([path, o]) => path === `${PATH}/pulls/6/runs` && o?.method === 'POST').map(([, o]) => (o!.data as { requestKey: string }).requestKey);
     expect(keys).toHaveLength(2);
     expect(keys[0]).toBe(keys[1]);
   });
 
   it('a run already in progress elsewhere is explained and the page is redrawn', async () => {
     setup({ start: Object.assign(new Error('This pull request is already being evaluated.'), { status: 409, code: 'RUN_ALREADY_ACTIVE' }) });
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     await act(async () => { fireEvent.click(evaluateButton()); });
     expect(screen.getByRole('alert').textContent).toMatch(/already being evaluated/);
     expect(route).toHaveBeenCalledTimes(1);
   });
 
-  it('a viewer, or a workspace without a token, cannot evaluate', async () => {
-    setup({ scenario: scenario({ canEvaluate: false }) });
-    await ui.showPull(6);
-    expect((evaluateButton() as HTMLButtonElement).disabled).toBe(true);
+  it('a viewer, an application without a token or without rules, cannot evaluate', async () => {
+    for (const overrides of [{ canEvaluate: false }, { githubTokenConfigured: false }, { credentialsReady: false }, { rules: null }]) {
+      setup({ scenario: scenario(overrides) });
+      await ui.showPull(APP, 6);
+      expect((evaluateButton() as HTMLButtonElement).disabled).toBe(true);
+    }
+    expect(screen.getByText(/no rules snapshot yet/)).toBeTruthy();
+  });
+
+  it('links back to its own application\'s pull requests', async () => {
+    setup();
+    await ui.showPull(APP, 6);
+    expect(screen.getByRole('link', { name: '← VendorPay pull requests' }).getAttribute('href')).toBe(`#/pr-assurance/apps/${APP}`);
   });
 
   it('a run that ended without evidence says there is no result and no verdict', async () => {
     setup({ history: [run('FAILED')], run: view('FAILED', { failure: { code: 'GITHUB_RUN_FAILED', message: 'The GitHub run ended (failure) without evidence.' } }) });
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     expect(within(panel()).getByText(/No result\./)).toBeTruthy();
     expect(within(panel()).getByText(/without evidence/)).toBeTruthy();
     expect(within(panel()).queryByText(/NOT READY|READY/)).toBeNull();
@@ -138,7 +149,7 @@ describe('PR assurance: one pull request', () => {
 
   it('stored evidence that fails its check is reported instead of a result', async () => {
     setup({ history: [run('COMPLETED', { disposition: 'NOT_READY' })], run: view('COMPLETED', { disposition: 'NOT_READY' }, { report: { ok: false, reason: 'EVIDENCE_DIGEST_MISMATCH', message: 'The evidence does not match its published SHA-256.' } }) });
-    await ui.showPull(6);
+    await ui.showPull(APP, 6);
     expect(within(panel()).getByText('The stored evidence failed its integrity check.')).toBeTruthy();
   });
 
@@ -146,7 +157,7 @@ describe('PR assurance: one pull request', () => {
     location.hash = `#/pr-assurance/runs/${RUN}`;
     setup({ run: view('RUNNING', { progress: { stage: 'starting-app', message: 'Starting', checksTotal: null, checks: [] } }) });
     await ui.showRun(RUN);
-    expect(screen.getByRole('link', { name: '← PR #6' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: '← PR #6' }).getAttribute('href')).toBe(`#/pr-assurance/apps/${APP}/pulls/6`);
     syncAnswers.push(view('RUNNING', { progress: { stage: 'running-checks', message: 'Running', checksTotal: 14, checks: checks(2) } }));
     await tick();
     expect(within(panel()).getByText(/2 of 14 finished/)).toBeTruthy();

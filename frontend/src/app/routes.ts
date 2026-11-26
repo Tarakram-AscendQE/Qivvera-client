@@ -14,7 +14,8 @@ export type Route =
   /** GitHub intake, optionally with a repository and pull request chosen (from an application's PR list). */
   | { readonly kind: 'intake'; readonly repositoryKey: string | null; readonly pullNumber: number | null }
   | { readonly kind: 'pr-assurance' }
-  | { readonly kind: 'pr-assurance-pull'; readonly number: number }
+  | { readonly kind: 'pr-assurance-app'; readonly applicationId: string }
+  | { readonly kind: 'pr-assurance-pull'; readonly applicationId: string; readonly number: number }
   | { readonly kind: 'pr-assurance-run'; readonly runId: string }
   | { readonly kind: 'applications' }
   | { readonly kind: 'application'; readonly id: string }
@@ -91,7 +92,8 @@ export function parseRoute(hash: string, workspace: RoutingWorkspace): Route {
   if (section === 'pr-assurance') {
     if (!workspace.capabilities['prAssurance']) return { kind: 'error', message: 'PR assurance is not enabled in this workspace.' };
     if (p.length === 1) return { kind: 'pr-assurance' };
-    if (p.length === 3 && first === 'pulls' && /^[1-9][0-9]{0,8}$/.test(second ?? '')) return { kind: 'pr-assurance-pull', number: Number(second) };
+    if (p.length === 3 && first === 'apps' && validId(second)) return { kind: 'pr-assurance-app', applicationId: second };
+    if (p.length === 5 && first === 'apps' && validId(second) && third === 'pulls' && /^[1-9][0-9]{0,8}$/.test(fourth ?? '')) return { kind: 'pr-assurance-pull', applicationId: second, number: Number(fourth) };
     if (p.length === 3 && first === 'runs' && validId(second)) return { kind: 'pr-assurance-run', runId: second };
     return { kind: 'error', message: 'This PR assurance link is incomplete. Open PR assurance from the navigation.' };
   }

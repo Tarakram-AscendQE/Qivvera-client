@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Badge, formatDate } from '../format';
 import { field } from '../json';
 import { text, type Api } from '../shell-contract';
@@ -7,11 +8,74 @@ import { Field, FormDialog, type DialogEnvironment } from './FormDialog';
 
 interface Common { readonly env: DialogEnvironment; readonly api: Api }
 
-export function NewApplicationDialog({ env, api }: Common) {
+/** The GitHub token field: hidden by default, with a show/hide toggle. Never pre-filled, and browsers are asked not to autofill or keep it. */
+export function SecretField({ id, label, hint = '', required = false }: { id: string; label: string; hint?: string; required?: boolean }) {
+  const [visible, setVisible] = useState(false);
   return (
-    <FormDialog env={env} title="Register application" description="Create a saved record. This does not connect to the repository." saveLabel="Register application"
+    <div className="form-field"><label htmlFor={id}>{label}{required ? ' *' : ''}</label>
+      <div className="input-with-eye">
+        <input id={id} name={id} type={visible ? 'text' : 'password'} autoComplete="new-password" autoCapitalize="off" spellCheck={false} maxLength={255} required={required} />
+        <button type="button" className="eye-btn" aria-controls={id} aria-label={visible ? 'Hide token' : 'Show token'} onClick={() => setVisible(value => !value)}>{visible ? 'Hide' : 'Show'}</button>
+      </div>
+      {hint ? <small>{hint}</small> : null}
+    </div>
+  );
+}
+
+/** A connection's repositories, as the server reports them (never a token). */
+export interface GitHubConnection { readonly app?: { readonly repository?: unknown }; readonly tests?: { readonly repository?: unknown }; readonly profiles?: { readonly repository?: unknown } }
+const githubUrl = (repository: unknown) => (repository ? `https://github.com/${text(repository)}` : '');
+
+/** The three repositories and the token an application is assured with. The token is always entered fresh. */
+function GitHubFields({ connection, repositoryUrl = '' }: { connection?: GitHubConnection | null; repositoryUrl?: string }) {
+  return (
+    <>
+      <Field id="repositoryUrl" label="Application repository URL" type="url" value={githubUrl(connection?.app?.repository) || repositoryUrl} hint="The repository whose pull requests are assured, for example https://github.com/acme/vendorpay-app." required />
+      <Field id="testRepositoryUrl" label="Test automation repository URL" type="url" value={githubUrl(connection?.tests?.repository)} hint="Runs Qivvera's checks. It must contain .github/workflows/qivvera-pr-assessment.yml." required />
+      <Field id="profilesRepositoryUrl" label="Profiles repository URL" type="url" value={githubUrl(connection?.profiles?.repository)} hint="The business rules this application is assured against." required />
+      <SecretField id="githubToken" label="GitHub personal access token" hint={connection ? 'Enter the token again, or a new one. It replaces the saved token, is stored encrypted and is never shown again.' : 'Used only for this application\'s repositories. Stored encrypted and never shown again.'} required />
+    </>
+  );
+}
+
+/** Registration. With PR assurance on, the application's GitHub repositories and token are required and checked before saving. */
+export function NewApplicationDialog({ env, api, github = false }: Common & { github?: boolean }) {
+  return (
+    <FormDialog env={env} title="Register application" saveLabel="Register application"
+      description={github ? 'Qivvera checks that the token can reach all three repositories before saving. Nothing is saved if a check fails.' : 'Create a saved record. This does not connect to the repository.'}
       submit={async data => `#/applications/${text(field(await api('/api/applications', { method: 'POST', data }), 'id'))}`}>
-      <Field id="name" label="Application name" hint="For example: VendorPay" required /><Field id="description" label="Description" type="textarea" hint="What does this application do?" /><Field id="repositoryUrl" label="Repository URL" type="url" hint="Optional HTTPS URL. Do not include credentials." />
+      <Field id="name" label="Application name" hint="For example: VendorPay" required /><Field id="description" label="Description" type="textarea" hint="What does this application do?" />
+      {github ? <GitHubFields /> : <Field id="repositoryUrl" label="Repository URL" type="url" hint="Optional HTTPS URL. Do not include credentials." />}
+    </FormDialog>
+  );
+}
+
+/** Connects an existing application to GitHub, or replaces its repositories and token (for example after the token expired). */
+export function ConnectGitHubDialog({ env, api, application }: Common & { application: { id: string; name?: unknown; repositoryUrl?: unknown; github?: GitHubConnection | null } }) {
+  const connected = !!application.github;
+  return (
+    <FormDialog env={env} title={connected ? `GitHub access for “${text(application.name)}”` : `Connect “${text(application.name)}” to GitHub`} saveLabel={connected ? 'Save GitHub access' : 'Connect to GitHub'}
+      description="Qivvera checks that the token can reach all three repositories before saving. Nothing changes if a check fails."
+      submit={async data => { await api(`/api/applications/${application.id}/github`, { method: 'POST', data }); return `#/applications/${application.id}`; }}>
+      <GitHubFields connection={application.github ?? null} repositoryUrl={text(application.repositoryUrl || '')} />
+    </FormDialog>
+  );
+}
+
+/**
+ * Archive hides an application (and its changes) from the lists and blocks new changes; restore undoes it.
+ * Nothing is deleted. The person confirms in this dialog, optionally with a reason kept in the activity history.
+ */
+export function ArchiveApplicationDialog({ env, api, application, archive }: Common & { application: { id: string; name?: unknown }; archive: boolean }) {
+  const name = text(application.name);
+  return (
+    <FormDialog env={env} title={archive ? `Archive “${name}”?` : `Restore “${name}”?`}
+      description={archive
+        ? 'It will be hidden from Applications, Workspace and Changes, and no new changes can be added. Nothing is deleted: its changes, decisions and evidence stay in history, and you can restore it at any time from “Show archived”.'
+        : 'It will appear in the lists again and new changes can be added. Its history is unchanged.'}
+      saveLabel={archive ? 'Archive application' : 'Restore application'}
+      submit={async data => { await api(`/api/applications/${application.id}/${archive ? 'archive' : 'restore'}`, { method: 'POST', data: { reason: data['reason'] ?? '' } }); return archive ? '#/applications' : `#/applications/${application.id}`; }}>
+      <Field id="reason" label="Reason (optional)" type="textarea" hint="Kept in the activity history, for example: Test data from the November rehearsal." />
     </FormDialog>
   );
 }

@@ -13,7 +13,7 @@ function TeamTests({ report }: { report: unknown }) {
   const passed = Number(field(team, 'passed')), total = Number(field(team, 'total'));
   return (
     <div className="pr-team">
-      <p>VendorPay team’s own tests on this commit: <strong>{passed} of {total} passed</strong>{Number(field(team, 'failed')) ? `, ${text(field(team, 'failed'))} failed` : ''}. <span className="small muted">Context only; never part of the verdict.</span></p>
+      <p>The team’s own tests on this commit: <strong>{passed} of {total} passed</strong>{Number(field(team, 'failed')) ? `, ${text(field(team, 'failed'))} failed` : ''}. <span className="small muted">Context only; never part of the verdict.</span></p>
       {passed === total && broken > 0 ? <p className="pr-contrast">The team’s own tests all passed, yet {rulesText(broken)} broken.</p> : null}
     </div>
   );
@@ -93,8 +93,8 @@ function Proof({ proof, obligations }: { proof: unknown; obligations: number }) 
       <dl className="boundary">
         <dt>Pull request</dt><dd>#{text(field(proof, 'pullNumber'))} at <span className="mono">{text(field(proof, 'headSha'))}</span></dd>
         <dt>Environment</dt><dd>{field(proof, 'environmentConfirmed') === true ? 'Confirmed to run this commit before and after the checks (V1)' : 'Not confirmed: no other result counts'}</dd>
-        <dt>Rules</dt><dd>vendorpay-policies at <span className="mono">{text(field(proof, 'rulesCommit'))}</span> · snapshot <span className="mono">{text(field(proof, 'snapshotDigest'))}</span></dd>
-        <dt>Checks</dt><dd>prcheck-verifiers at <span className="mono">{text(field(proof, 'verifiersCommit'))}</span>{runUrl ? <> · <a href={runUrl} target="_blank" rel="noreferrer">GitHub run</a></> : null}</dd>
+        <dt>Rules</dt><dd>{text(field(proof, 'rulesRepository')) || 'Rules snapshot'} at <span className="mono">{text(field(proof, 'rulesCommit'))}</span> · snapshot <span className="mono">{text(field(proof, 'snapshotDigest'))}</span></dd>
+        <dt>Checks</dt><dd>{text(field(proof, 'testsRepository')) || 'Test automation repository'} at <span className="mono">{text(field(proof, 'verifiersCommit'))}</span>{runUrl ? <> · <a href={runUrl} target="_blank" rel="noreferrer">GitHub run</a></> : null}</dd>
         <dt>Evidence SHA-256</dt><dd className="mono">{text(field(proof, 'evidenceSha256'))}</dd>
         <dt>Checks ran</dt><dd>{formatDate(field(proof, 'startedAt'))} – {formatDate(field(proof, 'finishedAt'))}</dd>
       </dl>

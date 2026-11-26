@@ -211,7 +211,8 @@ async function show(target: Route, current: () => boolean): Promise<void> {
     case 'resolution': return resolution().showItem(target.id);
     case 'intake': return intake().show(target.repositoryKey, target.pullNumber);
     case 'pr-assurance': return prAssurance().show();
-    case 'pr-assurance-pull': return prAssurance().showPull(target.number);
+    case 'pr-assurance-app': return prAssurance().showApplication(target.applicationId);
+    case 'pr-assurance-pull': return prAssurance().showPull(target.applicationId, target.number);
     case 'pr-assurance-run': return prAssurance().showRun(target.runId);
     case 'applications': return workspace().showApplications();
     case 'application':
@@ -264,6 +265,9 @@ async function handleAction(button: HTMLElement, active: ActiveCheck): Promise<v
       break;
     case 'new-application': ui().openNewApplication(); break;
     case 'new-change': ui().openNewChange(data['app']); break;
+    case 'archive-application': ui().openArchiveApplication(data['id']!, true); break;
+    case 'restore-application': ui().openArchiveApplication(data['id']!, false); break;
+    case 'connect-github': ui().openConnectGitHub(data['id']!); break;
     case 'new-revision': ui().openNewRevision(); break;
     case 'review-submit': ui().openReview(data['id']!, 'SUBMIT'); break;
     case 'review-withdraw': ui().openReview(data['id']!, 'WITHDRAW'); break;

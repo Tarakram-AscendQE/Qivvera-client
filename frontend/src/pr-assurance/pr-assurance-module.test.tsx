@@ -26,11 +26,14 @@ const pull6 = {
   pullNumber: 6, title: '<img src=x onerror=alert(1)>', headRef: 'feature/VP-184-v1-initial', headSha: 'af51c26b0b9f94894cccfaa5b0fb893221952c65',
   url: 'https://github.com/prcheck-live/vendorpay-app/pull/6', importedAt: '2026-11-26T09:00:00Z', importedBy: 'author@example.test'
 };
+const APP = '0b7c2f8e-1d2a-4c3b-9e8f-7a6b5c4d3e2f';
+const PATH = `/api/pr-assurance/applications/${APP}`;
+const connection = { app: { repository: 'prcheck-live/vendorpay-app' }, tests: { repository: 'prcheck-live/prcheck-verifiers', ref: 'main' }, profiles: { repository: 'prcheck-live/vendorpay-policies' } };
 const scenario = (overrides: Record<string, unknown> = {}) => ({
-  application: 'VendorPay', repository: 'prcheck-live/vendorpay-app', change: 'VP-184 · Bank change',
+  application: { id: APP, name: 'VendorPay' }, repository: 'prcheck-live/vendorpay-app', connection, credentialsReady: true,
   githubTokenConfigured: true, canEvaluate: true,
   rules: { repository: 'prcheck-live/vendorpay-policies', commit: 'e408884988ad27d6e0776700c4e268d4bf86ad9d', snapshotDigest: 'sha256:' + 'f'.repeat(64), profile: { id: 'payments-critical', title: 'Payments: critical financial controls' }, policies: 6, obligations: 14 },
-  pulls: [{ number: 6, pull: pull6, latestRun: null }, { number: 7, pull: null, latestRun: null }, { number: 8, pull: null, latestRun: null }],
+  pulls: [{ number: 6, pull: pull6, latestRun: null }],
   ...overrides
 });
 
@@ -52,23 +55,73 @@ beforeEach(() => {
   state = { session: { email: 'author@example.test', roles: ['AUTHOR'] } };
   document.body.innerHTML = '<div id="root"></div>';
   shell.mockClear();
-  location.hash = '#/pr-assurance';
+  location.hash = `#/pr-assurance/apps/${APP}`;
 });
 afterEach(() => shell.reset());
 
 describe('PR assurance timeline', () => {
-  it('shows the three pull requests in order and the rules they are assured against', async () => {
-    setup(async () => scenario());
-    await ui.show();
+  it('shows the application\'s imported pull requests in order and the rules they are assured against', async () => {
+    setup(async () => scenario({ pulls: [6, 7, 8].map(n => ({ number: n, pull: imported(n), latestRun: null })) }));
+    await ui.showApplication(APP);
     expect(shell).toHaveBeenCalledWith(expect.anything(), 'pr-assurance', 'PR assurance');
+    expect(api).toHaveBeenCalledWith(PATH);
     expect([...document.querySelectorAll('[data-pull]')].map(e => e.getAttribute('data-pull'))).toEqual(['6', '7', '8']);
     expect(screen.getByText(/6 rules · 14 obligations/)).toBeTruthy();
-    expect(within(card(7)).getByText('Not imported')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('VendorPay');
+    expect(document.querySelector('.sub')!.textContent).toMatch(/^Pull request assurance for prcheck-live\/vendorpay-app\./);
+    expect(within(card(6)).getByRole('link', { name: 'Open' }).getAttribute('href')).toBe(`#/pr-assurance/apps/${APP}/pulls/6`);
+  });
+
+  it('with nothing imported yet, says so and offers the open pull requests on GitHub only when asked', async () => {
+    setup(async path => (path === PATH ? scenario({ pulls: [] }) : path.endsWith('/github-pulls') ? [{ number: 6, title: 'v1', headRef: 'feature/v1', imported: false }, { number: 7, title: 'v2', headRef: 'feature/v2', imported: true }] : {}));
+    await ui.showApplication(APP);
+    expect(screen.getByText('No pull requests imported yet')).toBeTruthy();
+    expect(api).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Show open pull requests' }));
+    await waitFor(() => expect(document.querySelectorAll('[data-github-pull]')).toHaveLength(2));
+    expect(api).toHaveBeenCalledWith(`${PATH}/github-pulls`);
+    const seven = document.querySelector<HTMLElement>('[data-github-pull="7"]')!;
+    expect(within(seven).getByText('Imported')).toBeTruthy();
+    fireEvent.click(within(document.querySelector<HTMLElement>('[data-github-pull="6"]')!).getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(route).toHaveBeenCalledTimes(1));
+    expect(api).toHaveBeenCalledWith(`${PATH}/pulls/6/import`, { method: 'POST' });
+  });
+
+  it('imports every open pull request not yet imported with one button, in order, then redraws once', async () => {
+    setup(async path => (path === PATH ? scenario() : path.endsWith('/github-pulls')
+      ? [8, 6, 7].map(number => ({ number, title: `v${number}`, headRef: 'f', imported: number === 6 })) : {}));
+    await ui.showApplication(APP);
+    fireEvent.click(screen.getByRole('button', { name: 'Import all from GitHub' }));
+    await waitFor(() => expect(route).toHaveBeenCalledTimes(1));
+    expect(api.mock.calls.filter(([, o]) => o?.method === 'POST').map(([path]) => path)).toEqual([`${PATH}/pulls/7/import`, `${PATH}/pulls/8/import`]);
+    expect(toast).toHaveBeenCalledWith('All 2 pull requests imported from GitHub. Nothing has been evaluated yet.');
+  });
+
+  it('import all stops at the first refusal and says which pull request', async () => {
+    setup(async path => {
+      if (path === PATH) return scenario({ pulls: [] });
+      if (path.endsWith('/github-pulls')) return [6, 7].map(number => ({ number, imported: false }));
+      if (path.endsWith('/import')) throw new Error('GitHub refused this request. The token needs Pull requests: read on prcheck-live/vendorpay-app.');
+      return {};
+    });
+    await ui.showApplication(APP);
+    fireEvent.click(screen.getByRole('button', { name: 'Import all from GitHub' }));
+    await waitFor(() => expect(screen.getByText(/^PR #6: GitHub refused this request/)).toBeTruthy());
+    expect(api.mock.calls.filter(([, o]) => o?.method === 'POST')).toHaveLength(1);
+    expect(route).not.toHaveBeenCalled();
+  });
+
+  it('an application that is not connected to GitHub links to its settings and offers no import', async () => {
+    setup(async () => scenario({ connection: null, githubTokenConfigured: false, rules: null, pulls: [] }));
+    await ui.showApplication(APP);
+    expect(screen.getByText('This application is not connected to GitHub.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Add its repositories and token' }).getAttribute('href')).toBe(`#/applications/${APP}`);
+    expect(screen.queryByRole('button', { name: /Import|Show open/ })).toBeNull();
   });
 
   it('shows an imported pull request as text, with its branch, short commit and GitHub link', async () => {
     setup(async () => scenario());
-    await ui.show();
+    await ui.showApplication(APP);
     expect(within(card(6)).getByRole('heading').textContent).toBe('<img src=x onerror=alert(1)>');
     expect(document.querySelector('img')).toBeNull();
     expect(within(card(6)).getByText('af51c26')).toBeTruthy();
@@ -76,43 +129,43 @@ describe('PR assurance timeline', () => {
     expect([link.getAttribute('href'), link.getAttribute('rel')]).toEqual([pull6.url, 'noreferrer']);
   });
 
-  it('imports a pull request by number only, then redraws the page', async () => {
-    setup(async path => (path === '/api/pr-assurance' ? scenario() : { pullNumber: 7 }));
-    await ui.show();
-    fireEvent.click(within(card(7)).getByRole('button', { name: 'Import from GitHub' }));
+  it('re-imports a pull request by number only, then redraws the page', async () => {
+    setup(async path => (path === PATH ? scenario() : { pullNumber: 6 }));
+    await ui.showApplication(APP);
+    fireEvent.click(within(card(6)).getByRole('button', { name: 'Re-import from GitHub' }));
     await waitFor(() => expect(route).toHaveBeenCalledTimes(1));
-    expect(api).toHaveBeenCalledWith('/api/pr-assurance/pulls/7/import', { method: 'POST' });
-    expect(toast).toHaveBeenCalledWith('PR #7 imported from GitHub. Nothing has been evaluated yet.');
+    expect(api).toHaveBeenCalledWith(`${PATH}/pulls/6/import`, { method: 'POST' });
+    expect(toast).toHaveBeenCalledWith('PR #6 imported from GitHub. Nothing has been evaluated yet.');
   });
 
   it('a second click while an import is in flight sends nothing more', async () => {
     const pending = deferred<unknown>();
-    setup(path => (path === '/api/pr-assurance' ? Promise.resolve(scenario()) : pending.promise));
-    await ui.show();
-    const button = within(card(7)).getByRole('button', { name: 'Import from GitHub' });
+    setup(path => (path === PATH ? Promise.resolve(scenario()) : pending.promise));
+    await ui.showApplication(APP);
+    const button = within(card(6)).getByRole('button', { name: 'Re-import from GitHub' });
     fireEvent.click(button);
     fireEvent.click(button);
     pending.resolve({});
     await waitFor(() => expect(route).toHaveBeenCalledTimes(1));
-    expect(api.mock.calls.filter(([path]) => path !== '/api/pr-assurance')).toHaveLength(1);
+    expect(api.mock.calls.filter(([path]) => path !== PATH)).toHaveLength(1);
   });
 
   it('a failed import is explained on that card and nothing is redrawn', async () => {
     setup(async path => {
-      if (path === '/api/pr-assurance') return scenario();
+      if (path === PATH) return scenario();
       throw new Error('GitHub refused this request. The token needs Pull requests: read.');
     });
-    await ui.show();
-    fireEvent.click(within(card(8)).getByRole('button', { name: 'Import from GitHub' }));
-    await waitFor(() => expect(within(card(8)).getByRole('alert').textContent).toMatch(/Pull requests: read/));
+    await ui.showApplication(APP);
+    fireEvent.click(within(card(6)).getByRole('button', { name: 'Re-import from GitHub' }));
+    await waitFor(() => expect(within(card(6)).getByRole('alert').textContent).toMatch(/Pull requests: read/));
     expect(route).not.toHaveBeenCalled();
   });
 
   it('an import answer that arrives after the visit ended changes nothing', async () => {
     const pending = deferred<unknown>();
-    setup(path => (path === '/api/pr-assurance' ? Promise.resolve(scenario()) : pending.promise));
-    await ui.show();
-    fireEvent.click(within(card(7)).getByRole('button', { name: 'Import from GitHub' }));
+    setup(path => (path === PATH ? Promise.resolve(scenario()) : pending.promise));
+    await ui.showApplication(APP);
+    fireEvent.click(within(card(6)).getByRole('button', { name: 'Re-import from GitHub' }));
     ui.invalidate();
     pending.resolve({});
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -121,21 +174,21 @@ describe('PR assurance timeline', () => {
 
   it('a viewer sees the pull requests but no import button', async () => {
     setup(async () => scenario({ canEvaluate: false }));
-    await ui.show();
+    await ui.showApplication(APP);
     expect(screen.queryByRole('button', { name: /Import/ })).toBeNull();
   });
 
-  it('without a GitHub token the page says so and offers no import', async () => {
-    setup(async () => scenario({ githubTokenConfigured: false }));
-    await ui.show();
-    expect(screen.getByText('No GitHub token is configured.')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Import/ })).toBeNull();
+  it('without the deployer\'s encryption key the page says so and offers no import', async () => {
+    setup(async () => scenario({ credentialsReady: false }));
+    await ui.showApplication(APP);
+    expect(screen.getByText('GitHub tokens cannot be used yet.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Import|Show open/ })).toBeNull();
   });
 
   it('an answer for a page the user already left is not drawn', async () => {
     const pending = deferred<unknown>();
     setup(() => pending.promise);
-    const showing = ui.show();
+    const showing = ui.showApplication(APP);
     location.hash = '#/changes';
     pending.resolve(scenario());
     await showing;
@@ -144,24 +197,25 @@ describe('PR assurance timeline', () => {
 
   it('shows 2 → 1 → 0 broken rules once all three pull requests have a result', async () => {
     setup(async () => scenario({ obligations, pulls: [report6, report7, report8].map((report, i) => ({ number: 6 + i, pull: imported(6 + i), latestRun: null, result: resultFrom(report) })) }));
-    await ui.show();
+    await ui.showApplication(APP);
     expect(screen.getByLabelText('Progression').textContent).toBe('2 → 1 → 0 rules broken');
     expect(card(6).querySelector('.pr-count')!.textContent).toBe('2 rules broken');
     expect(card(8).querySelector('.pr-count')!.textContent).toBe('0 rules broken');
   });
 
   it('a pull request without a completed result shows "Not evaluated", never a count', async () => {
-    setup(async () => scenario({ obligations, pulls: [{ number: 6, pull: imported(6), latestRun: { status: 'RUNNING' }, result: null }, { number: 7, pull: null, latestRun: null, result: null }, { number: 8, pull: null, latestRun: null, result: null }] }));
-    await ui.show();
+    setup(async () => scenario({ obligations, pulls: [{ number: 6, pull: imported(6), latestRun: { status: 'RUNNING' }, result: null }, { number: 7, pull: imported(7), latestRun: null, result: null }] }));
+    await ui.showApplication(APP);
     expect(within(card(6)).getByText('Not evaluated')).toBeTruthy();
     expect(within(card(6)).getByText('Evaluation running')).toBeTruthy();
+    expect(within(card(7)).getByText('Not evaluated')).toBeTruthy();
     expect(screen.queryByLabelText('Progression')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
   });
 
   it('compares each obligation across the pull requests and marks what is now supported', async () => {
     setup(async () => scenario({ obligations, pulls: [report6, report7, report8].map((report, i) => ({ number: 6 + i, pull: imported(6 + i), latestRun: null, result: resultFrom(report) })) }));
-    await ui.show();
+    await ui.showApplication(APP);
     const row = (id: string) => [...document.querySelector(`tr[data-obligation="${id}"]`)!.querySelectorAll('td')].slice(1).map(td => td.textContent);
     expect(row('FIN-001.1')).toEqual(['VIOLATED', 'SUPPORTED', 'SUPPORTED', 'Now supported']);
     expect(row('FIN-002.1')).toEqual(['VIOLATED', 'VIOLATED', 'SUPPORTED', 'Now supported']);
@@ -170,9 +224,39 @@ describe('PR assurance timeline', () => {
   });
 
   it('a result whose stored evidence failed its check shows no count', async () => {
-    setup(async () => scenario({ obligations, pulls: [{ number: 6, pull: imported(6), latestRun: null, result: { runId: 'run', integrityFailed: true, reason: 'EVIDENCE_DIGEST_MISMATCH' } }, { number: 7, pull: null, latestRun: null, result: null }, { number: 8, pull: null, latestRun: null, result: null }] }));
-    await ui.show();
+    setup(async () => scenario({ obligations, pulls: [{ number: 6, pull: imported(6), latestRun: null, result: { runId: 'run', integrityFailed: true, reason: 'EVIDENCE_DIGEST_MISMATCH' } }] }));
+    await ui.showApplication(APP);
     expect(within(card(6)).getByText(/failed its integrity check/)).toBeTruthy();
     expect(card(6).querySelector('.pr-count')).toBeNull();
+  });
+});
+
+describe('PR assurance: choosing an application', () => {
+  const OTHER = 'b1b1b1b1-0000-4000-8000-000000000000';
+  const overview = {
+    canEvaluate: true, credentialsReady: true,
+    applications: [
+      { id: OTHER, name: 'Billing', connection: null },
+      { id: APP, name: 'VendorPay', connection: { ...connection, rules: { policies: 6, obligations: 14 } } },
+    ],
+  };
+  beforeEach(() => { location.hash = '#/pr-assurance'; });
+
+  it('lists connected applications first, each opening its own page; others link to their settings', async () => {
+    setup(async () => overview);
+    await ui.show();
+    expect(api).toHaveBeenCalledWith('/api/pr-assurance');
+    const cards = [...document.querySelectorAll<HTMLElement>('[data-application]')];
+    expect(cards.map(c => c.getAttribute('data-application'))).toEqual([APP, OTHER]);
+    expect(within(cards[0]!).getByRole('link', { name: 'VendorPay' }).getAttribute('href')).toBe(`#/pr-assurance/apps/${APP}`);
+    expect(within(cards[0]!).getByText('6 rules · 14 obligations')).toBeTruthy();
+    expect(within(cards[1]!).getByText('Not connected')).toBeTruthy();
+    expect(within(cards[1]!).getByRole('link', { name: 'Connect to GitHub →' }).getAttribute('href')).toBe(`#/applications/${OTHER}`);
+  });
+
+  it('with no applications, points to registering one', async () => {
+    setup(async () => ({ ...overview, applications: [] }));
+    await ui.show();
+    expect(screen.getByText('No applications yet')).toBeTruthy();
   });
 });

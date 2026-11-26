@@ -209,3 +209,28 @@ input,textarea,select{border-radius:var(--radius-sm)}
   .task .button{width:100%}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Application cards with a "more actions" menu (archive / restore). */
+.app-card{position:relative;box-shadow:var(--shadow);transition:border-color .15s ease-out}
+.app-card:hover{border-color:#cbd5e1}
+.app-card h2{font-size:18px;margin:14px 0 6px}
+.app-link{color:var(--ink)}
+.app-link::after{content:"";position:absolute;inset:0;border-radius:inherit}
+.app-link:hover{color:var(--teal-strong);text-decoration:none}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-tools{display:flex;align-items:center;gap:6px;position:relative;z-index:1}
+.app-card.archived{background:#fafbfc}
+.app-card.archived h2,.app-card.archived p{color:var(--muted)}
+.app-menu{position:relative}
+.icon-button{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border:1px solid transparent;border-radius:var(--radius-sm);background:none;color:var(--ink-2)}
+.icon-button:hover,.icon-button[aria-expanded="true"]{background:var(--draft-bg);border-color:var(--line)}
+.icon-button svg{width:20px;height:20px}
+.menu{position:absolute;right:0;top:calc(100% + 6px);min-width:200px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12);z-index:10}
+.menu [role="menuitem"]{display:block;width:100%;text-align:left;padding:10px 12px;border:0;border-radius:6px;background:none;font-size:14px;font-weight:500;color:var(--ink)}
+.menu [role="menuitem"]:hover,.menu [role="menuitem"]:focus-visible{background:var(--draft-bg)}
+.menu [role="menuitem"].danger{color:var(--bad-fg)}
+.heading .actions{align-items:center}
+
+/* GitHub token field in dialogs: room for the Show/Hide control so a long token never runs under it. */
+.modal-body .input-with-eye input{padding-right:64px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px}
+.modal-body .eye-btn{font-size:12px;font-weight:600}

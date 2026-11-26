@@ -4,6 +4,7 @@ import { field, list } from '../json';
 import type { Api, Reroute, Shell, ShellState, Toast } from '../shell-contract';
 import { createQueryClient } from '../query-client';
 import { createVisits } from '../visits';
+import { ApplicationsPage } from './ApplicationsPage';
 import { PullPage, RunPage } from './PullPage';
 import { TimelinePage } from './TimelinePage';
 
@@ -16,17 +17,20 @@ export interface PrAssuranceBridge {
 }
 
 export interface PrAssuranceUI {
+  /** Choose an application. */
   show(): Promise<void>;
-  showPull(number: number): Promise<void>;
+  /** One application's pull requests. */
+  showApplication(applicationId: string): Promise<void>;
+  showPull(applicationId: string, number: number): Promise<void>;
   showRun(runId: string): Promise<void>;
   /** Ends the current visit: late answers from it are ignored. Called when a route starts. */
   invalidate(): void;
 }
 
 /**
- * The PR assurance demo: VendorPay's three pull requests, assessed by Qivvera's own checks on GitHub
- * Actions. The browser only ever sends a pull-request number and a request key; the server pins
- * everything else.
+ * PR assurance per application: each application's pull requests, assessed by its own test automation
+ * repository on GitHub Actions, with its own token. The browser only ever sends an application id, a
+ * pull-request number and a request key; the server holds the repositories and the token.
  */
 export function createPrAssuranceUI(bridge: PrAssuranceBridge): PrAssuranceUI {
   const visits = createVisits(bridge.S);
@@ -41,15 +45,21 @@ export function createPrAssuranceUI(bridge: PrAssuranceBridge): PrAssuranceUI {
     bridge.shell(<QueryClientProvider client={client}>{draw(active)}</QueryClientProvider>, 'pr-assurance', 'PR assurance');
   }
   const get = (client: ReturnType<typeof createQueryClient>, path: string) => client.fetchQuery({ queryKey: [path], queryFn: () => bridge.api(path) });
+  const scenarioPath = (applicationId: string) => `/api/pr-assurance/applications/${applicationId}`;
 
   return {
     show: () => visit('#/pr-assurance', async client => {
-      const scenario = await get(client, '/api/pr-assurance');
+      const overview = await get(client, '/api/pr-assurance');
+      return () => <ApplicationsPage overview={overview} />;
+    }),
+
+    showApplication: applicationId => visit(`#/pr-assurance/apps/${applicationId}`, async client => {
+      const scenario = await get(client, scenarioPath(applicationId));
       return active => <TimelinePage bridge={bridge} scenario={scenario} active={active} />;
     }),
 
-    showPull: number => visit(`#/pr-assurance/pulls/${number}`, async client => {
-      const [scenario, history] = await Promise.all([get(client, '/api/pr-assurance'), get(client, `/api/pr-assurance/pulls/${number}/runs`)]);
+    showPull: (applicationId, number) => visit(`#/pr-assurance/apps/${applicationId}/pulls/${number}`, async client => {
+      const [scenario, history] = await Promise.all([get(client, scenarioPath(applicationId)), get(client, `${scenarioPath(applicationId)}/pulls/${number}/runs`)]);
       const latest = list(history)[0];
       const view = latest ? await get(client, `/api/pr-assurance/runs/${String(field(latest, 'id'))}`) : null;
       return active => <PullPage bridge={bridge} number={number} scenario={scenario} history={list(history)} latest={view} active={active} />;

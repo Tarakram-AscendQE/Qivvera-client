@@ -14,6 +14,8 @@ if (!process.env.DATABASE_URL) {
   const { startPostgresContainer } = await import('./postgres-container.mjs');
   const container = await startPostgresContainer({ label: 'qivvera-dev', database: 'qivvera' });
   Object.assign(process.env, { DATABASE_URL: container.adminUrl, DATABASE_SSL_MODE: 'disable', QIVVERA_MIGRATE_LOCAL: 'true' });
+  // The data (and any GitHub token saved in it) is thrown away on stop, so a throwaway encryption key is enough.
+  if (!process.env.QIVVERA_CREDENTIAL_KEY) process.env.QIVVERA_CREDENTIAL_KEY = (await import('node:crypto')).randomBytes(32).toString('base64');
   process.on('exit', container.stop);
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => process.exit(0));
   console.log('  Using a temporary local PostgreSQL (Docker). Its data is removed when you stop.');

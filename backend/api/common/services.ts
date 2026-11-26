@@ -52,9 +52,13 @@ export interface WorkflowRepository {
   listChanges(): Promise<readonly ChangeRecord[]>;
   listActivity(): Promise<unknown>;
   exportWorkspace(): Promise<unknown>;
-  createApplication(input: unknown, actor: Session): Promise<unknown>;
+  /** `within` runs on the same transaction after the application row is written (used to save its GitHub connection). */
+  createApplication(input: unknown, actor: Session, options?: { within?: (client: unknown, application: { id: string }) => Promise<void> }): Promise<unknown>;
   createChange(input: unknown, actor: Session): Promise<unknown>;
   getApplication(id: string): Promise<unknown>;
+  /** Hide or show an application; history is never removed. */
+  archiveApplication(id: string, input: unknown, actor: Session): Promise<unknown>;
+  restoreApplication(id: string, input: unknown, actor: Session): Promise<unknown>;
   getChange(id: string, revisionId?: string): Promise<ChangeRecord | null>;
   addObligation(changeId: string, input: unknown, actor: Session): Promise<unknown>;
   editObligation(id: string, input: unknown, actor: Session): Promise<unknown>;
@@ -125,14 +129,37 @@ export interface IntakeRepository {
   listSourceEvents(applicationId: string, session: Session): Promise<unknown>;
 }
 
-/** backend/server/pr-assurance/service.mjs: the PR assurance demo add-on (GitHub Actions runs). */
+/** A GitHub connection as pages see it: repositories, their ids and the rules source. Never the token. */
+export interface PrAssuranceConnection {
+  readonly applicationId: string;
+  readonly app: { readonly repository: string; readonly repositoryId: number };
+  readonly tests: { readonly repository: string; readonly repositoryId: number; readonly ref: string };
+  readonly profiles: { readonly repository: string; readonly repositoryId: number; readonly commit: string };
+  readonly rules: unknown;
+  readonly configuredBy: string;
+  readonly configuredAt: string;
+}
+
+/** Checked with GitHub; `save` encrypts the token for the new application id and writes on the caller's transaction. */
+export interface PreparedConnection {
+  readonly summary: unknown;
+  save(client: unknown, applicationId: string): Promise<void>;
+}
+
+/** backend/server/pr-assurance/service.mjs: PR assurance per application (each with its own GitHub token). */
 export interface PrAssuranceService {
-  scenario(session: Session): Promise<unknown>;
-  importPull(pullNumber: number, session: Session): Promise<unknown>;
-  startRun(pullNumber: number, input: unknown, session: Session): Promise<unknown>;
+  readonly credentialsReady: boolean;
+  prepareConnection(input: unknown, session: Session, role?: string): Promise<PreparedConnection>;
+  connect(applicationId: string, input: unknown, session: Session): Promise<unknown>;
+  connections(): Promise<Map<string, PrAssuranceConnection>>;
+  overview(applications: readonly { readonly id: string; readonly name?: unknown; readonly description?: unknown; readonly archived?: boolean }[], session: Session): Promise<unknown>;
+  scenario(application: { readonly id: string; readonly name?: unknown }, session: Session): Promise<unknown>;
+  githubPulls(applicationId: string, session: Session): Promise<unknown>;
+  importPull(applicationId: string, pullNumber: number, session: Session): Promise<unknown>;
+  startRun(applicationId: string, pullNumber: number, input: unknown, session: Session): Promise<unknown>;
   getRun(runId: string, session: Session): Promise<unknown>;
   syncRun(runId: string, session: Session): Promise<unknown>;
-  listRuns(pullNumber: number, session: Session): Promise<unknown>;
+  listRuns(applicationId: string, pullNumber: number, session: Session): Promise<unknown>;
 }
 
 export interface Services {

@@ -1,5 +1,11 @@
 # PR assurance demo: deployment and demo notes
 
+> **Changed 2026-11-26:** the GitHub token is no longer an environment variable. Each application is
+> registered (or connected) in the UI with its own repositories and token, stored encrypted. Read
+> [pr-assurance-applications.md](pr-assurance-applications.md) first; where this page mentions
+> `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN`, use **VendorPay → Connect to GitHub** instead, and PR pages are now
+> under `#/pr-assurance/apps/<application id>/…`.
+
 For: the deployer (Vercel + Neon) and the presenter on Friday 2026-11-27.
 Spec: [spec/SPEC-pr-assurance-demo.md](../spec/SPEC-pr-assurance-demo.md).
 

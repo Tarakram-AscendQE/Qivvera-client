@@ -18,8 +18,17 @@ export interface WorkspaceChange {
   readonly draftCount?: number;
 }
 export interface WorkspaceActivity { readonly action: unknown; readonly detail?: unknown; readonly createdAt: unknown; readonly actor?: unknown; readonly entityId?: unknown }
+/** An application's GitHub connection as the workspace summary carries it (PR assurance on). Never a token. */
+export interface GitHubConnectionView {
+  readonly app?: { readonly repository?: unknown };
+  readonly tests?: { readonly repository?: unknown; readonly ref?: unknown };
+  readonly profiles?: { readonly repository?: unknown; readonly commit?: unknown };
+  readonly rules?: { readonly source?: unknown; readonly repository?: unknown; readonly commit?: unknown; readonly policies?: unknown; readonly obligations?: unknown } | null;
+  readonly configuredBy?: unknown;
+  readonly configuredAt?: unknown;
+}
 export interface WorkspaceSummary {
-  readonly applications: readonly { readonly id: string; readonly name?: unknown; readonly repositoryUrl?: unknown; readonly createdAt?: unknown }[];
+  readonly applications: readonly { readonly id: string; readonly name?: unknown; readonly repositoryUrl?: unknown; readonly createdAt?: unknown; readonly archived?: boolean; readonly archivedAt?: unknown; readonly archivedBy?: unknown; readonly github?: GitHubConnectionView | null }[];
   readonly changes: readonly WorkspaceChange[];
   readonly activity: readonly WorkspaceActivity[];
 }
@@ -50,7 +59,7 @@ export function ChangeRows({ changes, workspace, canAuthor }: { changes: readonl
 }
 
 const ACTIVITY_LABELS: Readonly<Record<string, string>> = {
-  APPLICATION_CREATED: 'Application registered', CHANGE_CREATED: 'Change created', REVISION_CREATED: 'New revision recorded',
+  APPLICATION_CREATED: 'Application registered', APPLICATION_ARCHIVED: 'Application archived', APPLICATION_RESTORED: 'Application restored', APPLICATION_GITHUB_CONNECTED: 'GitHub access saved', CHANGE_CREATED: 'Change created', REVISION_CREATED: 'New revision recorded',
   OBLIGATION_PROPOSED: 'Candidate obligation added', OBLIGATION_UPDATED: 'Candidate draft updated',
   OBLIGATION_SUBMIT: 'Sent for review', OBLIGATION_WITHDRAW: 'Review request withdrawn', OBLIGATION_ACCEPT: 'Requirement accepted',
   OBLIGATION_REJECT: 'Requirement rejected', OBLIGATION_REQUEST_CLARIFICATION: 'Clarification requested',
@@ -75,4 +84,11 @@ const readableDetail = (detail: unknown): string => text(detail).replace(/^(IN_R
 export function ActivityRows({ items }: { items: readonly WorkspaceActivity[] }) {
   if (!items.length) return <p className="small muted">Your saved actions will appear here. No activity has been recorded yet.</p>;
   return <>{items.map((item, index) => <div className="activity" key={index}><strong>{activityLabel(item.action)}</strong><p>{item.action === 'OBLIGATION_UPDATED' ? 'Previous draft retained in activity record.' : readableDetail(item.detail)}</p><p>{formatDate(item.createdAt)} · {text(item.actor)}</p></div>)}</>;
+}
+
+/** The workspace without archived applications and their changes (archived records stay reachable by link). */
+export function activeWorkspace<W extends WorkspaceSummary>(workspace: W): W {
+  const archived = new Set(workspace.applications.filter(app => app.archived).map(app => app.id));
+  if (!archived.size) return workspace;
+  return { ...workspace, applications: workspace.applications.filter(app => !archived.has(app.id)), changes: workspace.changes.filter(change => !archived.has(String(change.applicationId))) };
 }

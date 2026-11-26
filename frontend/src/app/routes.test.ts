@@ -12,9 +12,10 @@ describe('routes', () => {
     expect(parseRoute('#/pr-assurance', on)).toEqual({ kind: 'pr-assurance' });
     expect(parseRoute('#/pr-assurance', none)).toEqual({ kind: 'error', message: 'PR assurance is not enabled in this workspace.' });
     expect(parseRoute('#/pr-assurance/extra', on)).toMatchObject({ kind: 'error' });
-    expect(parseRoute('#/pr-assurance/pulls/7', on)).toEqual({ kind: 'pr-assurance-pull', number: 7 });
+    expect(parseRoute(`#/pr-assurance/apps/${b}`, on)).toEqual({ kind: 'pr-assurance-app', applicationId: b });
+    expect(parseRoute(`#/pr-assurance/apps/${b}/pulls/7`, on)).toEqual({ kind: 'pr-assurance-pull', applicationId: b, number: 7 });
     expect(parseRoute(`#/pr-assurance/runs/${a}`, on)).toEqual({ kind: 'pr-assurance-run', runId: a });
-    for (const link of ['#/pr-assurance/pulls/07', '#/pr-assurance/pulls/x', '#/pr-assurance/runs/not-an-id', '#/pr-assurance/pulls/7/more'])
+    for (const link of ['#/pr-assurance/pulls/7', `#/pr-assurance/apps/${b}/pulls/07`, `#/pr-assurance/apps/${b}/pulls/x`, '#/pr-assurance/apps/not-an-id', '#/pr-assurance/runs/not-an-id', `#/pr-assurance/apps/${b}/pulls/7/more`])
       expect(parseRoute(link, on)).toMatchObject({ kind: 'error' });
   });
   it.each([

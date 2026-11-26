@@ -32,6 +32,8 @@ import { assuranceContext } from './endpoints/assurance/assurance-context.js';
 import { requestAssessment } from './endpoints/assurance/request-assessment.js';
 import { createApplication } from './endpoints/applications/create-application.js';
 import { getApplication } from './endpoints/applications/get-application.js';
+import { archiveApplication } from './endpoints/applications/archive-application.js';
+import { restoreApplication } from './endpoints/applications/restore-application.js';
 import { listApplications } from './endpoints/applications/list-applications.js';
 import { createChange } from './endpoints/changes/create-change.js';
 import { createRevision } from './endpoints/changes/create-revision.js';
@@ -62,6 +64,9 @@ import { health } from './endpoints/system/health.js';
 import { exportWorkspace } from './endpoints/workspace/export-workspace.js';
 import { getWorkspace } from './endpoints/workspace/get-workspace.js';
 import { getPrAssurance } from './endpoints/pr-assurance/get-scenario.js';
+import { getPrAssuranceOverview } from './endpoints/pr-assurance/get-overview.js';
+import { listGitHubPulls } from './endpoints/pr-assurance/list-github-pulls.js';
+import { connectGitHub } from './endpoints/applications/connect-github.js';
 import { importPull } from './endpoints/pr-assurance/import-pull.js';
 import { startRun } from './endpoints/pr-assurance/start-run.js';
 import { getRun } from './endpoints/pr-assurance/get-run.js';
@@ -107,6 +112,8 @@ export const workspaceRoutes: readonly Route[] = [
   post('/api/applications', createApplication),
   post('/api/changes', createChange),
   get('/api/applications/:applicationId', getApplication),
+  post('/api/applications/:applicationId/archive', archiveApplication),
+  post('/api/applications/:applicationId/restore', restoreApplication),
   get('/api/changes/:changeId', getChange),
   post('/api/changes/:changeId/obligations', addObligation),
   patch('/api/obligations/:obligationId', editObligation),
@@ -176,13 +183,17 @@ export const workspaceRoutes: readonly Route[] = [
     get('/api/applications/:applicationId/source-events', listSourceEvents)
   ]),
 
-  // PR assurance demo add-on (only when switched on). The browser sends only a PR number: the
-  // repositories, the workflow and every commit are pinned or read from GitHub by the server.
+  // PR assurance add-on (only when switched on), per application. The browser sends an application id
+  // and a PR number: each application's repositories and token are stored by the server, and every
+  // commit is read from GitHub by the server.
   ...onlyWhen(({ prAssurance }) => !!prAssurance, [
-    get('/api/pr-assurance', getPrAssurance),
-    post('/api/pr-assurance/pulls/:pullNumber/import', importPull),
-    post('/api/pr-assurance/pulls/:pullNumber/runs', startRun),
-    get('/api/pr-assurance/pulls/:pullNumber/runs', listRuns),
+    post('/api/applications/:applicationId/github', connectGitHub),
+    get('/api/pr-assurance', getPrAssuranceOverview),
+    get('/api/pr-assurance/applications/:applicationId', getPrAssurance),
+    get('/api/pr-assurance/applications/:applicationId/github-pulls', listGitHubPulls),
+    post('/api/pr-assurance/applications/:applicationId/pulls/:pullNumber/import', importPull),
+    post('/api/pr-assurance/applications/:applicationId/pulls/:pullNumber/runs', startRun),
+    get('/api/pr-assurance/applications/:applicationId/pulls/:pullNumber/runs', listRuns),
     get('/api/pr-assurance/runs/:runId', getRun),
     post('/api/pr-assurance/runs/:runId/sync', syncRun)
   ])

@@ -1,28 +1,24 @@
 /**
- * The PR assurance demo's fixed scenario. Nothing here comes from a browser: repositories, their
- * GitHub ids, the workflow and the three pull requests are pinned. Repository ids are checked on every
- * answer, so a renamed or replaced repository is not silently trusted.
+ * PR assurance settings that are the same for every application. Everything application-specific
+ * (its three repositories and its GitHub token) is registered in the UI and stored per application;
+ * nothing here comes from a browser.
  */
-export const SCENARIO = Object.freeze({
-  application: 'VendorPay',
-  change: "VP-184 · Let Procurement change a supplier's bank account",
-  app: Object.freeze({ owner: 'prcheck-live', repo: 'vendorpay-app', repositoryId: 1440617142 }),
-  verifiers: Object.freeze({
-    owner: 'prcheck-live', repo: 'prcheck-verifiers', repositoryId: 1440617261,
-    workflow: 'qivvera-pr-assessment.yml', ref: 'main',
-  }),
-  pulls: Object.freeze([6, 7, 8]),
-  /** The fine-grained token is read from this variable when needed; it is never stored or returned. */
-  tokenEnv: 'QIVVERA_PR_ASSURANCE_GITHUB_TOKEN',
-  snapshotFile: 'fixtures/pr-assurance/vendorpay-policies-e408884.json',
-  /** A run with no result after this long is TIMED_OUT (the workflow itself stops after 12 minutes). */
+export const PR_ASSURANCE = Object.freeze({
+  /** The workflow each Test Automation repository provides: workflow_dispatch with app_sha and correlation_id. */
+  workflow: 'qivvera-pr-assessment.yml',
+  /** Where a Profiles repository publishes its rules snapshot (made by scripts/pr-assurance-snapshot.mjs). */
+  rulesFile: '.qivvera/rules-snapshot.json',
+  /** Snapshots shipped with Qivvera, used when a Profiles repository does not publish one. */
+  bundledSnapshotsDir: 'fixtures/pr-assurance',
+  /** A run with no result after this long is TIMED_OUT (the reference workflow stops after 12 minutes). */
   runTimeoutMs: 15 * 60 * 1000,
 });
 
 /**
  * `githubWrite` (off unless QIVVERA_PR_ASSURANCE_GITHUB_WRITE is exactly "true") lets Qivvera set the
- * "Qivvera" commit status and its one PR comment on the demo app repository. Nothing else is written.
+ * "Qivvera" commit status and its one PR comment on each application's own repository, with that
+ * application's own token. Nothing else is written.
  */
 export function loadPrAssuranceConfig(env = process.env) {
-  return { enabled: env.QIVVERA_PR_ASSURANCE_ENABLED === 'true', githubWrite: env.QIVVERA_PR_ASSURANCE_GITHUB_WRITE === 'true', scenario: SCENARIO };
+  return { enabled: env.QIVVERA_PR_ASSURANCE_ENABLED === 'true', githubWrite: env.QIVVERA_PR_ASSURANCE_GITHUB_WRITE === 'true' };
 }

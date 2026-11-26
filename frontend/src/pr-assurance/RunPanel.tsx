@@ -12,9 +12,9 @@ export const SYNC_INTERVAL_MS = 2000;
 const STAGES: readonly [string, string][] = [
   ['queued', 'Waiting for GitHub'],
   ['preparing', 'Preparing a fresh GitHub machine'],
-  ['starting-app', 'Starting VendorPay at the pull request’s commit'],
+  ['starting-app', 'Starting the application at the pull request’s commit'],
   ['running-checks', 'Running Qivvera’s checks'],
-  ['running-team-tests', 'Running the VendorPay team’s own tests'],
+  ['running-team-tests', 'Running the team’s own tests'],
   ['done', 'Assessment complete']
 ];
 const OUTCOME: Record<string, string> = { passed: '✅', failed: '❌', timedOut: '❌', interrupted: '⚠️', skipped: '⏭' };

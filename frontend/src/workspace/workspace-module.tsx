@@ -6,12 +6,12 @@ import { AssessmentCaseDialog, MultiPlanDialog, RequestAssessmentDialog, SingleP
 import { dialogHost } from '../dialogs/dialog-host';
 import { openFormDialog } from '../dialogs/open-form';
 import type { DialogEnvironment } from '../dialogs/FormDialog';
-import { HistoryDialog, NewApplicationDialog, NewChangeDialog, NewRevisionDialog, ObligationDialog, ReviewDialog, type HistoryEvent, type ReviewAction } from '../dialogs/RecordDialogs';
+import { ArchiveApplicationDialog, ConnectGitHubDialog, HistoryDialog, NewApplicationDialog, NewChangeDialog, NewRevisionDialog, ObligationDialog, ReviewDialog, type HistoryEvent, type ReviewAction } from '../dialogs/RecordDialogs';
 import type { Api, Can, Refresh, Reroute, Shell, ShellState, Toast } from '../shell-contract';
 import type { ActiveCheck } from '../visits';
 import { OverviewPage, type Roles } from './OverviewPage';
 import { ActivityPage, ApplicationPage, ApplicationsPage, ChangesPage } from './RegistryPages';
-import type { WorkspaceSummary } from './rows';
+import { activeWorkspace, type WorkspaceSummary } from './rows';
 
 export interface WorkspaceBridge {
   readonly S: ShellState;
@@ -43,6 +43,10 @@ export interface WorkspaceUI {
   showChange(resolutionEnabled: boolean): void;
   openNewApplication(): void;
   openNewChange(applicationId?: string): void;
+  /** Confirm, then archive (hide) or restore an application. Nothing is deleted. */
+  openArchiveApplication(id: string, archive: boolean): void;
+  /** Adds or replaces an application's GitHub repositories and token (PR assurance). */
+  openConnectGitHub(id: string): void;
   openNewRevision(): void;
   /** Proposes a new obligation, or revises the one with this id. */
   openObligation(id?: string): void;
@@ -69,6 +73,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
 
   const openForm = (render: (env: DialogEnvironment) => ReactNode, active?: ActiveCheck) => openFormDialog(bridge, render, active);
   /** Resolution items can be tracked when the workflow is on and the person is an Author or Policy Authority. */
+  const capabilityOn = (name: string) => !!(S.workspace as { capabilities?: Record<string, unknown> } | null)?.capabilities?.[name];
   const canTrack = () => !!(S.workspace as { capabilities?: Record<string, unknown> } | null)?.capabilities?.['resolutionWorkflow'] && (can('AUTHOR') || can('POLICY_AUTHORITY'));
   /** Reads for the application page's pull-request panels. */
   const sources = { api, viewContext: bridge.viewContext };
@@ -76,7 +81,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
 
   return {
     showOverview() {
-      shell(<OverviewPage workspace={workspace()} roles={roles()} />, 'overview', 'Workspace');
+      shell(<OverviewPage workspace={activeWorkspace(workspace())} roles={roles()} />, 'overview', 'Workspace');
     },
     showApplications() {
       shell(<ApplicationsPage workspace={workspace()} roles={roles()} />, 'applications', 'Applications');
@@ -87,7 +92,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
       shell(<ApplicationPage app={app} workspace={workspace()} roles={roles()} sources={sources} />, 'applications', String(app.name));
     },
     showChanges() {
-      shell(<ChangesPage workspace={workspace()} roles={roles()} />, 'changes', 'Changes');
+      shell(<ChangesPage workspace={activeWorkspace(workspace())} roles={roles()} />, 'changes', 'Changes');
     },
     showActivity() {
       shell(<ActivityPage workspace={workspace()} />, 'activity', 'Activity');
@@ -103,11 +108,21 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
       shell(<ChangePage view={view} />, 'changes', String(shellState.change.title));
     },
     openNewApplication() {
-      openForm(env => <NewApplicationDialog env={env} api={api} />);
+      openForm(env => <NewApplicationDialog env={env} api={api} github={capabilityOn('prAssurance')} />);
     },
     openNewChange(applicationId = '') {
       const active = bridge.viewContext();
-      openForm(env => <NewChangeDialog env={env} api={api} applications={workspace().applications} selected={applicationId} openObligations={() => { if (active()) state.tab = 'obligations'; }} />, active);
+      openForm(env => <NewChangeDialog env={env} api={api} applications={activeWorkspace(workspace()).applications} selected={applicationId} openObligations={() => { if (active()) state.tab = 'obligations'; }} />, active);
+    },
+    openArchiveApplication(id, archive) {
+      const app = workspace().applications.find(candidate => candidate.id === id);
+      if (!app) return;
+      openForm(env => <ArchiveApplicationDialog env={env} api={api} application={app} archive={archive} />);
+    },
+    openConnectGitHub(id) {
+      const app = workspace().applications.find(candidate => candidate.id === id);
+      if (!app) return;
+      openForm(env => <ConnectGitHubDialog env={env} api={api} application={app as never} />);
     },
     openNewRevision() {
       const active = bridge.viewContext(), change = state.change;

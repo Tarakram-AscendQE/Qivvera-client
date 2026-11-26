@@ -47,7 +47,28 @@ export async function openWorkflowRepository(options = {}) {
     };
     const history = async (c, o, action, actor, rationale = '', independent = false) => c.query('INSERT INTO obligation_history (id,obligation_id,version,revision_id,action,actor,rationale,independent_actor,snapshot,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)', [randomUUID(), o.id, o.version, o.revision_id, action, actor, rationale, independent ? 1 : 0, JSON.stringify(obligationView(o)), new Date().toISOString()]);
     const createOb = async (c, changeId, revId, input, email, copiedFrom = null) => { const id = randomUUID(), now = new Date().toISOString(); await c.query('INSERT INTO obligations (id,change_id,statement,source_reference,criticality,version,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,1,$6,$6)', [id, changeId, input.statement, input.sourceReference, input.criticality, now]); await c.query('INSERT INTO obligation_workflow (obligation_id,revision_id,source_version,review_state,proposed_by,last_edited_by,imported,copied_from) VALUES ($1,$2,$3,$4,$5,$5,0,$6)', [id, revId, input.sourceVersion ?? '', 'DRAFT', email, copiedFrom]); const o = await getOb(c, id); await history(c, o, copiedFrom ? 'COPIED_TO_REVISION' : 'PROPOSED', email, copiedFrom ? 'Prior acceptance and assessment do not carry to this revision.' : ''); return obligationView(o); };
-    const listApps = async (c) => (await c.query('SELECT * FROM applications ORDER BY created_at DESC,id')).rows.map(appView);
+    // Archive state is the latest APPLICATION_ARCHIVED / APPLICATION_RESTORED activity for the application.
+    // Archiving hides an application; it never deletes it or any of its history (no schema change needed).
+    const ARCHIVE_ACTIONS = ['APPLICATION_ARCHIVED', 'APPLICATION_RESTORED'];
+    const archiveStates = async (c) => new Map((await c.query('SELECT DISTINCT ON (entity_id) entity_id, action, actor, created_at FROM activity WHERE action = ANY($1) ORDER BY entity_id, created_at DESC, id DESC', [ARCHIVE_ACTIONS])).rows.map(r => [r.entity_id, r]));
+    const archiveView = (app, state) => ({ ...app, archived: state?.action === 'APPLICATION_ARCHIVED', archivedAt: state?.action === 'APPLICATION_ARCHIVED' ? iso(state.created_at) : null, archivedBy: state?.action === 'APPLICATION_ARCHIVED' ? state.actor : null });
+    const listApps = async (c) => { const states = await archiveStates(c); return (await c.query('SELECT * FROM applications ORDER BY created_at DESC,id')).rows.map(r => archiveView(appView(r), states.get(r.id))); };
+    const isArchived = async (c, id) => (await c.query('SELECT action FROM activity WHERE entity_id=$1 AND action = ANY($2) ORDER BY created_at DESC, id DESC LIMIT 1', [id, ARCHIVE_ACTIONS])).rows[0]?.action === 'APPLICATION_ARCHIVED';
+    /** Archive or restore: Authors and Policy Authorities only; one activity record, nothing removed. */
+    const setArchived = (archive) => async (id, input, actor) => {
+        const email = actorEmail(actor);
+        if (!actor.roles.includes('AUTHOR') && !actor.roles.includes('POLICY_AUTHORITY')) throw new InputError('FORBIDDEN', 'Your workspace role does not permit this action.', 403);
+        identifier(id, 'Application');
+        fields(input ?? {}, ['reason']);
+        const reason = text(input?.reason, 'Reason', 500, false);
+        return db.transaction(async (c) => {
+            const row = (await c.query(`SELECT * FROM applications WHERE id=$1${db.lock}`, [id])).rows[0];
+            if (!row) throw new InputError('APPLICATION_NOT_FOUND', 'This application was not found.', 404);
+            if (await isArchived(c, id) === archive) throw new InputError(archive ? 'APPLICATION_ALREADY_ARCHIVED' : 'APPLICATION_NOT_ARCHIVED', archive ? 'This application is already archived. Reload to see its current state.' : 'This application is not archived. Reload to see its current state.', 409);
+            await audit(c, email, archive ? 'APPLICATION_ARCHIVED' : 'APPLICATION_RESTORED', id, `${archive ? 'Archived' : 'Restored'} ${row.name}${reason ? ': ' + reason : ''}`);
+            return archiveView(appView(row), { action: archive ? 'APPLICATION_ARCHIVED' : 'APPLICATION_RESTORED', actor: email, created_at: new Date().toISOString() });
+        });
+    };
     const listChanges = async (c) => { const all = (await c.query('SELECT id FROM changes ORDER BY created_at DESC,id')).rows; const result = []; for (const r of all) {
         const change = await getChange(c, r.id);
         const { obligations, ...rest } = change;
@@ -57,9 +78,11 @@ export async function openWorkflowRepository(options = {}) {
     const result = { workflow: true, driver: db.driver, reviewMode,
         close: () => db.close(), healthy: () => db.healthy(), listApplications: () => read(listApps), listChanges: () => read(listChanges), listActivity: () => read(listActivity),
         getSchemaVersion: () => read(async (c) => { const value = (await c.query('SELECT MAX(version) AS version FROM qivvera_migrations')).rows[0]?.version; return value === null || value === undefined ? null : Number(value); }),
-        getApplication: id => read(async (c) => appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0])), getChange: (id, rev) => read(c => getChange(c, id, rev)),
-        async createApplication(input, actor) { requireRole(actor, 'AUTHOR'); const a = applicationInput(input), email = actorEmail(actor); try {
-            return await db.transaction(async (c) => { const id = randomUUID(), now = new Date().toISOString(); await c.query('INSERT INTO applications (id,name,normalized_name,description,repository_url,created_at) VALUES ($1,$2,$3,$4,$5,$6)', [id, a.name, a.name.toLocaleLowerCase('en-US'), a.description, a.repositoryUrl, now]); await audit(c, email, 'APPLICATION_CREATED', id, `Registered ${a.name}`); return appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0]); });
+        getApplication: id => read(async (c) => { const app = appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0]); return app && archiveView(app, (await archiveStates(c)).get(id)); }),
+        archiveApplication: setArchived(true), restoreApplication: setArchived(false), getChange: (id, rev) => read(c => getChange(c, id, rev)),
+        // `within` runs on the same transaction after the row is written, so registration and its GitHub connection are saved together or not at all.
+        async createApplication(input, actor, { within } = {}) { requireRole(actor, 'AUTHOR'); const a = applicationInput(input), email = actorEmail(actor); try {
+            return await db.transaction(async (c) => { const id = randomUUID(), now = new Date().toISOString(); await c.query('INSERT INTO applications (id,name,normalized_name,description,repository_url,created_at) VALUES ($1,$2,$3,$4,$5,$6)', [id, a.name, a.name.toLocaleLowerCase('en-US'), a.description, a.repositoryUrl, now]); await audit(c, email, 'APPLICATION_CREATED', id, `Registered ${a.name}`); const app = appView((await c.query('SELECT * FROM applications WHERE id=$1', [id])).rows[0]); if (within) await within(c, app); return app; });
         }
         catch (e) {
             if (e.code === '23505')
@@ -67,7 +90,8 @@ export async function openWorkflowRepository(options = {}) {
             throw e;
         } },
         async createChange(input, actor) { requireRole(actor, 'AUTHOR'); const x = changeInput(input), email = actorEmail(actor); return db.transaction(async (c) => { if (!(await c.query('SELECT id FROM applications WHERE id=$1', [x.applicationId])).rows[0])
-            throw new InputError('APPLICATION_NOT_FOUND', 'Select an existing application.', 404); const id = randomUUID(), rev = randomUUID(), now = new Date().toISOString(); await c.query('INSERT INTO changes (id,application_id,title,intent,source_revision,producer,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, x.applicationId, x.title, x.intent, x.sourceRevision, x.producer, now]); await c.query('INSERT INTO change_revisions (id,change_id,revision_number,parent_revision_id,source_revision,intent,producer,reason,created_by,created_at) VALUES ($1,$2,1,NULL,$3,$4,$5,$6,$7,$8)', [rev, id, x.sourceRevision, x.intent, x.producer, 'Initial registered revision.', email, now]); await audit(c, email, 'CHANGE_CREATED', id, `Created ${x.title}`); return getChange(c, id); }); },
+            throw new InputError('APPLICATION_NOT_FOUND', 'Select an existing application.', 404); if (await isArchived(c, x.applicationId))
+            throw new InputError('APPLICATION_ARCHIVED', 'This application is archived. Restore it before adding changes.', 409); const id = randomUUID(), rev = randomUUID(), now = new Date().toISOString(); await c.query('INSERT INTO changes (id,application_id,title,intent,source_revision,producer,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)', [id, x.applicationId, x.title, x.intent, x.sourceRevision, x.producer, now]); await c.query('INSERT INTO change_revisions (id,change_id,revision_number,parent_revision_id,source_revision,intent,producer,reason,created_by,created_at) VALUES ($1,$2,1,NULL,$3,$4,$5,$6,$7,$8)', [rev, id, x.sourceRevision, x.intent, x.producer, 'Initial registered revision.', email, now]); await audit(c, email, 'CHANGE_CREATED', id, `Created ${x.title}`); return getChange(c, id); }); },
         async addObligation(changeId, input, actor) { requireRole(actor, 'AUTHOR'); const o = obligationInput(input), email = actorEmail(actor); return db.transaction(async (c) => { await ensureHead(c, changeId, o.revisionId); const out = await createOb(c, changeId, o.revisionId, o, email); await audit(c, email, 'OBLIGATION_PROPOSED', out.id, `Proposed: ${o.statement}`); return out; }); },
         async editObligation(id, input, actor) { requireRole(actor, 'AUTHOR'); const o = obligationInput(input, true), email = actorEmail(actor); return db.transaction(async (c) => { let old = await getOb(c, id); if (!old)
             throw new InputError('OBLIGATION_NOT_FOUND', 'This obligation was not found.', 404); await ensureHead(c, old.change_id, o.revisionId); old = await getOb(c, id); if (old.revision_id !== o.revisionId)
