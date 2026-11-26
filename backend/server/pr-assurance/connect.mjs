@@ -39,13 +39,10 @@ export function parseRepositoryUrl(value, label) {
     return `${owner}/${repo}`;
 }
 
-/**
- * The connection form's fields, validated. The token is checked for shape only; it is never echoed.
- * With a server token (see SERVER_TOKEN_ENV) that token is used and the form's token is ignored.
- */
-export function connectionInput(input, { serverToken = null } = {}) {
+/** The connection form's fields, validated. The token is checked for shape only; it is never echoed. */
+export function connectionInput(input) {
     fields(input, CONNECTION_FIELDS);
-    const token = serverToken ?? (typeof input.githubToken === 'string' ? input.githubToken.trim() : '');
+    const token = typeof input.githubToken === 'string' ? input.githubToken.trim() : '';
     if (!validToken(token)) fail('INVALID_GITHUB_TOKEN', 'Enter a GitHub personal access token. It starts with github_pat_ or ghp_ and has no spaces.');
     return {
         app: parseRepositoryUrl(input.repositoryUrl, LABELS.repositoryUrl),

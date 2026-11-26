@@ -19,13 +19,6 @@ export const PR_ASSURANCE = Object.freeze({
  * "Qivvera" commit status and its one PR comment on each application's own repository, with that
  * application's own token. Nothing else is written.
  */
-/**
- * Temporary, for the demo: when the deployer sets this, every application uses this one token for all
- * GitHub calls, and a token typed into the "Connect to GitHub" form is ignored (and may be left empty).
- * Remove it to go back to each application's own token.
- */
-export const SERVER_TOKEN_ENV = 'QIVVERA_PR_ASSURANCE_GITHUB_TOKEN';
-
 export function loadPrAssuranceConfig(env = process.env) {
   return { enabled: env.QIVVERA_PR_ASSURANCE_ENABLED === 'true', githubWrite: env.QIVVERA_PR_ASSURANCE_GITHUB_WRITE === 'true' };
 }

@@ -97,13 +97,13 @@ function fakeGitHub() {
     write: (run, text) => state.checkRuns.set(run.id, text) };
 }
 
-async function fixture(t, { credentialKey = randomBytes(32).toString('base64'), githubWrite = false, serverToken = null } = {}) {
+async function fixture(t, { credentialKey = randomBytes(32).toString('base64'), githubWrite = false } = {}) {
   const database = await testDatabase();
   const workflow = await openWorkflowRepository({ ...database, migrate: true });
   t.after(() => workflow.close());
   const github = fakeGitHub();
   let clock = Date.now();
-  const prAssurance = await openPrAssuranceService({ database, migrate: true, fetchFn: github.fetchFn, secretEnv: { ...(credentialKey ? { QIVVERA_CREDENTIAL_KEY: credentialKey } : {}), ...(serverToken ? { QIVVERA_PR_ASSURANCE_GITHUB_TOKEN: serverToken } : {}) }, now: () => clock,
+  const prAssurance = await openPrAssuranceService({ database, migrate: true, fetchFn: github.fetchFn, secretEnv: credentialKey ? { QIVVERA_CREDENTIAL_KEY: credentialKey } : {}, now: () => clock,
     githubWrite, publicOrigin: ORIGIN });
   t.after(() => prAssurance.close());
   const password = randomUUID() + randomUUID();
@@ -504,31 +504,4 @@ test('pr-assurance runs / when GitHub refuses the write, the result is kept, no 
   assert.deepEqual([done.run.status, done.run.disposition], ['COMPLETED', 'READY']);
   assert.match(done.githubNotice, /^Qivvera could not update the pull request on GitHub/);
   assert.deepEqual([h.github.state.statuses, h.github.state.comments], [[], []]);
-});
-
-test('pr-assurance apps / with a server token, an application connects without a token and every GitHub call uses the server token', async t => {
-  const WRONG = 'github_pat_TEST_ONLY_wrong_0123456789';
-  const h = await fixture(t, { serverToken: TOKEN });
-  assert.equal((await h.call('/api/workspace', { session: h.session })).body.capabilities.githubServerToken, true);
-  // No token in the form: accepted, because the server token is used.
-  const repos = { description: '', repositoryUrl: 'https://github.com/prcheck-live/vendorpay-app', testRepositoryUrl: 'https://github.com/prcheck-live/prcheck-verifiers',
-    profilesRepositoryUrl: 'https://github.com/prcheck-live/vendorpay-policies' };
-  const noToken = await h.call('/api/applications', { method: 'POST', session: h.session, data: { name: 'VendorPay without token', ...repos } });
-  assert.equal(noToken.status, 201, JSON.stringify(noToken.body));
-  // A different token typed into the form is ignored: GitHub only ever sees the server token.
-  const wrong = await h.call(`/api/applications/${noToken.body.id}/github`, { method: 'POST', session: h.session, data: { ...repos, description: undefined, githubToken: WRONG } });
-  assert.equal(wrong.status, 200, JSON.stringify(wrong.body));
-  const imported = await h.call(`/api/pr-assurance/applications/${noToken.body.id}/pulls/6/import`, { method: 'POST', session: h.session });
-  assert.equal(imported.status, 200, JSON.stringify(imported.body));
-  const used = new Set(h.github.state.auth.map(([, auth]) => auth));
-  assert.deepEqual([...used], [`Bearer ${TOKEN}`]);
-});
-
-test('pr-assurance apps / without a server token, the form still requires a token', async t => {
-  const h = await fixture(t);
-  assert.equal((await h.call('/api/workspace', { session: h.session })).body.capabilities.githubServerToken, false);
-  const refused = await h.call('/api/applications', { method: 'POST', session: h.session, data: { name: 'No token', description: '',
-    repositoryUrl: 'https://github.com/prcheck-live/vendorpay-app', testRepositoryUrl: 'https://github.com/prcheck-live/prcheck-verifiers',
-    profilesRepositoryUrl: 'https://github.com/prcheck-live/vendorpay-policies' } });
-  assert.deepEqual([refused.status, refused.body.error], [400, 'INVALID_GITHUB_TOKEN']);
 });

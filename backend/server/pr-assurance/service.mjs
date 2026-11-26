@@ -22,10 +22,10 @@
 import { createHash } from 'node:crypto';
 import { assessEvidence, compareAssessments, parseAssessmentOutput } from '../../../dist/core/pr-assurance.js';
 import { InputError, actorEmail, fields, identifier } from '../workflow-input.mjs';
-import { PR_ASSURANCE, SERVER_TOKEN_ENV } from './config.mjs';
+import { PR_ASSURANCE } from './config.mjs';
 import { connectionInput, inspectConnection } from './connect.mjs';
 import { keyMissing, loadCredentialKey } from './credentials.mjs';
-import { createGitHubClient, validToken } from './github.mjs';
+import { createGitHubClient } from './github.mjs';
 import { openPrAssuranceRepository, writeConnection } from './repository.mjs';
 import { loadBundledSnapshots, rulesSummary } from './rules.mjs';
 
@@ -75,8 +75,6 @@ const publicConnection = ({ sealed: _sealed, ...connection }) => connection;
 export async function openPrAssuranceService({ database, secretEnv = process.env, fetchFn = fetch, migrate = false, bundled = loadBundledSnapshots(), now = () => Date.now(), githubTimeoutMs,
     githubWrite = false, publicOrigin = null } = {}) {
     const credentials = loadCredentialKey(secretEnv);
-    // Temporary (demo): one server-wide token replaces every application's own token. See SERVER_TOKEN_ENV.
-    const serverToken = validToken(secretEnv[SERVER_TOKEN_ENV]) ? secretEnv[SERVER_TOKEN_ENV] : null;
     const repository = await openPrAssuranceRepository({ ...database, migrate });
     // Shipped snapshots are stored by digest too, so runs made against them can always be reassessed.
     for (const snapshot of bundled.all) await repository.saveSnapshot(snapshot);
@@ -95,9 +93,8 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
         if (!connection) throw notConnected();
         return connection;
     }
-    /** A GitHub client with this application's own token, or the server token when one is set. */
+    /** A GitHub client with this application's own token. */
     function githubFor(connection) {
-        if (serverToken) return createGitHubClient({ token: serverToken, connection, fetchFn, timeoutMs: githubTimeoutMs });
         if (!credentials) throw keyMissing();
         return createGitHubClient({ token: credentials.open(connection.sealed, connection.applicationId), connection, fetchFn, timeoutMs: githubTimeoutMs });
     }
@@ -264,7 +261,7 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
             if (!session.roles.includes(role)) throw new InputError('FORBIDDEN', 'Your workspace role does not permit this action.', 403);
         } else requireActor(session, 'connect an application to GitHub');
         if (!credentials) throw keyMissing();
-        const parsed = connectionInput(input, { serverToken });
+        const parsed = connectionInput(input);
         const connection = await inspectConnection(parsed, { fetchFn, bundled, timeoutMs: githubTimeoutMs });
         if (connection.rules) await repository.saveSnapshot(connection.rules);
         const actor = actorEmail(session);
@@ -283,8 +280,6 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
     return {
         /** True when tokens can be stored and used (the deployer has set the encryption key). */
         credentialsReady: !!credentials,
-        /** True when the server token is used for every application (the form's token is not needed). */
-        serverToken: !!serverToken,
 
         /** Registration uses this: it checks with GitHub first, then saves in the application's own transaction. */
         prepareConnection,

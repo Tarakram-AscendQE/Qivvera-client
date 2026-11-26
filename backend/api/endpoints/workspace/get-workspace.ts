@@ -22,7 +22,7 @@ export const getWorkspace = defineEndpoint({
         verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled,
         assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, githubWebhooks: !!intake?.webhookEnabled,
         obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates,
-        prAssurance: !!prAssurance, githubCredentials: !!prAssurance?.credentialsReady, githubServerToken: !!prAssurance?.serverToken
+        prAssurance: !!prAssurance, githubCredentials: !!prAssurance?.credentialsReady
       },
       storage: repository.driver, release: PRODUCT_VERSION, revision: releaseRevision, reviewMode: repository.reviewMode ?? 'not-available'
     });
