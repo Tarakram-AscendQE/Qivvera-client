@@ -189,3 +189,10 @@ test('pr-assurance github / comments go only to the three demo pull requests', a
   await assert.rejects(client.upsertPullComment(9, 'x'), { code: 'PULL_NOT_IN_SCENARIO' });
   assert.equal(calls.length, 0);
 });
+
+test('pr-assurance github / a request GitHub finds invalid names GitHub\'s own reason', async () => {
+  const { client } = github(reply(422, { message: 'Validation Failed', errors: [{ resource: 'Status', field: 'target_url', code: 'invalid', message: 'target_url is not a valid URL' }] }));
+  const error = await client.setCommitStatus(SHA, { state: 'pending', description: 'x' }).catch(e => e);
+  assert.equal(error.code, 'GITHUB_REQUEST_INVALID');
+  assert.equal(error.message, 'GitHub did not accept the request: Validation Failed: target_url is not a valid URL');
+});

@@ -148,7 +148,11 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
             }
             return null;
         } catch (error) {
-            if (typeof error?.code === 'string' && error instanceof InputError) return `Qivvera could not update the pull request on GitHub: ${error.message}`;
+            if (typeof error?.code === 'string' && error instanceof InputError) {
+                // Also in the server log: the page shows this notice only once.
+                console.warn(`PR_ASSURANCE_GITHUB_WRITE_FAILED run=${runId} step=${kind} ${error.code}: ${error.message}`);
+                return `Qivvera could not update the pull request on GitHub: ${error.message}`;
+            }
             throw error;
         }
     }

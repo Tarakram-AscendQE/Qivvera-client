@@ -44,6 +44,17 @@ function scenarioPull(number) {
 }
 const runId = value => (Number.isSafeInteger(value) && value > 0 ? value : fail('INVALID_GITHUB_RUN', 'A GitHub run id is required.', 400));
 
+/** GitHub's own short reason for refusing a request (its message and validation errors), on one line. */
+async function reasonOf(response) {
+  try {
+    const body = JSON.parse((await response.text()).slice(0, 4096));
+    const errors = typeof body?.errors === 'string' ? body.errors
+      : Array.isArray(body?.errors) ? body.errors.map(e => e?.message ?? [e?.field, e?.code].filter(Boolean).join(' ')).filter(Boolean).join('; ') : '';
+    const reason = [body?.message, errors].filter(x => typeof x === 'string' && x).join(': ').replace(/\s+/g, ' ').slice(0, 300);
+    return reason || 'no reason given';
+  } catch { return 'no reason given'; }
+}
+
 /** The workflow run fields Qivvera uses, after checking it is the run we started, in the pinned repository. */
 function toRun(raw, correlationId) {
   if (!raw || raw.repository?.id !== repositoryId || raw.display_title !== RUN_TITLE(correlationId) || !Number.isSafeInteger(raw.id)) {
@@ -81,6 +92,7 @@ export function createGitHubClient({ secretEnv = process.env, fetchFn = fetch, t
     }
     if (status === 401) fail('GITHUB_TOKEN_REJECTED', `GitHub rejected the token in ${SCENARIO.tokenEnv}. Ask the deployer to replace it.`);
     if (status === 403 || status === 404) fail('GITHUB_PERMISSION_MISSING', `GitHub refused this request. The token needs ${permission}.`);
+    if (status === 422) fail('GITHUB_REQUEST_INVALID', `GitHub did not accept the request: ${await reasonOf(response)}`, 502);
     if (status < 200 || status >= 300) fail('GITHUB_UNAVAILABLE', `GitHub answered ${status}. Try again shortly.`);
     if (status === 204) return null;
     const text = await response.text();
