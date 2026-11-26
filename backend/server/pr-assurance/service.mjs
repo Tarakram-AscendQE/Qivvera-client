@@ -9,6 +9,11 @@
  * cannot be verified ends the run without a disposition. The report is derived again from the stored
  * evidence on every read, so stored evidence that no longer matches its digest is shown as such.
  *
+ * With `githubWrite` on, Qivvera also tells the pull request on GitHub: a pending "Qivvera" commit status
+ * when a run starts, then success (READY only) or failure plus one PR comment when it completes, or error
+ * when it ends without a result. This is best effort and never changes the run: if GitHub refuses, the
+ * commit keeps no success status (so a required check keeps the merge blocked) and a notice says so.
+ *
  * The rules snapshot is checked when the service opens: its digest must match its content and it must
  * have been taken with the profile the decision logic implements. Otherwise the feature does not start.
  */
@@ -47,9 +52,33 @@ const runSummary = run => run && {
     createdAt: run.createdAt, finishedAt: run.finishedAt, failure: run.failure,
 };
 /** The progress shown while a run is going: the check-run output without any evidence. */
+/** The PR comment for a completed run: the result, what is broken and what changed since the previous PR. */
+function commentFor(run, result, link) {
+    const icon = result.disposition === 'READY' ? '✅' : '❌';
+    const lines = [`### ${icon} Qivvera: ${result.summary}`, '', `Commit \`${run.headSha.slice(0, 7)}\`${link ? ` · [Full report in Qivvera](${link})` : ''}`, ''];
+    const broken = result.rules.filter(r => r.broken);
+    if (broken.length) {
+        lines.push('**Broken business rules**', '');
+        for (const rule of broken) {
+            lines.push(`- **${rule.id}** ${rule.title}`);
+            for (const o of rule.obligations.filter(o => o.state !== 'SUPPORTED')) lines.push(`  - \`${o.id}\` ${o.statement} — ${o.state}`);
+        }
+        lines.push('');
+    } else lines.push('No business rule is broken on this commit.', '');
+    const c = result.comparison;
+    if (c) {
+        const ids = list => (list.length ? list.join(', ') : 'none');
+        lines.push(`**Since PR #${c.previousPull}:** fixed ${ids(c.fixed)} · still broken ${ids(c.stillBroken)} · newly broken ${ids(c.newlyBroken)}`, '');
+    }
+    lines.push(result.disposition === 'READY'
+        ? '_This commit may be merged as far as Qivvera is concerned._'
+        : '_Merging stays blocked until Qivvera reports READY. Push a fix, then evaluate the new commit in Qivvera._');
+    return lines.join('\n');
+}
 const progressOf = output => ({ stage: output.stage, message: output.message, checksTotal: output.checksTotal, checks: output.checks });
 
-export async function openPrAssuranceService({ database, secretEnv = process.env, fetchFn = fetch, migrate = false, snapshot = loadRulesSnapshot(), now = () => Date.now() }) {
+export async function openPrAssuranceService({ database, secretEnv = process.env, fetchFn = fetch, migrate = false, snapshot = loadRulesSnapshot(), now = () => Date.now(),
+    githubWrite = false, publicOrigin = null }) {
     const repository = await openPrAssuranceRepository({ ...database, migrate });
     const github = createGitHubClient({ secretEnv, fetchFn });
     const obligations = snapshot.policies.reduce((n, policy) => n + policy.obligations.length, 0);
@@ -94,6 +123,41 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
         };
     }
 
+    const runLink = id => (publicOrigin ? `${publicOrigin}/#/pr-assurance/runs/${id}` : null);
+    /**
+     * Tells the PR on GitHub how a run started or ended ('started', 'completed' or 'ended'). Returns a
+     * notice when GitHub refused; never repeats a write by itself.
+     */
+    async function tellGitHub(runId, kind) {
+        if (!githubWrite) return null;
+        try {
+            const run = await repository.getRun(runId);
+            const targetUrl = runLink(run.id);
+            if (kind === 'started') {
+                await github.setCommitStatus(run.headSha, { state: 'pending', description: 'Qivvera is checking the business rules on this commit', targetUrl });
+            } else if (kind === 'completed') {
+                const result = await report(run);
+                if (!result.ok) {
+                    await github.setCommitStatus(run.headSha, { state: 'error', description: 'Qivvera could not verify its stored evidence. Evaluate again.', targetUrl });
+                    return null;
+                }
+                await github.setCommitStatus(run.headSha, { state: result.disposition === 'READY' ? 'success' : 'failure', description: result.summary, targetUrl });
+                await github.upsertPullComment(run.pullNumber, commentFor(run, result, targetUrl));
+            } else {
+                await github.setCommitStatus(run.headSha, { state: 'error', description: 'Qivvera could not finish evaluating this commit. Evaluate it again.', targetUrl });
+            }
+            return null;
+        } catch (error) {
+            if (typeof error?.code === 'string' && error instanceof InputError) return `Qivvera could not update the pull request on GitHub: ${error.message}`;
+            throw error;
+        }
+    }
+    /** Ends a run without a result; only the request that actually ended it tells GitHub. */
+    async function endRun(runId, failure) {
+        const { changed } = await repository.failRun(runId, failure);
+        return changed ? tellGitHub(runId, 'ended') : null;
+    }
+
     async function view(runId, githubNotice = null) {
         const stored = await repository.getRun(runId);
         if (!stored) throw new InputError('RUN_NOT_FOUND', 'This assessment run does not exist.', 404);
@@ -108,8 +172,7 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
     async function advance(run) {
         if (!ACTIVE.includes(run.status)) return null;
         if (now() - Date.parse(run.createdAt) > SCENARIO.runTimeoutMs) {
-            await repository.failRun(run.id, { status: 'TIMED_OUT', code: 'RUN_TIMED_OUT', message: 'GitHub did not finish this run within 15 minutes.' });
-            return null;
+            return endRun(run.id, { status: 'TIMED_OUT', code: 'RUN_TIMED_OUT', message: 'GitHub did not finish this run within 15 minutes.' });
         }
         try {
             const githubRun = run.githubRunId ? await github.getRun(run.githubRunId, run.id) : await github.findRun(run.id, run.createdAt);
@@ -123,23 +186,20 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
             if (checkRun?.text) {
                 const parsed = parseAssessmentOutput(checkRun.text, { correlationId: run.id, appSha: run.headSha });
                 if (!parsed.ok) {
-                    await repository.failRun(run.id, { status: 'FAILED', code: parsed.reason, message: 'GitHub reported progress that Qivvera cannot accept for this run.' });
-                    return null;
+                    return endRun(run.id, { status: 'FAILED', code: parsed.reason, message: 'GitHub reported progress that Qivvera cannot accept for this run.' });
                 }
                 const { output } = parsed;
                 if (output.stage === 'failed') {
-                    await repository.failRun(run.id, { status: 'FAILED', code: 'ASSESSMENT_FAILED', message: output.message });
-                    return null;
+                    return endRun(run.id, { status: 'FAILED', code: 'ASSESSMENT_FAILED', message: output.message });
                 }
                 if (output.stage === 'done') {
                     const result = assessEvidence({ snapshot, evidenceText: output.evidence, evidenceSha256: output.evidenceSha256, expectedCommit: run.headSha.slice(0, 7), sha256 });
                     if (!result.ok) {
-                        await repository.failRun(run.id, { status: 'FAILED', code: result.reason, message: result.message });
-                        return null;
+                        return endRun(run.id, { status: 'FAILED', code: result.reason, message: result.message });
                     }
                     await repository.recordProgress(run.id, { ...found, checkRunId: checkRun.id, status: 'RUNNING', stage: 'done', message: result.summary, progress: progressOf(output) });
-                    await repository.completeRun(run.id, { evidenceText: output.evidence, evidenceSha256: output.evidenceSha256, teamTests: output.teamTests, disposition: result.disposition });
-                    return null;
+                    const { changed } = await repository.completeRun(run.id, { evidenceText: output.evidence, evidenceSha256: output.evidenceSha256, teamTests: output.teamTests, disposition: result.disposition });
+                    return changed ? tellGitHub(run.id, 'completed') : null;
                 }
                 await repository.recordProgress(run.id, { ...found, checkRunId: checkRun.id, status: 'RUNNING', stage: output.stage, message: output.message, progress: progressOf(output) });
             } else if (githubRun.status === 'in_progress') {
@@ -148,7 +208,7 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
             if (githubRun.status === 'completed') {
                 // The workflow ended but never reported a finished assessment.
                 const cancelled = githubRun.conclusion === 'cancelled';
-                await repository.failRun(run.id, cancelled
+                return endRun(run.id, cancelled
                     ? { status: 'CANCELLED', code: 'GITHUB_RUN_CANCELLED', message: 'The GitHub run was cancelled before it produced evidence.' }
                     : { status: 'FAILED', code: 'GITHUB_RUN_FAILED', message: `The GitHub run ended (${githubRun.conclusion ?? 'no conclusion'}) without evidence.` });
             }
@@ -209,6 +269,8 @@ export async function openPrAssuranceService({ database, secretEnv = process.env
                 }
                 notice = error.message;
             }
+            const told = await tellGitHub(run.id, 'started');
+            if (told) notice = notice ? `${notice} ${told}` : told;
             return { ...await view(run.id), notice, replayed: false };
         },
 

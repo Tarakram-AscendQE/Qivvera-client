@@ -53,6 +53,7 @@ Someone with write access to vendorpay-app can rename them; **Re-import from Git
 | 2 | Create a **fine-grained token**. Resource owner: `prcheck-live`. Repositories: `vendorpay-app` and `prcheck-verifiers` only. Permissions: vendorpay-app → Contents **read**, Pull requests **read**; prcheck-verifiers → Actions **read and write**, Checks **read**, Contents **read**. | Deployer | Token created and stored somewhere safe |
 | 3 | In Vercel → Project → Settings → Environment Variables, add `QIVVERA_PR_ASSURANCE_ENABLED` = `true` and `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN` = the token. Redeploy. | Deployer | The navigation shows **PR assurance** |
 | 4 | Run the migration against the deployment's database: `DATABASE_URL=<connection string> npm run migrate` (already done for the Neon database in `.env.local` on 2026-11-26) | Deployer | It prints "Schema 8 is current, and so are the PR assurance add-on tables." |
+| 4b | *Optional: notify the developer and block merging.* (1) Give the token two more permissions on vendorpay-app: Commit statuses **read and write**, Pull requests **read and write**. (2) Add `QIVVERA_PR_ASSURANCE_GITHUB_WRITE` = `true` and redeploy. (3) In vendorpay-app → Settings → Branches, protect `main`: **Require status checks to pass**, add the check **Qivvera** (it appears in the list after Qivvera's first evaluation). | Repository admin + deployer | Evaluating PR #6 shows a ❌ **Qivvera** check and a Qivvera comment on the PR; its Merge button is blocked |
 | 5 | **Do not merge or close PRs #6, #7 or #8.** Only open pull requests can be imported. | Everyone | All three stay open |
 | 6 | Rehearse once on the deployed URL (section 3) and write the times in section 5. | Presenter | Three results match the table below |
 
@@ -112,6 +113,11 @@ the team's own tests → done) and each of the 14 checks as it finishes. One run
 - The SHA-256 shows that stored evidence is unchanged since Qivvera verified it. It is not a signature.
 - The pull request's code runs on the same GitHub machine as the checks. That is acceptable for these
   reference PRs, but untrusted customer code must be isolated first.
-- Nothing is written to `vendorpay-app`: no comments, statuses or merge blocking.
+- Nothing is written to `vendorpay-app` unless `QIVVERA_PR_ASSURANCE_GITHUB_WRITE=true`. Then Qivvera
+  sets only the **Qivvera** commit status (pending → success for READY, failure otherwise, error when a
+  run ends without a result) and keeps one comment per PR up to date. Merging is blocked only by the
+  repository's own branch protection rule, which repository admins can bypass. A new push has no
+  Qivvera status until it is evaluated, so a required check keeps it blocked. A refused GitHub write
+  never changes the result; the run page says so and the next evaluation tries again.
 - The demo tables keep their own version record and are not covered by the operations backup and
   permission-audit tools yet. Demo runs can always be repeated.

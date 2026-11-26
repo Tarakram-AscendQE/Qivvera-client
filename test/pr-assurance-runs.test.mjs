@@ -32,7 +32,7 @@ function checkRunText(run, { stage = 'done', evidenceFor = run.headSha.slice(0, 
 
 /** A stand-in GitHub: PR reads, workflow starts, runs and check runs, each programmable per test. */
 function fakeGitHub() {
-  const state = { dispatches: [], calls: [], runs: new Map(), checkRuns: new Map(), dispatch: 'ok', down: false };
+  const state = { dispatches: [], calls: [], runs: new Map(), checkRuns: new Map(), dispatch: 'ok', down: false, statuses: [], comments: [], writes: 'ok' };
   const fetchFn = async (url, init) => {
     const { pathname, searchParams } = new URL(url);
     state.calls.push(`${init.method} ${pathname}`);
@@ -43,6 +43,18 @@ function fakeGitHub() {
       return json(200, { number: Number(pull[1]), state: 'open', merged: false, draft: false, title: `PR ${pull[1]}`, body: null,
         head: { sha: HEADS[pull[1]], ref: `feature/${pull[1]}`, repo }, base: { sha: '3'.repeat(40), ref: 'main', repo } });
     }
+    const status = pathname.match(/\/repos\/prcheck-live\/vendorpay-app\/statuses\/([0-9a-f]{40})$/);
+    if (status) {
+      if (state.writes === 'forbidden') return json(403, { message: 'Resource not accessible by personal access token' });
+      state.statuses.push({ sha: status[1], ...JSON.parse(init.body) });
+      return json(201, {});
+    }
+    if (pathname === '/user') return json(200, { login: 'qivvera-bot' });
+    const issue = pathname.match(/\/repos\/prcheck-live\/vendorpay-app\/issues\/(\d+)\/comments$/);
+    if (issue && init.method === 'GET') return json(200, state.comments.filter(c => c.pull === Number(issue[1])).map(c => ({ id: c.id, user: { login: 'qivvera-bot' }, body: c.body })));
+    if (issue) { state.comments.push({ id: state.comments.length + 1, pull: Number(issue[1]), body: JSON.parse(init.body).body, edits: 0 }); return json(201, {}); }
+    const edit = pathname.match(/\/repos\/prcheck-live\/vendorpay-app\/issues\/comments\/(\d+)$/);
+    if (edit) { const c = state.comments.find(x => x.id === Number(edit[1])); c.body = JSON.parse(init.body).body; c.edits += 1; return json(200, {}); }
     if (pathname.endsWith('/dispatches')) {
       if (state.dispatch === 'lost') { state.dispatches.push(JSON.parse(init.body).inputs); throw new TypeError('fetch failed'); }
       if (state.dispatch === 'forbidden') return json(403, { message: 'Resource not accessible by personal access token' });
@@ -71,13 +83,14 @@ function fakeGitHub() {
     write: (run, text) => state.checkRuns.set(run.id, text) };
 }
 
-async function fixture(t) {
+async function fixture(t, { githubWrite = false } = {}) {
   const database = await testDatabase();
   const workflow = await openWorkflowRepository({ ...database, migrate: true });
   t.after(() => workflow.close());
   const github = fakeGitHub();
   let clock = Date.now();
-  const prAssurance = await openPrAssuranceService({ database, migrate: true, fetchFn: github.fetchFn, secretEnv: { [SCENARIO.tokenEnv]: TOKEN }, now: () => clock });
+  const prAssurance = await openPrAssuranceService({ database, migrate: true, fetchFn: github.fetchFn, secretEnv: { [SCENARIO.tokenEnv]: TOKEN }, now: () => clock,
+    githubWrite, publicOrigin: ORIGIN });
   t.after(() => prAssurance.close());
   const password = randomUUID() + randomUUID();
   const server = createApplicationServer({ repository: workflow, prAssurance, publicOrigin: ORIGIN, accounts: [author, viewer].map(a => ({ ...a, passwordHash: hashPassword(password) })) });
@@ -293,4 +306,69 @@ test('pr-assurance runs / a PR without a completed run shows no count; a running
   const scenario = (await h.call('/api/pr-assurance', { session: h.session })).body;
   assert.deepEqual([scenario.pulls[0].latestRun.id, scenario.pulls[0].latestRun.status], [run.id, 'QUEUED']);
   assert.deepEqual([scenario.pulls[0].result.brokenRules, scenario.pulls[1].result], [2, null]);
+});
+
+test('pr-assurance runs / with GitHub writing off, nothing is written to the pull request', async t => {
+  const h = await fixture(t);
+  await h.complete(6);
+  assert.deepEqual([h.github.state.statuses, h.github.state.comments], [[], []]);
+  assert.equal(h.github.state.calls.some(c => /statuses|comments|\/user$/.test(c)), false);
+});
+
+test('pr-assurance runs / with GitHub writing on, a run sets pending, then failure and a comment naming the broken rules', async t => {
+  const h = await fixture(t, { githubWrite: true });
+  const { run } = (await h.evaluate(6)).body;
+  assert.deepEqual(h.github.state.statuses.map(s => [s.sha, s.state, s.context]), [[HEADS[6], 'pending', 'Qivvera']]);
+  assert.equal(h.github.state.statuses[0].target_url, `${ORIGIN}/#/pr-assurance/runs/${run.id}`);
+  h.github.start(run);
+  h.github.write(run, checkRunText(run));
+  const done = (await h.sync(run.id)).body;
+  assert.deepEqual([done.run.status, done.githubNotice], ['COMPLETED', null]);
+  assert.deepEqual(h.github.state.statuses.at(-1), { sha: HEADS[6], state: 'failure', context: 'Qivvera',
+    description: 'NOT READY · 2 rules broken · 11 of 14 obligations supported', target_url: `${ORIGIN}/#/pr-assurance/runs/${run.id}` });
+  assert.equal(h.github.state.comments.length, 1);
+  const { pull, body } = h.github.state.comments[0];
+  assert.equal(pull, 6);
+  assert.match(body, /^<!-- qivvera-pr-assurance -->\n### ❌ Qivvera: NOT READY · 2 rules broken/);
+  assert.match(body, /\*\*FIN-001\*\*/);
+  assert.match(body, /\*\*FIN-002\*\*/);
+  assert.match(body, /Merging stays blocked until Qivvera reports READY/);
+  // A later sync of the finished run writes nothing more.
+  await h.sync(run.id);
+  assert.equal(h.github.state.statuses.length, 2);
+  assert.equal(h.github.state.comments.length, 1);
+});
+
+test('pr-assurance runs / a READY result is the only success; evaluating again edits the same comment', async t => {
+  const h = await fixture(t, { githubWrite: true });
+  await h.complete(7);
+  await h.complete(8);
+  assert.deepEqual(h.github.state.statuses.filter(s => s.sha === HEADS[8]).map(s => s.state), ['pending', 'success']);
+  const eight = h.github.state.comments.find(c => c.pull === 8);
+  assert.match(eight.body, /✅ Qivvera: READY · no rules broken/);
+  assert.match(eight.body, /Since PR #7:\*\* fixed FIN-002/);
+  await h.complete(8);
+  assert.deepEqual([h.github.state.comments.filter(c => c.pull === 8).length, h.github.state.comments.find(c => c.pull === 8).edits], [1, 1]);
+});
+
+test('pr-assurance runs / a run that ends without a result sets an error status and posts no comment', async t => {
+  const h = await fixture(t, { githubWrite: true });
+  const { run } = (await h.evaluate(6)).body;
+  h.github.start(run, 'completed', 'cancelled');
+  assert.equal((await h.sync(run.id)).body.run.status, 'CANCELLED');
+  assert.deepEqual(h.github.state.statuses.map(s => s.state), ['pending', 'error']);
+  assert.deepEqual(h.github.state.comments, []);
+});
+
+test('pr-assurance runs / when GitHub refuses the write, the result is kept, no success is set and a notice names the permission', async t => {
+  const h = await fixture(t, { githubWrite: true });
+  h.github.state.writes = 'forbidden';
+  const { run, notice } = (await h.evaluate(8)).body;
+  assert.match(notice, /Commit statuses: read and write on vendorpay-app/);
+  h.github.start(run);
+  h.github.write(run, checkRunText(run));
+  const done = (await h.sync(run.id)).body;
+  assert.deepEqual([done.run.status, done.run.disposition], ['COMPLETED', 'READY']);
+  assert.match(done.githubNotice, /^Qivvera could not update the pull request on GitHub/);
+  assert.deepEqual([h.github.state.statuses, h.github.state.comments], [[], []]);
 });
