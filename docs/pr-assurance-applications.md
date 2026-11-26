@@ -11,7 +11,7 @@ For: the deployer and anyone registering applications. Replaces the single envir
 1. **Applications → + Register application.** Name, description, and (all required while PR assurance
    is on):
    - *Application repository URL*: the repository whose pull requests are assured.
-   - *Test automation repository URL*: runs Qivvera's checks; must contain
+   - *Verifiers repository URL*: runs Qivvera's checks; must contain
      `.github/workflows/qivvera-pr-assessment.yml` (inputs `app_sha`, `correlation_id`; writes the
      `qivvera-evidence <run id>` check run). `prcheck-live/prcheck-verifiers` is the reference.
    - *Profiles repository URL*: the business rules (see "Rules" below).
@@ -23,7 +23,7 @@ For: the deployer and anyone registering applications. Replaces the single envir
 4. **PR assurance** lists the applications. Choosing one shows its imported pull requests and its rules.
    **Show open pull requests** reads the open PRs of *its* repository with *its* token; **Import** reads a
    PR's title, branches and exact head commit.
-5. **Evaluate** starts the workflow in *its* test automation repository (on that repository's default
+5. **Evaluate** starts the workflow in *its* verifiers repository (on that repository's default
    branch) with *its* token. Progress, the result and the 2 → 1 → 0 comparison work as before.
 
 Existing applications (for example VendorPay registered before this change) show **Connect to GitHub** on
@@ -34,7 +34,7 @@ their page. The same dialog, **Update GitHub access**, replaces a token that exp
 | Repository | Permissions | Checked at registration |
 |---|---|---|
 | Application | Metadata, Pull requests: read | yes |
-| Test automation | Actions: read **and write**, Checks: read, Contents: read | read only: *write* cannot be checked without starting a run, so a missing write permission is reported on the first **Evaluate** |
+| Verifiers | Actions: read **and write**, Checks: read, Contents: read | read only: *write* cannot be checked without starting a run, so a missing write permission is reported on the first **Evaluate** |
 | Profiles | Contents: read | yes |
 
 **Optional: telling the pull request on GitHub.** With `QIVVERA_PR_ASSURANCE_GITHUB_WRITE=true`, Qivvera

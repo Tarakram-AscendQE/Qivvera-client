@@ -123,3 +123,36 @@ describe('change steps', () => {
     expect(screen.queryByRole('heading', { name: 'How to get to Ready' })).toBeNull();
   });
 });
+
+describe('Run assurance for an application connected to GitHub (PR assurance)', () => {
+  const connected = { applications: [{ id: 'a1', name: 'VendorPay', github: { app: { repository: 'prcheck-live/vendorpay-app' } } }], changes: [], activity: [], capabilities: { prAssurance: true } };
+  const run = () => screen.getByRole('button', { name: 'Run assurance' }) as HTMLButtonElement;
+
+  it('stays off while any requirement is a draft, sent back or awaiting review, and says why', () => {
+    for (const status of ['DRAFT', 'IN_REVIEW', 'CLARIFICATION_REQUIRED']) {
+      show({ workspace: connected, change: change({ obligations: [obligation('a', 'ACCEPTED'), obligation('b', status)] }) }, ['AUTHOR']);
+      expect(run().disabled).toBe(true);
+      expect(run().title).toMatch(/1 requirement is not reviewed yet/);
+    }
+    show({ workspace: connected, change: change({ obligations: [obligation('r', 'REJECTED')] }) }, ['AUTHOR']);
+    expect([run().disabled, run().title]).toEqual([true, 'Accept at least one requirement first.']);
+  });
+
+  it('turns on once requirements are accepted (rejected ones do not block) and points at PR assurance for this application', () => {
+    show({ workspace: connected, change: change({ sourceRevision: 'af51c26b0b9f', revision: { id: 'r1', number: 1, sourceRevision: 'af51c26b0b9f' }, obligations: [obligation('a', 'ACCEPTED'), obligation('r', 'REJECTED')] }) }, ['AUTHOR']);
+    expect(run().disabled).toBe(false);
+    expect([run().dataset['action'], run().dataset['app'], run().dataset['revision']]).toEqual(['run-pr-assurance', 'a1', 'af51c26b0b9f']);
+  });
+
+  it('a Viewer, or an earlier revision, cannot run it', () => {
+    show({ workspace: connected, change: change({ obligations: [obligation('a', 'ACCEPTED')] }) }, ['VIEWER']);
+    expect(run().disabled).toBe(true);
+    show({ workspace: connected, change: change({ isCurrentRevision: false, obligations: [obligation('a', 'ACCEPTED')] }) }, ['AUTHOR']);
+    expect(run().disabled).toBe(true);
+  });
+
+  it('an application that is not connected keeps the plan-based assessment', () => {
+    show({ workspace: { ...connected, applications: [{ id: 'a1', name: 'VendorPay', github: null }] }, change: change({ obligations: [obligation('a', 'ACCEPTED')] }) }, ['AUTHOR']);
+    expect(run().dataset['action']).toBe('run-assurance');
+  });
+});

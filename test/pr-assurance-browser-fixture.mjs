@@ -21,6 +21,7 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Use
 
 const author = { email: 'author@example.test', roles: ['AUTHOR'] };
 const viewer = { email: 'viewer@example.test', roles: ['VIEWER'] };
+const authority = { email: 'authority@example.test', roles: ['POLICY_AUTHORITY'] };
 /** PR #8's code commit is 3f6e20d; its recorded evidence is bound to that commit. */
 const PULLS = {
   6: { head: 'af51c26b0b9f94894cccfaa5b0fb893221952c65', title: 'VP-184: bank-change request and approval', ref: 'feature/VP-184-v1-initial', team: 25 },
@@ -103,7 +104,7 @@ const repository = await openWorkflowRepository({ ...database, migrate: true });
 const prAssurance = await openPrAssuranceService({ database, migrate: true, fetchFn: github, secretEnv: { QIVVERA_CREDENTIAL_KEY: randomBytes(32).toString('base64') } });
 const origin = `http://127.0.0.1:${port}`, passwordHash = hashPassword(password);
 const server = createApplicationServer({ repository, prAssurance, publicOrigin: origin, releaseRevision: '9'.repeat(40),
-  accounts: [author, viewer].map(actor => ({ ...actor, passwordHash })) });
+  accounts: [author, authority, viewer].map(actor => ({ ...actor, passwordHash })) });
 server.listen(port, '127.0.0.1', () => console.log(JSON.stringify({ origin, token: TOKEN, pulls: Object.fromEntries(Object.entries(PULLS).map(([n, p]) => [n, p.head])) })));
 
 let closing = false;

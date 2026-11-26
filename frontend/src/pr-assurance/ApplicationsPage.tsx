@@ -34,7 +34,7 @@ export function ApplicationsPage({ overview }: { overview: unknown }) {
           })}
         </div>
       ) : (
-        <section className="panel"><div className="empty"><div className="empty-icon">▦</div><h2>No applications yet</h2><p>Register an application with its application, test automation and profiles repositories and a GitHub token. Its pull requests then appear here.</p><a className="button primary" href="#/applications">Go to Applications</a></div></section>
+        <section className="panel"><div className="empty"><div className="empty-icon">▦</div><h2>No applications yet</h2><p>Register an application with its application, verifiers and profiles repositories and a GitHub token. Its pull requests then appear here.</p><a className="button primary" href="#/applications">Go to Applications</a></div></section>
       )}
     </>
   );

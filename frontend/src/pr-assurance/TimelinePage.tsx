@@ -203,7 +203,7 @@ export function TimelinePage({ bridge, scenario, active }: { bridge: PrAssurance
       <div className="heading"><div>
         <div className="eyebrow">Pull request assurance{repository ? ` · ${repository}` : ''}</div>
         <h1>{text(field(field(scenario, 'application'), 'name'))}</h1>
-        <p className="sub">Pull request assurance{repository ? <> for <span className="mono">{repository}</span></> : null}. Each pull request is checked against the business rules by this application's test automation, run on GitHub Actions against its exact commit, with this application's own GitHub token.</p>
+        <p className="sub">Pull request assurance{repository ? <> for <span className="mono">{repository}</span></> : null}. Each pull request is checked against the business rules by this application's verifiers, run on GitHub Actions against its exact commit, with this application's own GitHub token.</p>
       </div>
       {canImport ? <div className="actions"><button className="button primary" data-action="import-all" disabled={importingAll || importMutation.isPending} onClick={() => void importAll()}>{importingAll ? 'Importing all…' : 'Import all from GitHub'}</button></div> : null}
       </div>

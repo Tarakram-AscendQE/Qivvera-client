@@ -36,7 +36,7 @@ describe('registering an application with its GitHub repositories', () => {
     setup();
     ui.openNewApplication();
     const labels = [...modal().querySelectorAll('label')].map(label => label.textContent);
-    expect(labels).toEqual(['Application name *', 'Description', 'Application repository URL *', 'Test automation repository URL *', 'Profiles repository URL *', 'GitHub personal access token *']);
+    expect(labels).toEqual(['Application name *', 'Description', 'Application repository URL *', 'Verifiers repository URL *', 'Profiles repository URL *', 'GitHub personal access token *']);
     for (const id of ['name', 'repositoryUrl', 'testRepositoryUrl', 'profilesRepositoryUrl', 'githubToken']) expect(modal().querySelector<HTMLInputElement>(`#${id}`)!.required).toBe(true);
     const token = modal().querySelector<HTMLInputElement>('#githubToken')!;
     expect([token.type, token.value, token.autocomplete]).toEqual(['password', '', 'new-password']);
@@ -52,7 +52,7 @@ describe('registering an application with its GitHub repositories', () => {
     ui.openNewApplication();
     type('Application name *', 'VendorPay');
     type('Application repository URL *', 'https://github.com/prcheck-live/vendorpay-app');
-    type('Test automation repository URL *', 'https://github.com/prcheck-live/prcheck-verifiers');
+    type('Verifiers repository URL *', 'https://github.com/prcheck-live/prcheck-verifiers');
     type('Profiles repository URL *', 'https://github.com/prcheck-live/vendorpay-policies');
     type('GitHub personal access token *', TOKEN);
     fireEvent.submit(modal().querySelector('form')!);
@@ -68,7 +68,7 @@ describe('registering an application with its GitHub repositories', () => {
     ui.openNewApplication();
     type('Application name *', 'Billing');
     type('Application repository URL *', 'https://github.com/acme/app');
-    type('Test automation repository URL *', 'https://github.com/acme/tests');
+    type('Verifiers repository URL *', 'https://github.com/acme/verifiers');
     type('Profiles repository URL *', 'https://github.com/acme/profiles');
     type('GitHub personal access token *', TOKEN);
     fireEvent.submit(modal().querySelector('form')!);
