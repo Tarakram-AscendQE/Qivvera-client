@@ -19,6 +19,10 @@ export const SCENARIO = Object.freeze({
   runTimeoutMs: 15 * 60 * 1000,
 });
 
+/**
+ * `githubWrite` (off unless QIVVERA_PR_ASSURANCE_GITHUB_WRITE is exactly "true") lets Qivvera set the
+ * "Qivvera" commit status and its one PR comment on the demo app repository. Nothing else is written.
+ */
 export function loadPrAssuranceConfig(env = process.env) {
-  return { enabled: env.QIVVERA_PR_ASSURANCE_ENABLED === 'true', scenario: SCENARIO };
+  return { enabled: env.QIVVERA_PR_ASSURANCE_ENABLED === 'true', githubWrite: env.QIVVERA_PR_ASSURANCE_GITHUB_WRITE === 'true', scenario: SCENARIO };
 }

@@ -16,11 +16,18 @@ const BASE = 'https://api.github.com';
 const MAX_BYTES = 1024 * 1024;
 const { owner, repo, workflow, ref, repositoryId } = SCENARIO.verifiers;
 const VERIFIERS = `/repos/${owner}/${repo}`;
+const APP = `/repos/${SCENARIO.app.owner}/${SCENARIO.app.repo}`;
 const PERMISSION = {
   dispatch: 'Actions: read and write on prcheck-verifiers',
   runs: 'Actions: read on prcheck-verifiers',
   checks: 'Checks: read on prcheck-verifiers',
+  statuses: `Commit statuses: read and write on ${SCENARIO.app.repo}`,
+  comments: `Pull requests: read and write on ${SCENARIO.app.repo}`,
 };
+/** The commit status name a branch protection rule requires, and the marker of Qivvera's one comment per PR. */
+export const STATUS_CONTEXT = 'Qivvera';
+export const COMMENT_MARKER = '<!-- qivvera-pr-assurance -->';
+const STATUS_STATES = ['pending', 'success', 'failure', 'error'];
 const RUN_TITLE = correlationId => `qivvera ${correlationId}`;
 /** The run link is shown to people, so only the pinned repository's Actions address is kept. */
 const RUN_URL = new RegExp(`^https://github\\.com/${owner}/${repo}/actions/runs/\\d+$`);
@@ -30,6 +37,10 @@ const fail = (code, message, status = 503) => { throw new InputError(code, messa
 function commit(value) {
   if (typeof value !== 'string' || !/^[0-9a-f]{40}$/.test(value)) fail('INVALID_COMMIT', 'A full 40-character commit is required.', 400);
   return value;
+}
+function scenarioPull(number) {
+  if (!SCENARIO.pulls.includes(number)) fail('PULL_NOT_IN_SCENARIO', 'Only the demo pull requests #6, #7 and #8 can be used.', 400);
+  return number;
 }
 const runId = value => (Number.isSafeInteger(value) && value > 0 ? value : fail('INVALID_GITHUB_RUN', 'A GitHub run id is required.', 400));
 
@@ -84,6 +95,32 @@ export function createGitHubClient({ secretEnv = process.env, fetchFn = fetch, t
     async readPull(number) {
       if (!SCENARIO.pulls.includes(number)) fail('PULL_NOT_IN_SCENARIO', 'Only the demo pull requests #6, #7 and #8 can be imported.', 400);
       return readIntakePull({ ...SCENARIO.app, tokenEnv: SCENARIO.tokenEnv }, number, { secretEnv, fetchFn });
+    },
+
+    /** Sets the "Qivvera" commit status on a commit of the pinned app repository (what branch protection can require). */
+    async setCommitStatus(sha, { state, description, targetUrl = null }) {
+      if (!STATUS_STATES.includes(state)) fail('INVALID_STATUS', 'Unknown commit status.', 400);
+      const link = typeof targetUrl === 'string' && /^https?:\/\/[^\s]+$/.test(targetUrl) ? targetUrl : undefined;
+      await call('POST', `${APP}/statuses/${commit(sha)}`, {
+        body: { state, context: STATUS_CONTEXT, description: String(description).slice(0, 140), ...(link ? { target_url: link } : {}) },
+        permission: PERMISSION.statuses,
+      });
+    },
+
+    /**
+     * Writes Qivvera's one comment on a demo PR: the comment this token wrote earlier with the marker is
+     * edited, otherwise a new one is added. Nobody else's comment is ever changed.
+     */
+    async upsertPullComment(number, markdown) {
+      scenarioPull(number);
+      const body = `${COMMENT_MARKER}\n${markdown}`;
+      const login = (await call('GET', '/user', { permission: PERMISSION.comments }))?.login;
+      const comments = await call('GET', `${APP}/issues/${number}/comments?per_page=100`, { permission: PERMISSION.comments });
+      const own = (Array.isArray(comments) ? comments : []).find(c => typeof login === 'string' && c?.user?.login === login
+        && typeof c?.body === 'string' && c.body.startsWith(COMMENT_MARKER) && Number.isSafeInteger(c?.id));
+      if (own) await call('PATCH', `${APP}/issues/comments/${own.id}`, { body: { body }, permission: PERMISSION.comments });
+      else await call('POST', `${APP}/issues/${number}/comments`, { body: { body }, permission: PERMISSION.comments });
+      return { updated: !!own };
     },
 
     async dispatch({ appSha, correlationId }) {

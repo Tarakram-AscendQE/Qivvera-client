@@ -134,3 +134,58 @@ test('pr-assurance github / a run link that is not the pinned GitHub Actions add
   const { client } = github(reply(200, workflowRun()));
   assert.equal((await client.getRun(42, CORRELATION)).url, 'https://github.com/prcheck-live/prcheck-verifiers/actions/runs/42');
 });
+
+test('pr-assurance github / writing to GitHub is off unless switched on exactly', () => {
+  assert.equal(loadPrAssuranceConfig({}).githubWrite, false);
+  assert.equal(loadPrAssuranceConfig({ QIVVERA_PR_ASSURANCE_GITHUB_WRITE: 'yes' }).githubWrite, false);
+  assert.equal(loadPrAssuranceConfig({ QIVVERA_PR_ASSURANCE_GITHUB_WRITE: 'true' }).githubWrite, true);
+});
+
+test('pr-assurance github / the commit status goes only to the pinned app repository under the name "Qivvera"', async () => {
+  const { calls, client } = github(reply(201, {}));
+  await client.setCommitStatus(SHA, { state: 'failure', description: 'x'.repeat(200), targetUrl: 'https://qivvera.example/#/pr-assurance/runs/1' });
+  assert.equal(calls[0].url, `https://api.github.com/repos/prcheck-live/vendorpay-app/statuses/${SHA}`);
+  assert.equal(calls[0].method, 'POST');
+  assert.deepEqual(calls[0].body, { state: 'failure', context: 'Qivvera', description: 'x'.repeat(140), target_url: 'https://qivvera.example/#/pr-assurance/runs/1' });
+});
+
+test('pr-assurance github / a bad commit, state or link never reaches GitHub as given', async () => {
+  const { calls, client } = github(reply(201, {}));
+  await assert.rejects(client.setCommitStatus('af51c26', { state: 'success', description: 'ok' }), { code: 'INVALID_COMMIT' });
+  await assert.rejects(client.setCommitStatus(SHA, { state: 'merged', description: 'ok' }), { code: 'INVALID_STATUS' });
+  await client.setCommitStatus(SHA, { state: 'success', description: 'ok', targetUrl: 'javascript:alert(1)' });
+  assert.equal(calls.length, 1);
+  assert.equal('target_url' in calls[0].body, false);
+});
+
+test('pr-assurance github / a missing write permission is named, without the token', async () => {
+  const { client } = github(reply(403, { message: 'Resource not accessible' }));
+  const error = await client.setCommitStatus(SHA, { state: 'pending', description: 'x' }).catch(e => e);
+  assert.equal(error.code, 'GITHUB_PERMISSION_MISSING');
+  assert.match(error.message, /Commit statuses: read and write on vendorpay-app/);
+  assert.doesNotMatch(error.message, new RegExp(TOKEN));
+});
+
+test('pr-assurance github / the first PR comment is added with the marker', async () => {
+  const { calls, client } = github(reply(200, { login: 'qivvera-bot' }), reply(200, [{ id: 5, user: { login: 'dev' }, body: 'Looks good' }]), reply(201, { id: 9 }));
+  assert.deepEqual(await client.upsertPullComment(6, 'Result'), { updated: false });
+  assert.equal(calls[1].url, 'https://api.github.com/repos/prcheck-live/vendorpay-app/issues/6/comments?per_page=100');
+  assert.equal(calls[2].method, 'POST');
+  assert.equal(calls[2].url, 'https://api.github.com/repos/prcheck-live/vendorpay-app/issues/6/comments');
+  assert.deepEqual(calls[2].body, { body: '<!-- qivvera-pr-assurance -->\nResult' });
+});
+
+test('pr-assurance github / a later result edits Qivvera\'s own comment, never someone else\'s marked comment', async () => {
+  const marked = '<!-- qivvera-pr-assurance -->\nOld';
+  const { calls, client } = github(reply(200, { login: 'qivvera-bot' }),
+    reply(200, [{ id: 5, user: { login: 'dev' }, body: marked }, { id: 7, user: { login: 'qivvera-bot' }, body: marked }]), reply(200, { id: 7 }));
+  assert.deepEqual(await client.upsertPullComment(7, 'New'), { updated: true });
+  assert.equal(calls[2].method, 'PATCH');
+  assert.equal(calls[2].url, 'https://api.github.com/repos/prcheck-live/vendorpay-app/issues/comments/7');
+});
+
+test('pr-assurance github / comments go only to the three demo pull requests', async () => {
+  const { calls, client } = github();
+  await assert.rejects(client.upsertPullComment(9, 'x'), { code: 'PULL_NOT_IN_SCENARIO' });
+  assert.equal(calls.length, 0);
+});
