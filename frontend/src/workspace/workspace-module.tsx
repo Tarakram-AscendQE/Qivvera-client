@@ -108,7 +108,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
       shell(<ChangePage view={view} />, 'changes', String(shellState.change.title));
     },
     openNewApplication() {
-      openForm(env => <NewApplicationDialog env={env} api={api} github={capabilityOn('prAssurance')} />);
+      openForm(env => <NewApplicationDialog env={env} api={api} github={capabilityOn('prAssurance')} serverToken={capabilityOn('githubServerToken')} />);
     },
     openNewChange(applicationId = '') {
       const active = bridge.viewContext();
@@ -122,7 +122,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
     openConnectGitHub(id) {
       const app = workspace().applications.find(candidate => candidate.id === id);
       if (!app) return;
-      openForm(env => <ConnectGitHubDialog env={env} api={api} application={app as never} />);
+      openForm(env => <ConnectGitHubDialog env={env} api={api} application={app as never} serverToken={capabilityOn('githubServerToken')} />);
     },
     openNewRevision() {
       const active = bridge.viewContext(), change = state.change;

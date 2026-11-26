@@ -149,6 +149,7 @@ export interface PreparedConnection {
 /** backend/server/pr-assurance/service.mjs: PR assurance per application (each with its own GitHub token). */
 export interface PrAssuranceService {
   readonly credentialsReady: boolean;
+  readonly serverToken: boolean;
   prepareConnection(input: unknown, session: Session, role?: string): Promise<PreparedConnection>;
   connect(applicationId: string, input: unknown, session: Session): Promise<unknown>;
   connections(): Promise<Map<string, PrAssuranceConnection>>;

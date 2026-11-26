@@ -26,38 +26,43 @@ export function SecretField({ id, label, hint = '', required = false }: { id: st
 export interface GitHubConnection { readonly app?: { readonly repository?: unknown }; readonly tests?: { readonly repository?: unknown }; readonly profiles?: { readonly repository?: unknown } }
 const githubUrl = (repository: unknown) => (repository ? `https://github.com/${text(repository)}` : '');
 
-/** The three repositories and the token an application is assured with. The token is always entered fresh. */
-function GitHubFields({ connection, repositoryUrl = '' }: { connection?: GitHubConnection | null; repositoryUrl?: string }) {
+/**
+ * The three repositories and the token an application is assured with. The token is always entered fresh,
+ * except while the server uses its own token for every application: then no token is asked for.
+ */
+function GitHubFields({ connection, repositoryUrl = '', serverToken = false }: { connection?: GitHubConnection | null; repositoryUrl?: string; serverToken?: boolean }) {
   return (
     <>
       <Field id="repositoryUrl" label="Application repository URL" type="url" value={githubUrl(connection?.app?.repository) || repositoryUrl} hint="The repository whose pull requests are assured, for example https://github.com/acme/vendorpay-app." required />
       <Field id="testRepositoryUrl" label="Test automation repository URL" type="url" value={githubUrl(connection?.tests?.repository)} hint="Runs Qivvera's checks. It must contain .github/workflows/qivvera-pr-assessment.yml." required />
       <Field id="profilesRepositoryUrl" label="Profiles repository URL" type="url" value={githubUrl(connection?.profiles?.repository)} hint="The business rules this application is assured against." required />
-      <SecretField id="githubToken" label="GitHub personal access token" hint={connection ? 'Enter the token again, or a new one. It replaces the saved token, is stored encrypted and is never shown again.' : 'Used only for this application\'s repositories. Stored encrypted and never shown again.'} required />
+      {serverToken
+        ? <p className="small muted" data-server-token>GitHub access uses the server's own token (QIVVERA_PR_ASSURANCE_GITHUB_TOKEN), so no token is needed here.</p>
+        : <SecretField id="githubToken" label="GitHub personal access token" hint={connection ? 'Enter the token again, or a new one. It replaces the saved token, is stored encrypted and is never shown again.' : 'Used only for this application\'s repositories. Stored encrypted and never shown again.'} required />}
     </>
   );
 }
 
 /** Registration. With PR assurance on, the application's GitHub repositories and token are required and checked before saving. */
-export function NewApplicationDialog({ env, api, github = false }: Common & { github?: boolean }) {
+export function NewApplicationDialog({ env, api, github = false, serverToken = false }: Common & { github?: boolean; serverToken?: boolean }) {
   return (
     <FormDialog env={env} title="Register application" saveLabel="Register application"
       description={github ? 'Qivvera checks that the token can reach all three repositories before saving. Nothing is saved if a check fails.' : 'Create a saved record. This does not connect to the repository.'}
       submit={async data => `#/applications/${text(field(await api('/api/applications', { method: 'POST', data }), 'id'))}`}>
       <Field id="name" label="Application name" hint="For example: VendorPay" required /><Field id="description" label="Description" type="textarea" hint="What does this application do?" />
-      {github ? <GitHubFields /> : <Field id="repositoryUrl" label="Repository URL" type="url" hint="Optional HTTPS URL. Do not include credentials." />}
+      {github ? <GitHubFields serverToken={serverToken} /> : <Field id="repositoryUrl" label="Repository URL" type="url" hint="Optional HTTPS URL. Do not include credentials." />}
     </FormDialog>
   );
 }
 
 /** Connects an existing application to GitHub, or replaces its repositories and token (for example after the token expired). */
-export function ConnectGitHubDialog({ env, api, application }: Common & { application: { id: string; name?: unknown; repositoryUrl?: unknown; github?: GitHubConnection | null } }) {
+export function ConnectGitHubDialog({ env, api, application, serverToken = false }: Common & { serverToken?: boolean; application: { id: string; name?: unknown; repositoryUrl?: unknown; github?: GitHubConnection | null } }) {
   const connected = !!application.github;
   return (
     <FormDialog env={env} title={connected ? `GitHub access for “${text(application.name)}”` : `Connect “${text(application.name)}” to GitHub`} saveLabel={connected ? 'Save GitHub access' : 'Connect to GitHub'}
       description="Qivvera checks that the token can reach all three repositories before saving. Nothing changes if a check fails."
       submit={async data => { await api(`/api/applications/${application.id}/github`, { method: 'POST', data }); return `#/applications/${application.id}`; }}>
-      <GitHubFields connection={application.github ?? null} repositoryUrl={text(application.repositoryUrl || '')} />
+      <GitHubFields connection={application.github ?? null} repositoryUrl={text(application.repositoryUrl || '')} serverToken={serverToken} />
     </FormDialog>
   );
 }
