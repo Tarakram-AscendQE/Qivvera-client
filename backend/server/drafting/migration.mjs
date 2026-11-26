@@ -10,7 +10,7 @@ export async function migrateDrafting(db) {
     return db.transaction(async c => {
         await c.query('SELECT pg_advisory_xact_lock(78124422)');
         const rows = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-        if (rows.some(r => Number(r.version) > 8)) throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
+        if (rows.some(r => Number(r.version) > 9)) throw new Error('SCHEMA_NEWER_THAN_APPLICATION');
         const prior = rows.find(r => Number(r.version) === 6);
         if (prior) {
             if (prior.checksum !== draftingChecksum) throw new Error('DRAFTING_MIGRATION_CHECKSUM_MISMATCH');
@@ -25,7 +25,7 @@ export async function requireDrafting(db) {
     await requireIntake(db);
     return db.transaction(async c => {
         const rows = (await c.query('SELECT * FROM qivvera_migrations ORDER BY version')).rows;
-        if (!rows.some(r => Number(r.version) === 6 && r.checksum === draftingChecksum) || rows.some(r => Number(r.version) > 8))
+        if (!rows.some(r => Number(r.version) === 6 && r.checksum === draftingChecksum) || rows.some(r => Number(r.version) > 9))
             throw new Error('DRAFTING_MIGRATION_REQUIRED');
     }, true);
 }

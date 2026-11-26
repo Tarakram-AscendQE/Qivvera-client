@@ -137,7 +137,7 @@ try:
         check('Native navigation reaches sign-in; unauthenticated support data is denied.')
 
         sign_in(page, fixture, 'author@example.test')
-        expect(page.get_by_role('heading', name='Start with your role', exact=True)).to_be_visible()
+        expect(page.get_by_role('heading', name='Your turn', exact=True)).to_be_visible()
         before_guidance = request_json(page, fixture, '/api/workspace')
         assert before_guidance['applications'] == [] and before_guidance['changes'] == []
         check('An Author reaches role-specific starting guidance in a genuinely empty workspace.')
@@ -241,12 +241,12 @@ try:
         page.get_by_role('button', name='Save decision', exact=True).click()
         expect(page.get_by_text('Requirement accepted', exact=True)).to_be_visible()
         expect(page.get_by_role('heading', name='Not assessed', exact=True)).to_be_visible()
-        page.get_by_role('button', name='Assurance', exact=True).click()
+        page.get_by_role('button', name='Plan & check', exact=True).click()
         expect(page.get_by_role('button', name='Configure mapping', exact=True)).to_be_disabled()
         expect(page.get_by_text('No configured target matches this application and full source revision.', exact=False)).to_be_visible()
         check('A different Policy Authority accepts applicability; absent target setup still prevents mapping and no readiness is invented.')
 
-        page.get_by_role('button', name='Obligations', exact=True).click()
+        page.get_by_role('button', name='Requirements', exact=True).click()
         page.get_by_role('button', name='Review history', exact=True).click()
         expect(page.get_by_role('heading', name='Obligation review history', exact=True)).to_be_visible()
         expect(page.get_by_text('Different recorded reviewer identity. This is not a guarantee of organizational independence.', exact=True)).to_be_visible()
@@ -265,7 +265,7 @@ try:
         page.get_by_role('button', name='Revisions', exact=True).click()
         page.get_by_role('link', name='Revision 1', exact=True).click()
         expect(page.get_by_text('Historical revision · read-only', exact=True)).to_be_visible()
-        page.get_by_role('button', name='Obligations', exact=True).click()
+        page.get_by_role('button', name='Requirements', exact=True).click()
         expect(page.get_by_role('button', name='+ Add obligation', exact=True)).to_be_disabled()
         expect(page.get_by_text('Requirement accepted', exact=True)).to_be_visible()
         page.get_by_role('link', name=re.compile('^Open current revision')).first.click()
@@ -275,15 +275,21 @@ try:
         check('Revision navigation preserves historical authority, copies only candidates and survives a real page reload.')
 
         page.set_viewport_size({'width': 390, 'height': 844})
+        expect(page.get_by_role('navigation', name='Main navigation').get_by_role('link', name='Guide', exact=True)).to_be_hidden()
+        page.get_by_role('button', name='Open navigation', exact=True).click()
         nav(page, 'Guide')
         expect(page.get_by_role('heading', name='Your guide to Qivvera', exact=True)).to_be_visible()
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+        page.get_by_role('button', name='Open navigation', exact=True).click()
+        page.keyboard.press('Escape')
+        expect(page.get_by_role('navigation', name='Main navigation').get_by_role('link', name='Support', exact=True)).to_be_hidden()
+        page.get_by_role('button', name='Open navigation', exact=True).click()
         nav(page, 'Support')
         expect(page.get_by_role('heading', name='Workspace support', exact=True)).to_be_visible()
         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
         page.screenshot(path=str(OUTPUT / 'increment6-support-mobile.png'), full_page=True)
         page.set_viewport_size({'width': 1440, 'height': 1000})
-        check('Guide and Support remain usable without horizontal page overflow at 390px.')
+        check('At 390px the navigation is a drawer: hidden until opened, closes on Escape; Guide and Support stay usable without horizontal page overflow.')
 
         page.goto(fixture.origin + '/#/changes/00000000-0000-4000-8000-000000000000')
         expect(page.get_by_role('heading', name='We could not open this view', exact=True)).to_be_visible()
@@ -308,7 +314,7 @@ try:
         # verify that the old response cannot open a dialog in the new session.
         sign_in(page, fixture, 'author@example.test')
         page.goto(change_url, wait_until='networkidle')
-        page.get_by_role('button', name='Obligations', exact=True).click()
+        page.get_by_role('button', name='Requirements', exact=True).click()
         with page.expect_response(lambda response: '/api/obligations/' in response.url and response.url.endswith('/history')) as old_history:
             page.get_by_role('button', name='Review history', exact=True).click()
         history_response = old_history.value
@@ -337,7 +343,7 @@ try:
         # Expiry during DELETE /api/session must clear the UI as well as expiry on
         # ordinary read routes. Keep old history in the closed dialog to verify cleanup.
         page.goto(change_url, wait_until='networkidle')
-        page.get_by_role('button', name='Obligations', exact=True).click()
+        page.get_by_role('button', name='Requirements', exact=True).click()
         page.get_by_role('button', name='Review history', exact=True).click()
         expect(page.get_by_role('heading', name='Obligation review history', exact=True)).to_be_visible()
         page.get_by_role('button', name='Close dialog', exact=True).click()
@@ -374,7 +380,7 @@ try:
         disabled_page.on('pageerror', lambda error: page_errors.append(str(error)))
         disabled_page.goto(disabled.origin, wait_until='networkidle')
         sign_in(disabled_page, disabled, 'author@example.test')
-        expect(disabled_page.get_by_role('heading', name='Start with your role', exact=True)).to_be_visible()
+        expect(disabled_page.get_by_role('heading', name='Your turn', exact=True)).to_be_visible()
         nav(disabled_page, 'Support')
         expect(disabled_page.get_by_role('heading', name='Workspace support', exact=True)).to_be_visible()
         disabled_info = request_json(disabled_page, disabled, '/api/support-info')

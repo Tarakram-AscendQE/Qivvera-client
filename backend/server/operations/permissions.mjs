@@ -1,4 +1,4 @@
-/** Read-only audit of the cumulative schema-8 runtime privilege contract. */
+/** Read-only audit of the cumulative schema-9 runtime privilege contract. */
 import { TABLES, databaseConfig, connectDatabase, beginReadSnapshot, databaseIdentity,
     requireCurrentSchema, digestJSON, releaseIdentity, fail, OperationsError } from './common.mjs';
 
@@ -24,6 +24,7 @@ Object.assign(web, {
     // Accounts are administered by the operator; the web runtime only reads them and records sign-in time.
     workspace_users: permission(true, false, ['last_login_at']),
     workspace_user_roles: permission(true, false)
+    // github_webhook_deliveries / source_events use the default web profile: SELECT and INSERT only.
 });
 const workerReads = new Set(['applications', 'changes', 'change_revisions', 'obligations', 'obligation_workflow',
     'obligation_history', 'qivvera_migrations', 'assurance_plans', 'assurance_runs', 'assurance_evidence']);
@@ -165,7 +166,7 @@ export async function auditRuntimePermissions(input = {}) {
             identityDigest: digestJSON({ database: validated.webConfig.identity, web: webResult.identity.role, worker: workerResult.identity.role }),
             passed: webResult.violations.length === 0 && workerResult.violations.length === 0,
             roles: { web: roleReport(webResult), worker: roleReport(workerResult) },
-            scope: 'Current schema-8 public-table runtime profile, effective grants, reachable roles and ownership.',
+            scope: 'Current schema-9 public-table runtime profile, effective grants, reachable roles and ownership.',
             limitations: ['Role/password/provider administration is not changed or certified.',
                 'External schemas, provider policy, backups, network controls and hosted application behavior require separate acceptance.'],
             releaseAcceptance: 'not-evaluated' };

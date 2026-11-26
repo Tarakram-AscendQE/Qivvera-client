@@ -5,14 +5,15 @@ import { routerFor } from './common/routing.js';
 import { requireCsrf, requireSameOrigin, securityHeaders } from './common/security.js';
 import type { Services } from './common/services.js';
 import { requireSession } from './common/session.js';
-import { publicRoutes, sessionRoutes, signInRoutes, workspaceRoutes } from './routes.js';
+import { publicRoutes, sessionRoutes, signInRoutes, webhookRoutes, workspaceRoutes } from './routes.js';
 
 /**
  * The Express application. Every request passes these steps in order; the first that answers wins.
  *
  *   1. security headers, request reference, URL normalised
  *   2. public routes (/healthz, /readyz)        — no sign-in
- *   3. web root files (index.html, app.js, ...) — no sign-in
+ *   3. GitHub webhook (POST /api/github/webhook)  — no sign-in or origin; HMAC signature only
+ *   3b. web root files (index.html, app.js, ...) — no sign-in
  *   4. writes must come from the workspace origin            → 403 ORIGIN_REJECTED
  *   5. sign-in route (POST /api/session)
  *   6. sign-in required                                       → 401 AUTH_REQUIRED
@@ -33,6 +34,7 @@ export function createExpressApp(services: Services): Express {
 
   app.use(securityHeaders(services.secureCookies));
   app.use(routerFor(publicRoutes, services));
+  app.use(routerFor(webhookRoutes, services));
   app.use(serveAssets(services.assets));
   app.use(requireSameOrigin(services.publicOrigin));
   app.use(routerFor(signInRoutes, services));

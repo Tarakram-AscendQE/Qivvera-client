@@ -11,7 +11,8 @@ export type Route =
   | { readonly kind: 'drafting'; readonly changeId: string; readonly revisionId: string; readonly runId: string | null; readonly offset: number }
   | { readonly kind: 'resolution-inbox' }
   | { readonly kind: 'resolution'; readonly id: string }
-  | { readonly kind: 'intake' }
+  /** GitHub intake, optionally with a repository and pull request chosen (from an application's PR list). */
+  | { readonly kind: 'intake'; readonly repositoryKey: string | null; readonly pullNumber: number | null }
   | { readonly kind: 'pr-assurance' }
   | { readonly kind: 'pr-assurance-pull'; readonly number: number }
   | { readonly kind: 'pr-assurance-run'; readonly runId: string }
@@ -82,7 +83,11 @@ export function parseRoute(hash: string, workspace: RoutingWorkspace): Route {
     return { kind: 'drafting', changeId: first, revisionId: second, runId: third === 'runs' ? fourth! : null, offset };
   }
   if (section === 'resolutions' && workspace.capabilities['resolutionWorkflow']) return first ? { kind: 'resolution', id: first } : { kind: 'resolution-inbox' };
-  if (section === 'intake' && workspace.capabilities['githubIntake']) return { kind: 'intake' };
+  if (section === 'intake' && workspace.capabilities['githubIntake']) {
+    const pullNumber = Number(second);
+    if (first && second && Number.isSafeInteger(pullNumber) && pullNumber > 0) return { kind: 'intake', repositoryKey: decodeURIComponent(first), pullNumber };
+    return { kind: 'intake', repositoryKey: null, pullNumber: null };
+  }
   if (section === 'pr-assurance') {
     if (!workspace.capabilities['prAssurance']) return { kind: 'error', message: 'PR assurance is not enabled in this workspace.' };
     if (p.length === 1) return { kind: 'pr-assurance' };

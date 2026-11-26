@@ -3,6 +3,7 @@ import {migrateDrafting} from '../server/drafting/migration.mjs';
 import {migrateTemplates} from '../server/templates/migration.mjs';
 import {migrateAccounts} from '../server/accounts/migration.mjs';
 import { migratePrAssurance } from '../server/pr-assurance/migration.mjs';
+import {migrateWebhooks} from '../server/intake/webhook-migration.mjs';
 import { migrateResolution } from '../server/resolution/migration.mjs';
 import { migrateAssurance } from '../server/assurance/migration.mjs';
 import { openDatabase, migrateDatabase } from '../server/workflow-store.mjs';
@@ -25,9 +26,10 @@ try {
     await migrateDrafting(db);
     await migrateTemplates(db);
     await migrateAccounts(db);
-    // The PR assurance add-on keeps its own version ledger; the workspace schema stays 8.
+    await migrateWebhooks(db);
+    // The PR assurance add-on keeps its own version ledger, independent of the workspace schema.
     await migratePrAssurance(db);
-    console.log('Schema 8 is current, and so are the PR assurance add-on tables. Existing evidence, resolution history, source receipts, drafting records and accounts retained.');
+    console.log('Schema 9 is current, and so are the PR assurance add-on tables. Existing evidence, resolution history, source receipts, drafting records, accounts and webhook receipts retained.');
 }
 catch {
     console.error('MIGRATION_FAILED: no secrets logged. Ask the database owner to inspect the failure.');

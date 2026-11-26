@@ -16,7 +16,7 @@ export const getWorkspace = defineEndpoint({
       capabilities: {
         registry: true, authorityDecisions: true, changeRevisions: true,
         verifierExecution: !!assurance?.enabled, evidenceCollection: !!assurance?.enabled, assuranceDisposition: !!assurance?.enabled,
-        assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake,
+        assessmentQueue: !!assurance, resolutionWorkflow: !!resolution, githubIntake: !!intake, githubWebhooks: !!intake?.webhookEnabled,
         obligationDrafting: !!repository.drafting, revisionImpact: !!repository.impact, verificationTemplates: !!assurance?.templates,
         prAssurance: !!prAssurance
       },

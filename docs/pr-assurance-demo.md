@@ -17,6 +17,12 @@ Already done on 2026-11-26:
   accounts and the existing data were unchanged.
 - `.env.local` contains `QIVVERA_PR_ASSURANCE_ENABLED=true` and `QIVVERA_PR_ASSURANCE_GITHUB_TOKEN`.
 
+**Do not run `npm run migrate` against Neon before the demo.** Since the `tarak-local` merge it would also
+apply migration 9 (GitHub webhooks), after which any older build using Neon refuses to start. The demo does
+not need it: webhooks are off (`QIVVERA_GITHUB_INTAKE_ENABLED=false`, no webhook secret), and with them off
+the merged code runs on Neon's schema 8. Move Neon to schema 9 only when webhooks are switched on, as part
+of a planned deployment (see `docs/github-webhooks.md`).
+
 To run it:
 1. Stop any dev server that was started before these changes (old code does not have the feature).
 2. **Start from a clean slate:** `npm run demo:reset` shows what demo data exists (changes nothing);

@@ -14,7 +14,7 @@ try:
   page.goto(base,wait_until='networkidle')
   page.get_by_label('Email address').fill('policy@example.test');page.get_by_label('Password',exact=True).fill('synthetic-browser-only-password');page.get_by_role('button',name='Open workspace').click()
   page.goto(base+'/#/changes/'+metadata['changeId']);expect(page.get_by_role('heading',name='Approval change',exact=True)).to_be_visible();checks.append('Native authenticated navigation')
-  page.get_by_role('button',name='Assurance',exact=True).click()
+  page.get_by_role('button',name='Plan & check',exact=True).click()
   page.get_by_role('button',name='Configure mapping',exact=True).click()
   page.get_by_label('Why does this check support the obligation?').fill('Approved mapping for the explicit synthetic maker-checker rule.')
   page.locator('input[name="acknowledgeLimits"]').check();page.get_by_role('button',name='Approve plan',exact=True).click();checks.append('Authority-approved mapping through browser')

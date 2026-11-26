@@ -62,6 +62,23 @@ describe('GitHub intake', () => {
     expect(screen.getByRole('option', { name: 'acme/approvals · Approvals' })).toBeTruthy();
   });
 
+  it('opened from an application PR list, previews the chosen pull request once', async () => {
+    setup(async () => preview);
+    location.hash = '#/intake/repo-1/12';
+    await ui.show('repo-1', 12);
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Review before importing' })).toBeTruthy());
+    expect((screen.getByLabelText('Open pull-request number') as HTMLInputElement).value).toBe('12');
+    expect(api.mock.calls.filter(([path]) => path === '/api/source-previews')).toEqual([['/api/source-previews', { method: 'POST', data: { repositoryKey: 'repo-1', pullNumber: 12 } }]]);
+  });
+
+  it('does not preview a pull request from a repository that is not configured', async () => {
+    setup(async () => preview);
+    location.hash = '#/intake/other/12';
+    await ui.show('other', 12);
+    expect((screen.getByLabelText('Open pull-request number') as HTMLInputElement).value).toBe('');
+    expect(api.mock.calls.some(([path]) => path === '/api/source-previews')).toBe(false);
+  });
+
   it('explains why the form is missing', async () => {
     setup(async () => preview, []);
     await ui.show();

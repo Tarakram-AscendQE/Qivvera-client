@@ -209,7 +209,7 @@ async function show(target: Route, current: () => boolean): Promise<void> {
     case 'drafting': return drafting().show(target.changeId, target.revisionId, { runId: target.runId, offset: target.offset });
     case 'resolution-inbox': return resolution().showInbox();
     case 'resolution': return resolution().showItem(target.id);
-    case 'intake': return intake().show();
+    case 'intake': return intake().show(target.repositoryKey, target.pullNumber);
     case 'pr-assurance': return prAssurance().show();
     case 'pr-assurance-pull': return prAssurance().showPull(target.number);
     case 'pr-assurance-run': return prAssurance().showRun(target.runId);

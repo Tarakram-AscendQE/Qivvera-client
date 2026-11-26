@@ -26,7 +26,7 @@ with sync_playwright() as p:
  expect(page.get_by_role('heading',name='NOT READY',exact=True)).to_be_visible();checks.append('Current violated execution displays NOT READY')
  expect(page.get_by_text('Requirement accepted',exact=True)).to_be_visible();expect(page.get_by_text('VIOLATED',exact=True)).to_be_visible();checks.append('Accepted requirement and violated software remain distinct')
  page.screenshot(path=str(out/'01-assessment-not-ready.png'),full_page=True)
- page.get_by_role('button',name='Assurance',exact=True).click();expect(page.get_by_role('heading',name='Approved verification plan',exact=True)).to_be_visible();checks.append('Plan and execution history visible')
+ page.get_by_role('button',name='Plan & check',exact=True).click();expect(page.get_by_role('heading',name='Approved verification plan',exact=True)).to_be_visible();checks.append('Plan and execution history visible')
  page.screenshot(path=str(out/'02-assurance-plan.png'),full_page=True)
  page.get_by_role('button',name='Open assurance case →',exact=True).click()
  expect(page.get_by_role('heading',name='Expected versus observed',exact=True)).to_be_visible()

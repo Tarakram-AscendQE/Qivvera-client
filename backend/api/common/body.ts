@@ -59,3 +59,29 @@ function parsedBody(raw: unknown, maxBytes: number): unknown {
     throw invalidJson();
   }
 }
+
+/**
+ * Reads the exact request bytes, for endpoints that verify a signature over them (GitHub webhooks).
+ * Same Content-Type and size rules as readJsonBody. Fails closed (400 RAW_BODY_UNAVAILABLE) when a
+ * serverless adapter has already parsed the body and the original bytes cannot be recovered.
+ */
+export async function readRawBody(req: IncomingMessage & { body?: unknown; rawBody?: unknown }, maxBytes: number): Promise<Buffer> {
+  if ((req.headers['content-type'] ?? '').split(';')[0]!.trim() !== 'application/json') throw new InputError('JSON_REQUIRED', 'Send JSON.', 415);
+  if (Number(req.headers['content-length'] ?? 0) > maxBytes) {
+    req.resume();
+    throw tooLarge(maxBytes);
+  }
+  if (req.readable && !req.readableEnded) {
+    // Keep draining after the limit so the response can still be written on the same connection.
+    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const chunk of req as AsyncIterable<Buffer>) {
+      size += chunk.length;
+      if (size <= maxBytes) chunks.push(chunk);
+    }
+    if (size > maxBytes) throw tooLarge(maxBytes);
+    return Buffer.concat(chunks);
+  }
+  if (Buffer.isBuffer(req.rawBody) && req.rawBody.length <= maxBytes) return req.rawBody;
+  throw new InputError('RAW_BODY_UNAVAILABLE', 'The webhook body could not be verified.', 400);
+}

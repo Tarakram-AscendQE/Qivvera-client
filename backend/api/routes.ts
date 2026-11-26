@@ -18,6 +18,9 @@ import { exportImpact } from './endpoints/impact/export-impact.js';
 import { getImpact } from './endpoints/impact/get-impact.js';
 import { importSource } from './endpoints/intake/import-source.js';
 import { listChangeSources } from './endpoints/intake/list-change-sources.js';
+import { listPullRequests } from './endpoints/intake/list-pull-requests.js';
+import { listSourceEvents } from './endpoints/intake/list-source-events.js';
+import { receiveWebhook, webhookMethodNotAllowed } from './endpoints/github/receive-webhook.js';
 import { listSourceRepositories } from './endpoints/intake/list-source-repositories.js';
 import { previewSource } from './endpoints/intake/preview-source.js';
 import { cancelAssessment } from './endpoints/assurance/cancel-assessment.js';
@@ -69,6 +72,17 @@ import { listRuns } from './endpoints/pr-assurance/list-runs.js';
 export const publicRoutes: readonly Route[] = [
   get('/healthz', health),
   get('/readyz', health)
+];
+
+/**
+ * GitHub deliveries: no session, no Origin. Authenticated only by the HMAC signature over the exact
+ * body, so they run before the origin and session steps. 404 when webhooks are not enabled.
+ */
+export const webhookRoutes: readonly Route[] = [
+  post('/api/github/webhook', receiveWebhook),
+  get('/api/github/webhook', webhookMethodNotAllowed),
+  patch('/api/github/webhook', webhookMethodNotAllowed),
+  del('/api/github/webhook', webhookMethodNotAllowed)
 ];
 
 /** No sign-in yet; writes must come from the workspace origin. */
@@ -152,12 +166,14 @@ export const workspaceRoutes: readonly Route[] = [
     get('/api/drafting-runs/:runId/export', exportDraftingRun)
   ]),
 
-  // GitHub intake: pull-request source context (only when configured). No GitHub writes.
+  // GitHub intake: pull-request source context, open-PR list and webhook activity (only when configured). No GitHub writes.
   ...onlyWhen(({ intake }) => !!intake, [
     get('/api/source-repositories', listSourceRepositories),
     post('/api/source-previews', previewSource),
     post('/api/source-imports', importSource),
-    get('/api/changes/:changeId/source-imports', listChangeSources)
+    get('/api/changes/:changeId/source-imports', listChangeSources),
+    get('/api/applications/:applicationId/pull-requests', listPullRequests),
+    get('/api/applications/:applicationId/source-events', listSourceEvents)
   ]),
 
   // PR assurance demo add-on (only when switched on). The browser sends only a PR number: the

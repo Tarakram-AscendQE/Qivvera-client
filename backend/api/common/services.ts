@@ -113,6 +113,16 @@ export interface IntakeRepository {
   preview(input: unknown, session: Session): Promise<unknown>;
   importPreview(input: unknown, session: Session): Promise<MaybeReplayed>;
   list(changeId: string): Promise<unknown>;
+  /** Open pull requests of the application's connected repositories, with their import state. */
+  listPulls(applicationId: string, session: Session): Promise<unknown>;
+  /** True when a webhook secret is configured (schema 9). */
+  readonly webhookEnabled: boolean;
+  /** Constant-time HMAC SHA-256 check of the exact body against X-Hub-Signature-256. */
+  verifyWebhook(raw: Buffer, signature: string | string[] | undefined): boolean;
+  /** Stores one verified delivery (idempotent by delivery ID) and the events it records. */
+  receiveWebhook(delivery: { readonly deliveryId: string; readonly event: string; readonly payload: unknown }): Promise<{ readonly outcome: string; readonly reason?: string; readonly duplicate?: boolean }>;
+  /** The latest webhook event per pull request for one application. */
+  listSourceEvents(applicationId: string, session: Session): Promise<unknown>;
 }
 
 /** backend/server/pr-assurance/service.mjs: the PR assurance demo add-on (GitHub Actions runs). */

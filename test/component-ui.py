@@ -48,7 +48,7 @@ with sync_playwright() as p:
  page.screenshot(path=str(out/'03-revisions.png'),full_page=True)
  page.evaluate("()=>{mockRevision='old';window.dispatchEvent(new HashChangeEvent('hashchange'));}")
  expect(page.get_by_text('Historical revision · read-only',exact=True)).to_be_visible()
- page.get_by_role('button',name='Obligations',exact=True).click()
+ page.get_by_role('button',name='Requirements',exact=True).click()
  expect(page.get_by_role('button',name='+ Add obligation')).to_be_disabled()
  checks+=['Historical revision has read-only actions']
  page.screenshot(path=str(out/'04-history-read-only.png'),full_page=True)

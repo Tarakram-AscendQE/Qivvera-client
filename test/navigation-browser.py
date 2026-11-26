@@ -146,7 +146,7 @@ try:
         # A form opened on A becomes unusable when the browser navigates to B.
         page.goto(origin + '/#/changes/' + fixture['changeId'])
         expect(page.get_by_role('heading', name=fixture['changeTitle'], exact=True)).to_be_visible()
-        page.get_by_role('button', name='Obligations', exact=True).click()
+        page.get_by_role('button', name='Requirements', exact=True).click()
         before_a = read(page, origin, change_path)['obligations']
         before_b = read(page, origin, other_path)['obligations']
         page.get_by_role('button', name='+ Add obligation', exact=True).click()
@@ -218,7 +218,7 @@ try:
         page.goto(origin + '/#/overview')
         sign_in(page, 'viewer@example.test')
         delivered(page, pending.value, fixture, barrier, document_nonce)
-        expect(page.get_by_role('heading', name='Your assurance workspace', exact=True)).to_be_visible()
+        expect(page.get_by_role('heading', name='Your turn', exact=True)).to_be_visible()
         assert 'viewer@example.test' in page.locator('.identity').inner_text()
         expect(page.locator('dialog')).not_to_be_visible()
         checks.append('A delayed prior-session resolution response cannot restore content or controls after identity change.')

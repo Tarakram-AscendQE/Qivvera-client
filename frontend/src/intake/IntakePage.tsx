@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { field } from '../json';
 import { Field, FormDialog } from '../dialogs/FormDialog';
 import { openFormDialog, type DialogServices } from '../dialogs/open-form';
@@ -28,7 +28,13 @@ function PreviewResult({ preview, onImport }: { preview: unknown; onImport: () =
   );
 }
 
-export function IntakePage({ bridge, repositories, active }: { bridge: IntakeBridge; repositories: readonly unknown[]; active: ActiveCheck }) {
+/** A pull request chosen on an application page: intake opens with it selected and previews it. */
+export interface PreferredPull {
+  readonly repositoryKey: string;
+  readonly pullNumber: number;
+}
+
+export function IntakePage({ bridge, repositories, active, preferred = null }: { bridge: IntakeBridge; repositories: readonly unknown[]; active: ActiveCheck; preferred?: PreferredPull | null }) {
   const { S, api, can } = bridge;
   const [preview, setPreview] = useState<unknown>(null);
   const [error, setError] = useState('');
@@ -39,6 +45,15 @@ export function IntakePage({ bridge, repositories, active }: { bridge: IntakeBri
   });
   const author = can('AUTHOR');
   const applications = S.workspace?.applications ?? [];
+  const formRef = useRef<HTMLFormElement>(null);
+  const chosen = preferred && repositories.some(repository => field(repository, 'id') === preferred.repositoryKey) ? preferred : null;
+  // Arriving from an application's pull-request list: preview the chosen PR once (read-only; nothing is imported).
+  const autoPreviewed = useRef(false);
+  useEffect(() => {
+    if (!chosen || autoPreviewed.current) return;
+    autoPreviewed.current = true;
+    formRef.current?.requestSubmit();
+  }, [chosen]);
 
   async function submitPreview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,7 +99,7 @@ export function IntakePage({ bridge, repositories, active }: { bridge: IntakeBri
       <div className="heading"><div><div className="eyebrow">Development workflow</div><h1>Import a GitHub change</h1><p className="sub">Preview the exact source reference. Import context—not requirements, evidence or readiness.</p></div></div>
       <div className="notice">Repository access is configured by the operator. This does not fetch or execute repository code, verify a deployment, post a GitHub check or grant workspace permissions.</div>
       <section className="panel"><div className="panel-body">{author && repositories.length ? (
-        <form id="source-preview" onSubmit={event => void submitPreview(event)}><div className="form-error" role="alert">{error}</div><div className="form-field"><label htmlFor="repositoryKey">Authorized repository</label><select name="repositoryKey" id="repositoryKey">{repositories.map((repository, index) => <option key={index} value={text(field(repository, 'id'))}>{`${String(field(repository, 'owner'))}/${String(field(repository, 'repo'))}`} · {applications.find(application => application.id === field(repository, 'applicationId'))?.name ?? 'Configured application'}</option>)}</select></div><div className="form-field"><label htmlFor="pullNumber">Open pull-request number</label><input id="pullNumber" name="pullNumber" type="number" min="1" max="2147483647" required /></div><button className="button primary" type="submit" disabled={previewMutation.isPending}>Preview source metadata</button></form>
+        <form id="source-preview" ref={formRef} onSubmit={event => void submitPreview(event)}><div className="form-error" role="alert">{error}</div><div className="form-field"><label htmlFor="repositoryKey">Authorized repository</label><select name="repositoryKey" id="repositoryKey" defaultValue={chosen?.repositoryKey}>{repositories.map((repository, index) => <option key={index} value={text(field(repository, 'id'))}>{`${String(field(repository, 'owner'))}/${String(field(repository, 'repo'))}`} · {applications.find(application => application.id === field(repository, 'applicationId'))?.name ?? 'Configured application'}</option>)}</select></div><div className="form-field"><label htmlFor="pullNumber">Open pull-request number</label><input id="pullNumber" name="pullNumber" type="number" min="1" max="2147483647" required defaultValue={chosen?.pullNumber} /></div><button className="button primary" type="submit" disabled={previewMutation.isPending}>Preview source metadata</button></form>
       ) : (
         <><h2>{author ? 'No repository is configured' : 'Author role required'}</h2><p>Ask the workspace operator to confirm access. No source import has occurred.</p></>
       )}</div></section>

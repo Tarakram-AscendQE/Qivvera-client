@@ -182,7 +182,7 @@ export function createImpactReader(db, options = {}) {
                 if (assuranceEnabled) {
                     const versions = (await c.query('SELECT version,checksum FROM qivvera_migrations ORDER BY version')).rows;
                     const required = [[3, assuranceChecksum], ...(generalizationEnabled ? [[4, resolutionChecksum], [5, intakeChecksum]] : [])];
-                    if (versions.some(v => Number(v.version) > 8) || required.some(([version, checksum]) => !versions.some(v => Number(v.version) === version && v.checksum === checksum))) fail('IMPACT_ASSURANCE_UNAVAILABLE', 'Configured assurance records require compatible, verified migrations. Ask the deployment owner to check the schema.');
+                    if (versions.some(v => Number(v.version) > 9) || required.some(([version, checksum]) => !versions.some(v => Number(v.version) === version && v.checksum === checksum))) fail('IMPACT_ASSURANCE_UNAVAILABLE', 'Configured assurance records require compatible, verified migrations. Ask the deployment owner to check the schema.');
                     plan = await planFor(c, ctx);
                     if (parent) parentPlan = await planFor(c, await model.context(c, changeId, parent.id));
                     assurance.plan = plan?.view ?? null;

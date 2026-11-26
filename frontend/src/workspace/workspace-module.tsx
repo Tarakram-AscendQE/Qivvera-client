@@ -70,6 +70,8 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
   const openForm = (render: (env: DialogEnvironment) => ReactNode, active?: ActiveCheck) => openFormDialog(bridge, render, active);
   /** Resolution items can be tracked when the workflow is on and the person is an Author or Policy Authority. */
   const canTrack = () => !!(S.workspace as { capabilities?: Record<string, unknown> } | null)?.capabilities?.['resolutionWorkflow'] && (can('AUTHOR') || can('POLICY_AUTHORITY'));
+  /** Reads for the application page's pull-request panels. */
+  const sources = { api, viewContext: bridge.viewContext };
   const obligation = (id: string) => state.change.obligations.find(candidate => candidate.id === id);
 
   return {
@@ -82,7 +84,7 @@ export function createWorkspaceUI(bridge: WorkspaceBridge): WorkspaceUI {
     showApplication(id) {
       const app = workspace().applications.find(candidate => candidate.id === id);
       if (!app) throw new Error('Application not found.');
-      shell(<ApplicationPage app={app} workspace={workspace()} roles={roles()} />, 'applications', String(app.name));
+      shell(<ApplicationPage app={app} workspace={workspace()} roles={roles()} sources={sources} />, 'applications', String(app.name));
     },
     showChanges() {
       shell(<ChangesPage workspace={workspace()} roles={roles()} />, 'changes', 'Changes');

@@ -63,7 +63,7 @@ try:
   page.get_by_role('button',name='Revisions',exact=True).click()
   page.screenshot(path=str(out/'03-revision-history.png'),full_page=True)
   page.get_by_role('link',name='Revision 1',exact=True).click()
-  page.get_by_role('button',name='Obligations',exact=True).click()
+  page.get_by_role('button',name='Requirements',exact=True).click()
   expect(page.get_by_text('Historical revision · read-only',exact=True)).to_be_visible();expect(page.get_by_text('Requirement accepted',exact=True)).to_be_visible();expect(page.get_by_role('button',name='+ Add obligation')).to_be_disabled();check('Revision 1 remains accepted historically and cannot be edited')
   page.screenshot(path=str(out/'04-historical-obligation.png'),full_page=True)
   page.locator('.notice.warning').get_by_role('link',name='Open current revision').click()

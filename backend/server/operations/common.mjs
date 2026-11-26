@@ -7,6 +7,7 @@ import { intakeChecksum } from '../intake/migration.mjs';
 import { draftingChecksum } from '../drafting/migration.mjs';
 import { templatesChecksum } from '../templates/migration.mjs';
 import { accountsChecksum } from '../accounts/migration.mjs';
+import { webhooksChecksum } from '../intake/webhook-migration.mjs';
 
 export const TABLE_KEYS = Object.freeze({
     applications: ['id'], changes: ['id'], obligations: ['id'], activity: ['id'],
@@ -17,14 +18,15 @@ export const TABLE_KEYS = Object.freeze({
     source_previews: ['id'], source_imports: ['id'], source_backoff: ['repository_key'],
     drafting_runs: ['id'], drafting_suggestions: ['id'], verification_templates: ['id'],
     verification_template_versions: ['id'], verification_template_mutations: ['id'],
-    verification_template_uses: ['plan_id'], workspace_users: ['id'], workspace_user_roles: ['user_id', 'role']
+    verification_template_uses: ['plan_id'], workspace_users: ['id'], workspace_user_roles: ['user_id', 'role'],
+    github_webhook_deliveries: ['delivery_id'], source_events: ['id']
 });
 export const TABLES = Object.freeze(Object.keys(TABLE_KEYS).sort());
 export const EXPECTED_MIGRATIONS = Object.freeze([
     { version: 2, checksum: migrationChecksum }, { version: 3, checksum: assuranceChecksum },
     { version: 4, checksum: resolutionChecksum }, { version: 5, checksum: intakeChecksum },
     { version: 6, checksum: draftingChecksum }, { version: 7, checksum: templatesChecksum },
-    { version: 8, checksum: accountsChecksum }
+    { version: 8, checksum: accountsChecksum }, { version: 9, checksum: webhooksChecksum }
 ]);
 export class OperationsError extends Error {
     constructor(code, receipt) { super(code); this.code = code; if (receipt) this.receipt = receipt; }
