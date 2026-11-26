@@ -111,13 +111,46 @@ export function TimelinePage({ bridge, scenario, active }: { bridge: PrAssurance
     }
   }
 
+  // Imports every pull request in order, one at a time; stops at the first failure and shows it on that card.
+  const [importingAll, setImportingAll] = useState(false);
+  async function importAll() {
+    if (!active() || importing.current !== null) return;
+    importing.current = 0;
+    setImportingAll(true);
+    setErrors({});
+    const numbers = pulls.map(entry => Number(field(entry, 'number')));
+    let done = 0;
+    try {
+      for (const number of numbers) {
+        try {
+          await importMutation.mutateAsync(number);
+          done += 1;
+        } catch (err) {
+          if (!active() || isSessionEnded(err)) return;
+          setErrors(current => ({ ...current, [number]: err instanceof Error ? err.message : String(err) }));
+          break;
+        }
+        if (!active()) return;
+      }
+      if (!active()) return;
+      if (done === numbers.length) bridge.toast(`All ${done} pull requests imported from GitHub. Nothing has been evaluated yet.`);
+      else if (done) bridge.toast(`${done} of ${numbers.length} pull requests imported. The import stopped at an error.`);
+      if (done) await bridge.route();
+    } finally {
+      importing.current = null;
+      if (active()) setImportingAll(false);
+    }
+  }
+
   return (
     <>
       <div className="heading"><div>
         <div className="eyebrow">{text(field(scenario, 'application'))} · {text(field(scenario, 'repository'))}</div>
         <h1>Pull request assurance</h1>
         <p className="sub">{text(field(scenario, 'change'))}. Each pull request is checked against the business rules by Qivvera's own tests, run on GitHub Actions against its exact commit.</p>
-      </div></div>
+      </div>
+      {canImport ? <div className="actions"><button className="button primary" data-action="import-all" disabled={importingAll || importMutation.isPending} onClick={() => void importAll()}>{importingAll ? 'Importing all…' : 'Import all from GitHub'}</button></div> : null}
+      </div>
       {tokenConfigured ? null : <div className="notice warning"><strong>No GitHub token is configured.</strong> Ask the deployer to set QIVVERA_PR_ASSURANCE_GITHUB_TOKEN. Nothing can be imported or evaluated until then.</div>}
       <section className="panel"><div className="panel-head"><div><h2>Rules assured against</h2>
         <p>{text(field(rules, 'policies'))} rules · {text(field(rules, 'obligations'))} obligations · {text(field(field(rules, 'profile'), 'title'))}</p></div></div>

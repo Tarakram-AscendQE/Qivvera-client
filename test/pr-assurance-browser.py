@@ -125,11 +125,14 @@ try:
             expect(card(page, number).get_by_text('Not imported', exact=True)).to_be_visible()
         check('The PR assurance page lists the three demo pull requests and the rules snapshot they are assured against.')
 
+        card(page, 6).get_by_role('button', name='Import from GitHub', exact=True).click()
+        expect(card(page, 6).get_by_text('Not evaluated', exact=True)).to_be_visible()
+        page.get_by_role('button', name='Import all from GitHub', exact=True).click()
+        expect(page.get_by_text('All 3 pull requests imported from GitHub. Nothing has been evaluated yet.', exact=True)).to_be_visible()
         for number in (6, 7, 8):
-            card(page, number).get_by_role('button', name='Import from GitHub', exact=True).click()
             expect(card(page, number).get_by_text('Not evaluated', exact=True)).to_be_visible()
             expect(card(page, number).get_by_text(fixture.metadata['pulls'][str(number)][:7], exact=True)).to_be_visible()
-        check('Importing reads each PR\'s title, branch and exact head commit; nothing is evaluated yet.')
+        check('Importing one PR, then all of them with one button, reads each PR\'s title, branch and exact head commit; nothing is evaluated yet.')
 
         evaluate(page, fixture, 6, 'NOT READY · 2 rules broken · 11 of 14 obligations supported')
         expect(page.get_by_text('The team’s own tests all passed, yet 2 business rules are broken.', exact=True)).to_be_visible()
