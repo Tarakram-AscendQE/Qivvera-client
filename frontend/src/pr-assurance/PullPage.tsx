@@ -72,8 +72,8 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
         <div>
           <div className="eyebrow">{text(field(scenario, 'repository'))} · PR #{number}</div>
           <h1>{pull ? text(field(pull, 'title')) : `PR #${number}`}</h1>
-          {pull ? <p className="sub"><span className="mono">{text(field(pull, 'headRef'))}</span> · head <span className="mono">{short(field(pull, 'headSha'))}</span> · <a href={text(field(pull, 'url'))} target="_blank" rel="noreferrer">Open on GitHub</a></p>
-            : <p className="sub">Not imported yet. Import it from the pull request list first.</p>}
+          {pull ? <p className="sub">PR #{number} · <span className="mono">{text(field(pull, 'headRef'))}</span> · head <span className="mono">{short(field(pull, 'headSha'))}</span> · <a href={text(field(pull, 'url'))} target="_blank" rel="noreferrer">Open on GitHub</a></p>
+            : <p className="sub">PR #{number} · Not imported yet. Import it from the pull request list first.</p>}
         </div>
         <div className="actions">
           <button className="button primary" data-action="evaluate" disabled={!canStart || starting} onClick={() => void evaluate()}>{starting ? 'Starting…' : runActive ? 'Evaluation running…' : 'Evaluate with Qivvera'}</button>
@@ -94,7 +94,7 @@ export function RunPage({ bridge, view, active }: { bridge: PrAssuranceBridge; v
   return (
     <>
       <a className="back" href={`#/pr-assurance/pulls/${text(field(run, 'pullNumber'))}`}>← PR #{text(field(run, 'pullNumber'))}</a>
-      <div className="heading"><div><div className="eyebrow">PR #{text(field(run, 'pullNumber'))} · commit <span className="mono">{short(field(run, 'headSha'))}</span></div><h1>Assessment run</h1></div></div>
+      <div className="heading"><div><div className="eyebrow">PR #{text(field(run, 'pullNumber'))} · commit <span className="mono">{short(field(run, 'headSha'))}</span></div><h1>Assessment run</h1><p className="sub">PR #{text(field(run, 'pullNumber'))} · commit <span className="mono">{short(field(run, 'headSha'))}</span></p></div></div>
       <RunPanel bridge={bridge} initial={view} active={active} />
     </>
   );

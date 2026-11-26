@@ -58,6 +58,8 @@ describe('PR assurance: one pull request', () => {
     await ui.showPull(6);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('VP-184 v1');
     expect(screen.getByText('Not evaluated yet')).toBeTruthy();
+    // The PR number must not depend on the eyebrow line, which the redesigned theme hides.
+    expect(document.querySelector('.sub')!.textContent).toMatch(/^PR #6 · feature\/VP-184-v1-initial/);
     expect((evaluateButton() as HTMLButtonElement).disabled).toBe(false);
   });
 
