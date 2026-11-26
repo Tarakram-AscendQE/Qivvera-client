@@ -31,7 +31,7 @@ function GitHubFields({ connection, repositoryUrl = '' }: { connection?: GitHubC
   return (
     <>
       <Field id="repositoryUrl" label="Application repository URL" type="url" value={githubUrl(connection?.app?.repository) || repositoryUrl} hint="The repository whose pull requests are assured, for example https://github.com/acme/vendorpay-app." required />
-      <Field id="testRepositoryUrl" label="Test automation repository URL" type="url" value={githubUrl(connection?.tests?.repository)} hint="Runs Qivvera's checks. It must contain .github/workflows/qivvera-pr-assessment.yml." required />
+      <Field id="testRepositoryUrl" label="Verifiers repository URL" type="url" value={githubUrl(connection?.tests?.repository)} hint="Runs Qivvera's checks. It must contain .github/workflows/qivvera-pr-assessment.yml." required />
       <Field id="profilesRepositoryUrl" label="Profiles repository URL" type="url" value={githubUrl(connection?.profiles?.repository)} hint="The business rules this application is assured against." required />
       <SecretField id="githubToken" label="GitHub personal access token" hint={connection ? 'Enter the token again, or a new one. It replaces the saved token, is stored encrypted and is never shown again.' : 'Used only for this application\'s repositories. Stored encrypted and never shown again.'} required />
     </>

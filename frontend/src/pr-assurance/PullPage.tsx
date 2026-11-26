@@ -82,7 +82,7 @@ export function PullPage({ bridge, number, scenario, history, latest, active }: 
       <div className="form-error" role="alert">{error}</div>
       {notice ? <div className="notice warning">{notice}</div> : null}
       {view ? <RunPanel key={text(field(field(view, 'run'), 'id'))} bridge={bridge} initial={view} active={active} />
-        : <section className="panel"><div className="panel-body"><h2>Not evaluated yet</h2><p className="small">{rules ? `Evaluate runs this application's test automation against this pull request's exact commit on GitHub Actions and assesses ${text(field(rules, 'obligations'))} obligations. It takes about a minute.` : 'This application has no rules snapshot yet, so it cannot be evaluated.'}</p></div></section>}
+        : <section className="panel"><div className="panel-body"><h2>Not evaluated yet</h2><p className="small">{rules ? `Evaluate runs this application's verifiers against this pull request's exact commit on GitHub Actions and assesses ${text(field(rules, 'obligations'))} obligations. It takes about a minute.` : 'This application has no rules snapshot yet, so it cannot be evaluated.'}</p></div></section>}
       <section className="panel"><div className="panel-head"><h2>Earlier runs</h2></div><div className="panel-body"><History runs={history} /></div></section>
     </>
   );

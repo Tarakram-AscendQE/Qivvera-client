@@ -19,7 +19,7 @@ import { acceptPublishedSnapshot } from './rules.mjs';
 const fail = (code, message, status = 400) => { throw new InputError(code, message, status); };
 
 export const CONNECTION_FIELDS = Object.freeze(['repositoryUrl', 'testRepositoryUrl', 'profilesRepositoryUrl', 'githubToken']);
-const LABELS = Object.freeze({ repositoryUrl: 'Application repository URL', testRepositoryUrl: 'Test automation repository URL', profilesRepositoryUrl: 'Profiles repository URL' });
+const LABELS = Object.freeze({ repositoryUrl: 'Application repository URL', testRepositoryUrl: 'Verifiers repository URL', profilesRepositoryUrl: 'Profiles repository URL' });
 
 /** https://github.com/<owner>/<repo>[.git][/] → "owner/repo". Nothing else is accepted. */
 export function parseRepositoryUrl(value, label) {

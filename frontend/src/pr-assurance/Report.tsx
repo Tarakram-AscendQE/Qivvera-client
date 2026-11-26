@@ -94,7 +94,7 @@ function Proof({ proof, obligations }: { proof: unknown; obligations: number }) 
         <dt>Pull request</dt><dd>#{text(field(proof, 'pullNumber'))} at <span className="mono">{text(field(proof, 'headSha'))}</span></dd>
         <dt>Environment</dt><dd>{field(proof, 'environmentConfirmed') === true ? 'Confirmed to run this commit before and after the checks (V1)' : 'Not confirmed: no other result counts'}</dd>
         <dt>Rules</dt><dd>{text(field(proof, 'rulesRepository')) || 'Rules snapshot'} at <span className="mono">{text(field(proof, 'rulesCommit'))}</span> · snapshot <span className="mono">{text(field(proof, 'snapshotDigest'))}</span></dd>
-        <dt>Checks</dt><dd>{text(field(proof, 'testsRepository')) || 'Test automation repository'} at <span className="mono">{text(field(proof, 'verifiersCommit'))}</span>{runUrl ? <> · <a href={runUrl} target="_blank" rel="noreferrer">GitHub run</a></> : null}</dd>
+        <dt>Checks</dt><dd>{text(field(proof, 'testsRepository')) || 'Verifiers repository'} at <span className="mono">{text(field(proof, 'verifiersCommit'))}</span>{runUrl ? <> · <a href={runUrl} target="_blank" rel="noreferrer">GitHub run</a></> : null}</dd>
         <dt>Evidence SHA-256</dt><dd className="mono">{text(field(proof, 'evidenceSha256'))}</dd>
         <dt>Checks ran</dt><dd>{formatDate(field(proof, 'startedAt'))} – {formatDate(field(proof, 'finishedAt'))}</dd>
       </dl>

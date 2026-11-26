@@ -58,7 +58,28 @@ export function AssessmentBanner({ view }: { view: ChangeView }) {
   return <section className={`status-panel ${kind}`} aria-label={latest?.applicability === 'CURRENT' ? 'Current assessment' : 'Assessment status'}><div><h2>{title}</h2><p>{copy}</p><p className="small">Scope-bound behavioural assessment. Not universal safety or release certification.</p></div><div className="chip-row"><Badge text={view.change.obligations.filter(o => o.reviewStatus === 'ACCEPTED').length + ' ACCEPTED'} />{latest ? <Badge text={latest.status} /> : null}</div></section>;
 }
 
+/**
+ * With PR assurance on and the change's application connected to GitHub, "Run assurance" opens PR
+ * assurance once the requirements are reviewed: at least one accepted, none still a draft, sent back or
+ * awaiting review. Otherwise it requests the plan-based assessment, as before.
+ */
+function PrAssuranceRunButton({ view, applicationId }: { view: ChangeView; applicationId: string }) {
+  const { change } = view;
+  const accepted = change.obligations.filter(o => o.reviewStatus === 'ACCEPTED').length;
+  const open = change.obligations.filter(o => ['DRAFT', 'IN_REVIEW', 'CLARIFICATION_REQUIRED'].includes(text(o.reviewStatus))).length;
+  const allowed = !!change.isCurrentRevision && (view.roles.author || view.roles.authority);
+  const enabled = allowed && accepted > 0 && open === 0;
+  const why = !allowed ? 'Only an Author or a Policy Authority can run assurance on the current revision.'
+    : open ? `${open} ${open === 1 ? 'requirement is' : 'requirements are'} not reviewed yet. A Policy Authority must accept or reject ${open === 1 ? 'it' : 'them'} first.`
+    : !accepted ? 'Accept at least one requirement first.'
+    : 'Open PR assurance for this change\'s pull request and evaluate it.';
+  return <button className="button primary" data-action="run-pr-assurance" data-app={applicationId} data-revision={text(change.revision.sourceRevision ?? change.sourceRevision ?? '')} disabled={!enabled} title={why}>Run assurance</button>;
+}
+
 export function RunButton({ view }: { view: ChangeView }) {
+  const applicationId = text(view.change.applicationId);
+  const app = view.workspace.applications.find(candidate => candidate.id === applicationId);
+  if (view.workspace.capabilities['prAssurance'] && app?.github) return <PrAssuranceRunButton view={view} applicationId={applicationId} />;
   const active = view.runs.some(run => ACTIVE.includes(run.status));
   const enabled = !!view.change.isCurrentRevision && !!view.context?.plan?.current && !active && (view.roles.author || view.roles.authority);
   return <button className="button primary" data-action="run-assurance" disabled={!enabled} title="Requires a current authority-approved plan and a separately running worker">{active ? 'Assessment in progress' : 'Run assurance'}</button>;

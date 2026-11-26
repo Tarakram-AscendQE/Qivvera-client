@@ -14,7 +14,7 @@ const STAGES: readonly [string, string][] = [
   ['preparing', 'Preparing a fresh GitHub machine'],
   ['starting-app', 'Starting the application at the pull request’s commit'],
   ['running-checks', 'Running Qivvera’s checks'],
-  ['running-team-tests', 'Running the team’s own tests'],
+  ['running-team-tests', 'Running the verifiers'],
   ['done', 'Assessment complete']
 ];
 const OUTCOME: Record<string, string> = { passed: '✅', failed: '❌', timedOut: '❌', interrupted: '⚠️', skipped: '⏭' };

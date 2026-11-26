@@ -45,7 +45,7 @@ function GitHubPanel({ app, canManage }: { app: Application; canManage: boolean 
   const github = app.github;
   if (!github) {
     return (
-      <section className="panel" id="app-github"><div className="panel-head"><div><h2>GitHub</h2><p>Not connected. Add the application, test automation and profiles repositories and a token to assure its pull requests.</p></div>
+      <section className="panel" id="app-github"><div className="panel-head"><div><h2>GitHub</h2><p>Not connected. Add the application, verifiers and profiles repositories and a token to assure its pull requests.</p></div>
         {canManage ? <button className="button primary" data-action="connect-github" data-id={app.id}>Connect to GitHub</button> : null}</div>
         <div className="panel-body details"><div><span className="field-label">Repository reference</span><div className="detail-value">{text(app.repositoryUrl || 'Not supplied')}</div></div><div><span className="field-label">Registered</span><div className="detail-value">{formatDate(app.createdAt)}</div></div></div>
       </section>
@@ -57,7 +57,7 @@ function GitHubPanel({ app, canManage }: { app: Application; canManage: boolean 
       <div className="actions">{canManage ? <button className="button" data-action="connect-github" data-id={app.id}>Update GitHub access</button> : null}<a className="button primary" href={`#/pr-assurance/apps/${app.id}`}>Open PR assurance</a></div></div>
       <div className="panel-body details">
         <div><span className="field-label">Application repository</span><div className="detail-value">{repoLink(github.app?.repository)}</div></div>
-        <div><span className="field-label">Test automation repository</span><div className="detail-value">{repoLink(github.tests?.repository)}</div><div className="small muted">Workflow runs on <span className="mono">{text(github.tests?.ref)}</span></div></div>
+        <div><span className="field-label">Verifiers repository</span><div className="detail-value">{repoLink(github.tests?.repository)}</div><div className="small muted">Workflow runs on <span className="mono">{text(github.tests?.ref)}</span></div></div>
         <div><span className="field-label">Profiles repository</span><div className="detail-value">{repoLink(github.profiles?.repository)}</div>
           <div className="small muted">{rules ? `${text(rules.policies)} rules · ${text(rules.obligations)} obligations, ${rules.source === 'BUNDLED' ? 'from the snapshot shipped with Qivvera' : 'from the repository\'s rules snapshot'} at ${text(rules.commit).slice(0, 7)}` : 'No rules snapshot found: pull requests can be imported but not evaluated.'}</div></div>
         <div><span className="field-label">GitHub token</span><div className="detail-value">Stored encrypted</div><div className="small muted">Saved {formatDate(github.configuredAt)} by {text(github.configuredBy)}</div></div>

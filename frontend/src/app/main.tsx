@@ -6,6 +6,7 @@ import { createGuideUI, type GuideUI } from '../guide/guide-module';
 import { createImpactUI, type ImpactUI } from '../impact/impact-module';
 import { createIntakeUI, type IntakeUI } from '../intake/intake-module';
 import { createPrAssuranceUI, type PrAssuranceUI } from '../pr-assurance/pr-assurance-module';
+import { prAssuranceTarget } from '../pr-assurance/targets';
 import type { SessionInfo, ShellState, WorkspaceInfo } from '../shell-contract';
 import { createResolutionUI, type ResolutionUI } from '../resolution/resolution-module';
 import type { ResolutionPage } from '../resolution/parts';
@@ -251,6 +252,14 @@ async function handleAction(button: HTMLElement, active: ActiveCheck): Promise<v
   switch (data['action']) {
     case 'configure-plan': ui().openPlan(); break;
     case 'run-assurance': ui().openRequestAssessment(); break;
+    case 'run-pr-assurance': {
+      // Opens the pull request whose head is this change's source commit, else the application's PR list.
+      const applicationId = data['app']!;
+      let target = `#/pr-assurance/apps/${applicationId}`;
+      try { target = prAssuranceTarget(applicationId, await api(`/api/pr-assurance/applications/${applicationId}`), data['revision']); } catch { /* the PR list explains any problem */ }
+      if (active()) location.hash = target;
+      break;
+    }
     case 'refresh-assurance': await route(); break;
     case 'open-assessment': await ui().showAssessment(data['id']!); break;
     case 'cancel-assessment':
